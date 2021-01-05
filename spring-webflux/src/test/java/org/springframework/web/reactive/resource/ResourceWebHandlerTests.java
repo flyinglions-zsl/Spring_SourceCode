@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,16 @@
 package org.springframework.web.reactive.resource;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -35,31 +35,29 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.core.io.buffer.support.DataBufferTestUtils;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.PathContainer;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.HandlerMapping;
 import org.springframework.web.server.MethodNotAllowedException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.fail;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link ResourceWebHandler}.
@@ -70,17 +68,21 @@ public class ResourceWebHandlerTests {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
+
 	private ResourceWebHandler handler;
 
-	@BeforeEach
+	private DataBufferFactory bufferFactory = new DefaultDataBufferFactory();
+
+
+	@Before
 	public void setup() throws Exception {
-		List<Resource> locations = new ArrayList<>(2);
-		locations.add(new ClassPathResource("test/", getClass()));
-		locations.add(new ClassPathResource("testalternatepath/", getClass()));
-		locations.add(new ClassPathResource("META-INF/resources/webjars/"));
+		List<Resource> paths = new ArrayList<>(2);
+		paths.add(new ClassPathResource("test/", getClass()));
+		paths.add(new ClassPathResource("testalternatepath/", getClass()));
+		paths.add(new ClassPathResource("META-INF/resources/webjars/"));
 
 		this.handler = new ResourceWebHandler();
-		this.handler.setLocations(locations);
+		this.handler.setLocations(paths);
 		this.handler.setCacheControl(CacheControl.maxAge(3600, TimeUnit.SECONDS));
 		this.handler.afterPropertiesSet();
 	}
@@ -93,13 +95,13 @@ public class ResourceWebHandlerTests {
 		this.handler.handle(exchange).block(TIMEOUT);
 
 		HttpHeaders headers = exchange.getResponse().getHeaders();
-		assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/css"));
-		assertThat(headers.getContentLength()).isEqualTo(17);
-		assertThat(headers.getCacheControl()).isEqualTo("max-age=3600");
-		assertThat(headers.containsKey("Last-Modified")).isTrue();
-		assertThat(resourceLastModifiedDate("test/foo.css") / 1000).isEqualTo(headers.getLastModified() / 1000);
-		assertThat(headers.getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(headers.get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(MediaType.parseMediaType("text/css"), headers.getContentType());
+		assertEquals(17, headers.getContentLength());
+		assertEquals("max-age=3600", headers.getCacheControl());
+		assertTrue(headers.containsKey("Last-Modified"));
+		assertEquals(headers.getLastModified() / 1000, resourceLastModifiedDate("test/foo.css") / 1000);
+		assertEquals("bytes", headers.getFirst("Accept-Ranges"));
+		assertEquals(1, headers.get("Accept-Ranges").size());
 		assertResponseBody(exchange, "h1 { color:red; }");
 	}
 
@@ -109,25 +111,29 @@ public class ResourceWebHandlerTests {
 		setPathWithinHandlerMapping(exchange, "foo.css");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat((Object) exchange.getResponse().getStatusCode()).isNull();
+		assertNull(exchange.getResponse().getStatusCode());
 		HttpHeaders headers = exchange.getResponse().getHeaders();
-		assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/css"));
-		assertThat(headers.getContentLength()).isEqualTo(17);
-		assertThat(headers.getCacheControl()).isEqualTo("max-age=3600");
-		assertThat(headers.containsKey("Last-Modified")).isTrue();
-		assertThat(resourceLastModifiedDate("test/foo.css") / 1000).isEqualTo(headers.getLastModified() / 1000);
-		assertThat(headers.getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(headers.get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(MediaType.parseMediaType("text/css"), headers.getContentType());
+		assertEquals(17, headers.getContentLength());
+		assertEquals("max-age=3600", headers.getCacheControl());
+		assertTrue(headers.containsKey("Last-Modified"));
+		assertEquals(headers.getLastModified() / 1000, resourceLastModifiedDate("test/foo.css") / 1000);
+		assertEquals("bytes", headers.getFirst("Accept-Ranges"));
+		assertEquals(1, headers.get("Accept-Ranges").size());
+
+		StepVerifier.create(exchange.getResponse().getBody())
+				.expectErrorMatches(ex -> ex.getMessage().startsWith("No content was written"))
+				.verify();
 	}
 
 	@Test
-	public void getResourceHttpOptions() {
+	public void getResourceHttpOptions() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.options(""));
 		setPathWithinHandlerMapping(exchange, "foo.css");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getStatusCode()).isNull();
-		assertThat(exchange.getResponse().getHeaders().getFirst("Allow")).isEqualTo("GET,HEAD,OPTIONS");
+		assertNull(exchange.getResponse().getStatusCode());
+		assertEquals("GET,HEAD,OPTIONS", exchange.getResponse().getHeaders().getFirst("Allow"));
 	}
 
 	@Test
@@ -138,11 +144,11 @@ public class ResourceWebHandlerTests {
 		this.handler.handle(exchange).block(TIMEOUT);
 
 		MockServerHttpResponse response = exchange.getResponse();
-		assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
-		assertThat(response.getHeaders().containsKey("Last-Modified")).isTrue();
-		assertThat(resourceLastModifiedDate("test/foo.css") / 1000).isEqualTo(response.getHeaders().getLastModified() / 1000);
-		assertThat(response.getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(response.getHeaders().get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals("no-store", response.getHeaders().getCacheControl());
+		assertTrue(response.getHeaders().containsKey("Last-Modified"));
+		assertEquals(response.getHeaders().getLastModified() / 1000, resourceLastModifiedDate("test/foo.css") / 1000);
+		assertEquals("bytes", response.getHeaders().getFirst("Accept-Ranges"));
+		assertEquals(1, response.getHeaders().get("Accept-Ranges").size());
 	}
 
 	@Test
@@ -156,9 +162,9 @@ public class ResourceWebHandlerTests {
 		setPathWithinHandlerMapping(exchange, "versionString/foo.css");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getHeaders().getETag()).isEqualTo("W/\"versionString\"");
-		assertThat(exchange.getResponse().getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(exchange.getResponse().getHeaders().get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals("\"versionString\"", exchange.getResponse().getHeaders().getETag());
+		assertEquals("bytes", exchange.getResponse().getHeaders().getFirst("Accept-Ranges"));
+		assertEquals(1, exchange.getResponse().getHeaders().get("Accept-Ranges").size());
 	}
 
 	@Test
@@ -168,12 +174,12 @@ public class ResourceWebHandlerTests {
 		this.handler.handle(exchange).block(TIMEOUT);
 
 		HttpHeaders headers = exchange.getResponse().getHeaders();
-		assertThat(headers.getContentType()).isEqualTo(MediaType.TEXT_HTML);
-		assertThat(headers.getCacheControl()).isEqualTo("max-age=3600");
-		assertThat(headers.containsKey("Last-Modified")).isTrue();
-		assertThat(resourceLastModifiedDate("test/foo.html") / 1000).isEqualTo(headers.getLastModified() / 1000);
-		assertThat(headers.getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(headers.get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(MediaType.TEXT_HTML, headers.getContentType());
+		assertEquals("max-age=3600", headers.getCacheControl());
+		assertTrue(headers.containsKey("Last-Modified"));
+		assertEquals(headers.getLastModified() / 1000, resourceLastModifiedDate("test/foo.html") / 1000);
+		assertEquals("bytes", headers.getFirst("Accept-Ranges"));
+		assertEquals(1, headers.get("Accept-Ranges").size());
 	}
 
 	@Test
@@ -183,53 +189,36 @@ public class ResourceWebHandlerTests {
 		this.handler.handle(exchange).block(TIMEOUT);
 
 		HttpHeaders headers = exchange.getResponse().getHeaders();
-		assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/css"));
-		assertThat(headers.getContentLength()).isEqualTo(17);
-		assertThat(headers.getCacheControl()).isEqualTo("max-age=3600");
-		assertThat(headers.containsKey("Last-Modified")).isTrue();
-		assertThat(resourceLastModifiedDate("testalternatepath/baz.css") / 1000).isEqualTo(headers.getLastModified() / 1000);
-		assertThat(headers.getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(headers.get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(MediaType.parseMediaType("text/css"), headers.getContentType());
+		assertEquals(17, headers.getContentLength());
+		assertEquals("max-age=3600", headers.getCacheControl());
+		assertTrue(headers.containsKey("Last-Modified"));
+		assertEquals(headers.getLastModified() / 1000, resourceLastModifiedDate("testalternatepath/baz.css") / 1000);
+		assertEquals("bytes", headers.getFirst("Accept-Ranges"));
+		assertEquals(1, headers.get("Accept-Ranges").size());
 		assertResponseBody(exchange, "h1 { color:red; }");
 	}
 
 	@Test
-	public void getResourceFromSubDirectory() {
+	public void getResourceFromSubDirectory() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
 		setPathWithinHandlerMapping(exchange, "js/foo.js");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.parseMediaType("application/javascript"));
+		assertEquals(MediaType.parseMediaType("application/javascript"),
+				exchange.getResponse().getHeaders().getContentType());
 		assertResponseBody(exchange, "function foo() { console.log(\"hello world\"); }");
 	}
 
 	@Test
-	public void getResourceFromSubDirectoryOfAlternatePath() {
+	public void getResourceFromSubDirectoryOfAlternatePath() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
 		setPathWithinHandlerMapping(exchange, "js/baz.js");
 		this.handler.handle(exchange).block(TIMEOUT);
 
 		HttpHeaders headers = exchange.getResponse().getHeaders();
-		assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("application/javascript"));
+		assertEquals(MediaType.parseMediaType("application/javascript"), headers.getContentType());
 		assertResponseBody(exchange, "function foo() { console.log(\"hello world\"); }");
-	}
-
-	@Test
-	public void getResourceWithRegisteredMediaType() throws Exception {
-		MediaType mediaType = new MediaType("foo", "bar");
-
-		ResourceWebHandler handler = new ResourceWebHandler();
-		handler.setLocations(Collections.singletonList(new ClassPathResource("test/", getClass())));
-		handler.setMediaTypes(Collections.singletonMap("bar", mediaType));
-		handler.afterPropertiesSet();
-
-		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
-		setPathWithinHandlerMapping(exchange, "foo.bar");
-		handler.handle(exchange).block(TIMEOUT);
-
-		HttpHeaders headers = exchange.getResponse().getHeaders();
-		assertThat(headers.getContentType()).isEqualTo(mediaType);
-		assertResponseBody(exchange, "foo bar foo bar foo bar");
 	}
 
 	@Test // SPR-14577
@@ -244,7 +233,7 @@ public class ResourceWebHandlerTests {
 		setPathWithinHandlerMapping(exchange, "foo.html");
 		handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.TEXT_HTML);
+		assertEquals(MediaType.TEXT_HTML, exchange.getResponse().getHeaders().getContentType());
 	}
 
 	@Test
@@ -253,10 +242,10 @@ public class ResourceWebHandlerTests {
 		// Use mock ResourceResolver: i.e. we're only testing upfront validations...
 
 		Resource resource = mock(Resource.class);
-		given(resource.getFilename()).willThrow(new AssertionError("Resource should not be resolved"));
-		given(resource.getInputStream()).willThrow(new AssertionError("Resource should not be resolved"));
+		when(resource.getFilename()).thenThrow(new AssertionError("Resource should not be resolved"));
+		when(resource.getInputStream()).thenThrow(new AssertionError("Resource should not be resolved"));
 		ResourceResolver resolver = mock(ResourceResolver.class);
-		given(resolver.resolveResource(any(), any(), any(), any())).willReturn(Mono.just(resource));
+		when(resolver.resolveResource(any(), any(), any(), any())).thenReturn(Mono.just(resource));
 
 		ResourceWebHandler handler = new ResourceWebHandler();
 		handler.setLocations(Collections.singletonList(new ClassPathResource("test/", getClass())));
@@ -285,11 +274,10 @@ public class ResourceWebHandlerTests {
 	private void testInvalidPath(String requestPath, ResourceWebHandler handler) {
 		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
 		setPathWithinHandlerMapping(exchange, requestPath);
-
 		StepVerifier.create(handler.handle(exchange))
 				.expectErrorSatisfies(err -> {
-					assertThat(err).isInstanceOf(ResponseStatusException.class);
-					assertThat(((ResponseStatusException) err).getRawStatusCode()).isEqualTo(404);
+					assertThat(err, instanceOf(ResponseStatusException.class));
+					assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) err).getStatus());
 				}).verify(TIMEOUT);
 	}
 
@@ -327,60 +315,57 @@ public class ResourceWebHandlerTests {
 		// testResolvePathWithTraversal(location, "/  " + secretPath);
 	}
 
-	private void testResolvePathWithTraversal(HttpMethod httpMethod, String requestPath, Resource location)
-			throws Exception {
-
+	private void testResolvePathWithTraversal(HttpMethod httpMethod, String requestPath, Resource location) throws Exception {
 		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.method(httpMethod, ""));
 		setPathWithinHandlerMapping(exchange, requestPath);
 		StepVerifier.create(this.handler.handle(exchange))
 				.expectErrorSatisfies(err -> {
-					assertThat(err).isInstanceOf(ResponseStatusException.class);
-					assertThat(((ResponseStatusException) err).getRawStatusCode()).isEqualTo(404);
-				})
-				.verify(TIMEOUT);
+					assertThat(err, instanceOf(ResponseStatusException.class));
+					assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) err).getStatus());
+				}).verify(TIMEOUT);
 		if (!location.createRelative(requestPath).exists() && !requestPath.contains(":")) {
 			fail(requestPath + " doesn't actually exist as a relative path");
 		}
 	}
 
 	@Test
-	public void processPath() {
-		assertThat(this.handler.processPath("/foo/bar")).isSameAs("/foo/bar");
-		assertThat(this.handler.processPath("foo/bar")).isSameAs("foo/bar");
+	public void processPath() throws Exception {
+		assertSame("/foo/bar", this.handler.processPath("/foo/bar"));
+		assertSame("foo/bar", this.handler.processPath("foo/bar"));
 
 		// leading whitespace control characters (00-1F)
-		assertThat(this.handler.processPath("  /foo/bar")).isEqualTo("/foo/bar");
-		assertThat(this.handler.processPath((char) 1 + "/foo/bar")).isEqualTo("/foo/bar");
-		assertThat(this.handler.processPath((char) 31 + "/foo/bar")).isEqualTo("/foo/bar");
-		assertThat(this.handler.processPath("  foo/bar")).isEqualTo("foo/bar");
-		assertThat(this.handler.processPath((char) 31 + "foo/bar")).isEqualTo("foo/bar");
+		assertEquals("/foo/bar", this.handler.processPath("  /foo/bar"));
+		assertEquals("/foo/bar", this.handler.processPath((char) 1 + "/foo/bar"));
+		assertEquals("/foo/bar", this.handler.processPath((char) 31 + "/foo/bar"));
+		assertEquals("foo/bar", this.handler.processPath("  foo/bar"));
+		assertEquals("foo/bar", this.handler.processPath((char) 31 + "foo/bar"));
 
 		// leading control character 0x7F (DEL)
-		assertThat(this.handler.processPath((char) 127 + "/foo/bar")).isEqualTo("/foo/bar");
-		assertThat(this.handler.processPath((char) 127 + "/foo/bar")).isEqualTo("/foo/bar");
+		assertEquals("/foo/bar", this.handler.processPath((char) 127 + "/foo/bar"));
+		assertEquals("/foo/bar", this.handler.processPath((char) 127 + "/foo/bar"));
 
 		// leading control and '/' characters
-		assertThat(this.handler.processPath("  /  foo/bar")).isEqualTo("/foo/bar");
-		assertThat(this.handler.processPath("  /  /  foo/bar")).isEqualTo("/foo/bar");
-		assertThat(this.handler.processPath("  // /// ////  foo/bar")).isEqualTo("/foo/bar");
-		assertThat(this.handler.processPath((char) 1 + " / " + (char) 127 + " // foo/bar")).isEqualTo("/foo/bar");
+		assertEquals("/foo/bar", this.handler.processPath("  /  foo/bar"));
+		assertEquals("/foo/bar", this.handler.processPath("  /  /  foo/bar"));
+		assertEquals("/foo/bar", this.handler.processPath("  // /// ////  foo/bar"));
+		assertEquals("/foo/bar", this.handler.processPath((char) 1 + " / " + (char) 127 + " // foo/bar"));
 
 		// root or empty path
-		assertThat(this.handler.processPath("   ")).isEqualTo("");
-		assertThat(this.handler.processPath("/")).isEqualTo("/");
-		assertThat(this.handler.processPath("///")).isEqualTo("/");
-		assertThat(this.handler.processPath("/ /   / ")).isEqualTo("/");
+		assertEquals("", this.handler.processPath("   "));
+		assertEquals("/", this.handler.processPath("/"));
+		assertEquals("/", this.handler.processPath("///"));
+		assertEquals("/", this.handler.processPath("/ /   / "));
 	}
 
 	@Test
-	public void initAllowedLocations() {
+	public void initAllowedLocations() throws Exception {
 		PathResourceResolver resolver = (PathResourceResolver) this.handler.getResourceResolvers().get(0);
 		Resource[] locations = resolver.getAllowedLocations();
 
-		assertThat(locations.length).isEqualTo(3);
-		assertThat(((ClassPathResource) locations[0]).getPath()).isEqualTo("test/");
-		assertThat(((ClassPathResource) locations[1]).getPath()).isEqualTo("testalternatepath/");
-		assertThat(((ClassPathResource) locations[2]).getPath()).isEqualTo("META-INF/resources/webjars/");
+		assertEquals(3, locations.length);
+		assertEquals("test/", ((ClassPathResource) locations[0]).getPath());
+		assertEquals("testalternatepath/", ((ClassPathResource) locations[1]).getPath());
+		assertEquals("META-INF/resources/webjars/", ((ClassPathResource) locations[2]).getPath());
 	}
 
 	@Test
@@ -397,18 +382,17 @@ public class ResourceWebHandlerTests {
 		handler.afterPropertiesSet();
 
 		Resource[] locations = pathResolver.getAllowedLocations();
-		assertThat(locations.length).isEqualTo(1);
-		assertThat(((ClassPathResource) locations[0]).getPath()).isEqualTo("test/");
+		assertEquals(1, locations.length);
+		assertEquals("test/", ((ClassPathResource) locations[0]).getPath());
 	}
 
 	@Test
 	public void notModified() throws Exception {
-		MockServerWebExchange exchange = MockServerWebExchange.from(
-				MockServerHttpRequest.get("").ifModifiedSince(resourceLastModified("test/foo.css")));
-
+		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("")
+				.ifModifiedSince(resourceLastModified("test/foo.css")));
 		setPathWithinHandlerMapping(exchange, "foo.css");
 		this.handler.handle(exchange).block(TIMEOUT);
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
+		assertEquals(HttpStatus.NOT_MODIFIED, exchange.getResponse().getStatusCode());
 	}
 
 	@Test
@@ -419,56 +403,53 @@ public class ResourceWebHandlerTests {
 		setPathWithinHandlerMapping(exchange, "foo.css");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat((Object) exchange.getResponse().getStatusCode()).isNull();
+		assertNull(exchange.getResponse().getStatusCode());
 		assertResponseBody(exchange, "h1 { color:red; }");
 	}
 
 	@Test
-	public void directory() {
+	public void directory() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
 		setPathWithinHandlerMapping(exchange, "js/");
 		StepVerifier.create(this.handler.handle(exchange))
 				.expectErrorSatisfies(err -> {
-					assertThat(err).isInstanceOf(ResponseStatusException.class);
-					assertThat(((ResponseStatusException) err).getRawStatusCode()).isEqualTo(404);
+					assertThat(err, instanceOf(ResponseStatusException.class));
+					assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) err).getStatus());
 				}).verify(TIMEOUT);
 	}
 
 	@Test
-	public void directoryInJarFile() {
+	public void directoryInJarFile() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
 		setPathWithinHandlerMapping(exchange, "underscorejs/");
-		StepVerifier.create(this.handler.handle(exchange))
-				.expectErrorSatisfies(err -> {
-					assertThat(err).isInstanceOf(ResponseStatusException.class);
-					assertThat(((ResponseStatusException) err).getRawStatusCode()).isEqualTo(404);
-				}).verify(TIMEOUT);
+		this.handler.handle(exchange).block(TIMEOUT);
+
+		assertNull(exchange.getResponse().getStatusCode());
+		assertEquals(0, exchange.getResponse().getHeaders().getContentLength());
 	}
 
 	@Test
-	public void missingResourcePath() {
+	public void missingResourcePath() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
 		setPathWithinHandlerMapping(exchange, "");
 		StepVerifier.create(this.handler.handle(exchange))
 				.expectErrorSatisfies(err -> {
-					assertThat(err).isInstanceOf(ResponseStatusException.class);
-					assertThat(((ResponseStatusException) err).getRawStatusCode()).isEqualTo(404);
+					assertThat(err, instanceOf(ResponseStatusException.class));
+					assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) err).getStatus());
 				}).verify(TIMEOUT);
 	}
 
-	@Test
-	public void noPathWithinHandlerMappingAttribute() {
+	@Test(expected = IllegalArgumentException.class)
+	public void noPathWithinHandlerMappingAttribute() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
-		assertThatIllegalArgumentException().isThrownBy(() ->
-				this.handler.handle(exchange).block(TIMEOUT));
+		this.handler.handle(exchange).block(TIMEOUT);
 	}
 
-	@Test
-	public void unsupportedHttpMethod() {
+	@Test(expected = MethodNotAllowedException.class)
+	public void unsupportedHttpMethod() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.post(""));
 		setPathWithinHandlerMapping(exchange, "foo.css");
-		assertThatExceptionOfType(MethodNotAllowedException.class).isThrownBy(() ->
-				this.handler.handle(exchange).block(TIMEOUT));
+		this.handler.handle(exchange).block(TIMEOUT);
 	}
 
 	@Test
@@ -478,106 +459,99 @@ public class ResourceWebHandlerTests {
 		}
 	}
 
-	private void resourceNotFound(HttpMethod httpMethod) {
+	private void resourceNotFound(HttpMethod httpMethod) throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.method(httpMethod, "").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "not-there.css");
-		Mono<Void> mono = this.handler.handle(exchange);
-
-		StepVerifier.create(mono)
+		StepVerifier.create(this.handler.handle(exchange))
 				.expectErrorSatisfies(err -> {
-					assertThat(err).isInstanceOf(ResponseStatusException.class);
-					assertThat(((ResponseStatusException) err).getRawStatusCode()).isEqualTo(404);
+					assertThat(err, instanceOf(ResponseStatusException.class));
+					assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) err).getStatus());
 				}).verify(TIMEOUT);
-
-		// SPR-17475
-		AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
-		StepVerifier.create(mono).consumeErrorWith(exceptionRef::set).verify();
-		StepVerifier.create(mono).consumeErrorWith(ex -> assertThat(ex).isNotSameAs(exceptionRef.get())).verify();
 	}
 
 	@Test
-	public void partialContentByteRange() {
+	public void partialContentByteRange() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("").header("Range", "bytes=0-1").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "foo.txt");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.PARTIAL_CONTENT);
-		assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.TEXT_PLAIN);
-		assertThat(exchange.getResponse().getHeaders().getContentLength()).isEqualTo(2);
-		assertThat(exchange.getResponse().getHeaders().getFirst("Content-Range")).isEqualTo("bytes 0-1/10");
-		assertThat(exchange.getResponse().getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(exchange.getResponse().getHeaders().get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(HttpStatus.PARTIAL_CONTENT, exchange.getResponse().getStatusCode());
+		assertEquals(MediaType.TEXT_PLAIN, exchange.getResponse().getHeaders().getContentType());
+		assertEquals(2, exchange.getResponse().getHeaders().getContentLength());
+		assertEquals("bytes 0-1/10", exchange.getResponse().getHeaders().getFirst("Content-Range"));
+		assertEquals("bytes", exchange.getResponse().getHeaders().getFirst("Accept-Ranges"));
+		assertEquals(1, exchange.getResponse().getHeaders().get("Accept-Ranges").size());
 		assertResponseBody(exchange, "So");
 	}
 
 	@Test
-	public void partialContentByteRangeNoEnd() {
+	public void partialContentByteRangeNoEnd() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("").header("range", "bytes=9-").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "foo.txt");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.PARTIAL_CONTENT);
-		assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.TEXT_PLAIN);
-		assertThat(exchange.getResponse().getHeaders().getContentLength()).isEqualTo(1);
-		assertThat(exchange.getResponse().getHeaders().getFirst("Content-Range")).isEqualTo("bytes 9-9/10");
-		assertThat(exchange.getResponse().getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(exchange.getResponse().getHeaders().get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(HttpStatus.PARTIAL_CONTENT, exchange.getResponse().getStatusCode());
+		assertEquals(MediaType.TEXT_PLAIN, exchange.getResponse().getHeaders().getContentType());
+		assertEquals(1, exchange.getResponse().getHeaders().getContentLength());
+		assertEquals("bytes 9-9/10", exchange.getResponse().getHeaders().getFirst("Content-Range"));
+		assertEquals("bytes", exchange.getResponse().getHeaders().getFirst("Accept-Ranges"));
+		assertEquals(1, exchange.getResponse().getHeaders().get("Accept-Ranges").size());
 		assertResponseBody(exchange, ".");
 	}
 
 	@Test
-	public void partialContentByteRangeLargeEnd() {
+	public void partialContentByteRangeLargeEnd() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("").header("range", "bytes=9-10000").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "foo.txt");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.PARTIAL_CONTENT);
-		assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.TEXT_PLAIN);
-		assertThat(exchange.getResponse().getHeaders().getContentLength()).isEqualTo(1);
-		assertThat(exchange.getResponse().getHeaders().getFirst("Content-Range")).isEqualTo("bytes 9-9/10");
-		assertThat(exchange.getResponse().getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(exchange.getResponse().getHeaders().get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(HttpStatus.PARTIAL_CONTENT, exchange.getResponse().getStatusCode());
+		assertEquals(MediaType.TEXT_PLAIN, exchange.getResponse().getHeaders().getContentType());
+		assertEquals(1, exchange.getResponse().getHeaders().getContentLength());
+		assertEquals("bytes 9-9/10", exchange.getResponse().getHeaders().getFirst("Content-Range"));
+		assertEquals("bytes", exchange.getResponse().getHeaders().getFirst("Accept-Ranges"));
+		assertEquals(1, exchange.getResponse().getHeaders().get("Accept-Ranges").size());
 		assertResponseBody(exchange, ".");
 	}
 
 	@Test
-	public void partialContentSuffixRange() {
+	public void partialContentSuffixRange() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("").header("range", "bytes=-1").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "foo.txt");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.PARTIAL_CONTENT);
-		assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.TEXT_PLAIN);
-		assertThat(exchange.getResponse().getHeaders().getContentLength()).isEqualTo(1);
-		assertThat(exchange.getResponse().getHeaders().getFirst("Content-Range")).isEqualTo("bytes 9-9/10");
-		assertThat(exchange.getResponse().getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(exchange.getResponse().getHeaders().get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(HttpStatus.PARTIAL_CONTENT, exchange.getResponse().getStatusCode());
+		assertEquals(MediaType.TEXT_PLAIN, exchange.getResponse().getHeaders().getContentType());
+		assertEquals(1, exchange.getResponse().getHeaders().getContentLength());
+		assertEquals("bytes 9-9/10", exchange.getResponse().getHeaders().getFirst("Content-Range"));
+		assertEquals("bytes", exchange.getResponse().getHeaders().getFirst("Accept-Ranges"));
+		assertEquals(1, exchange.getResponse().getHeaders().get("Accept-Ranges").size());
 		assertResponseBody(exchange, ".");
 	}
 
 	@Test
-	public void partialContentSuffixRangeLargeSuffix() {
+	public void partialContentSuffixRangeLargeSuffix() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("").header("range", "bytes=-11").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "foo.txt");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.PARTIAL_CONTENT);
-		assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.TEXT_PLAIN);
-		assertThat(exchange.getResponse().getHeaders().getContentLength()).isEqualTo(10);
-		assertThat(exchange.getResponse().getHeaders().getFirst("Content-Range")).isEqualTo("bytes 0-9/10");
-		assertThat(exchange.getResponse().getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
-		assertThat(exchange.getResponse().getHeaders().get("Accept-Ranges").size()).isEqualTo(1);
+		assertEquals(HttpStatus.PARTIAL_CONTENT, exchange.getResponse().getStatusCode());
+		assertEquals(MediaType.TEXT_PLAIN, exchange.getResponse().getHeaders().getContentType());
+		assertEquals(10, exchange.getResponse().getHeaders().getContentLength());
+		assertEquals("bytes 0-9/10", exchange.getResponse().getHeaders().getFirst("Content-Range"));
+		assertEquals("bytes", exchange.getResponse().getHeaders().getFirst("Accept-Ranges"));
+		assertEquals(1, exchange.getResponse().getHeaders().get("Accept-Ranges").size());
 		assertResponseBody(exchange, "Some text.");
 	}
 
 	@Test
-	public void partialContentInvalidRangeHeader() {
+	public void partialContentInvalidRangeHeader() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("").header("range", "bytes=foo bar").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "foo.txt");
@@ -587,25 +561,25 @@ public class ResourceWebHandlerTests {
 				.expectComplete()
 				.verify();
 
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
-		assertThat(exchange.getResponse().getHeaders().getFirst("Accept-Ranges")).isEqualTo("bytes");
+		assertEquals(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE, exchange.getResponse().getStatusCode());
+		assertEquals("bytes", exchange.getResponse().getHeaders().getFirst("Accept-Ranges"));
 	}
 
 	@Test
-	public void partialContentMultipleByteRanges() {
+	public void partialContentMultipleByteRanges() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("").header("Range", "bytes=0-1, 4-5, 8-9").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		setPathWithinHandlerMapping(exchange, "foo.txt");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.PARTIAL_CONTENT);
-		assertThat(exchange.getResponse().getHeaders().getContentType().toString()
-		.startsWith("multipart/byteranges;boundary=")).isTrue();
+		assertEquals(HttpStatus.PARTIAL_CONTENT, exchange.getResponse().getStatusCode());
+		assertTrue(exchange.getResponse().getHeaders().getContentType().toString()
+				.startsWith("multipart/byteranges;boundary="));
 
 		String boundary = "--" + exchange.getResponse().getHeaders().getContentType().toString().substring(30);
 
 		Mono<DataBuffer> reduced = Flux.from(exchange.getResponse().getBody())
-				.reduce(DefaultDataBufferFactory.sharedInstance.allocateBuffer(), (previous, current) -> {
+				.reduce(this.bufferFactory.allocateBuffer(), (previous, current) -> {
 					previous.write(current);
 					DataBufferUtils.release(current);
 					return previous;
@@ -613,50 +587,36 @@ public class ResourceWebHandlerTests {
 
 		StepVerifier.create(reduced)
 				.consumeNextWith(buf -> {
-					String content = buf.toString(UTF_8);
+					String content = DataBufferTestUtils.dumpString(buf, StandardCharsets.UTF_8);
 					String[] ranges = StringUtils.tokenizeToStringArray(content, "\r\n", false, true);
 
-					assertThat(ranges[0]).isEqualTo(boundary);
-					assertThat(ranges[1]).isEqualTo("Content-Type: text/plain");
-					assertThat(ranges[2]).isEqualTo("Content-Range: bytes 0-1/10");
-					assertThat(ranges[3]).isEqualTo("So");
+					assertEquals(boundary, ranges[0]);
+					assertEquals("Content-Type: text/plain", ranges[1]);
+					assertEquals("Content-Range: bytes 0-1/10", ranges[2]);
+					assertEquals("So", ranges[3]);
 
-					assertThat(ranges[4]).isEqualTo(boundary);
-					assertThat(ranges[5]).isEqualTo("Content-Type: text/plain");
-					assertThat(ranges[6]).isEqualTo("Content-Range: bytes 4-5/10");
-					assertThat(ranges[7]).isEqualTo(" t");
+					assertEquals(boundary, ranges[4]);
+					assertEquals("Content-Type: text/plain", ranges[5]);
+					assertEquals("Content-Range: bytes 4-5/10", ranges[6]);
+					assertEquals(" t", ranges[7]);
 
-					assertThat(ranges[8]).isEqualTo(boundary);
-					assertThat(ranges[9]).isEqualTo("Content-Type: text/plain");
-					assertThat(ranges[10]).isEqualTo("Content-Range: bytes 8-9/10");
-					assertThat(ranges[11]).isEqualTo("t.");
+					assertEquals(boundary, ranges[8]);
+					assertEquals("Content-Type: text/plain", ranges[9]);
+					assertEquals("Content-Range: bytes 8-9/10", ranges[10]);
+					assertEquals("t.", ranges[11]);
 				})
 				.expectComplete()
 				.verify();
 	}
 
 	@Test  // SPR-14005
-	public void doOverwriteExistingCacheControlHeaders() {
+	public void doOverwriteExistingCacheControlHeaders() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
 		exchange.getResponse().getHeaders().setCacheControl(CacheControl.noStore().getHeaderValue());
 		setPathWithinHandlerMapping(exchange, "foo.css");
 		this.handler.handle(exchange).block(TIMEOUT);
 
-		assertThat(exchange.getResponse().getHeaders().getCacheControl()).isEqualTo("max-age=3600");
-	}
-
-	@Test
-	void ignoreLastModified() {
-		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(""));
-		setPathWithinHandlerMapping(exchange, "foo.css");
-		this.handler.setUseLastModified(false);
-		this.handler.handle(exchange).block(TIMEOUT);
-
-		HttpHeaders headers = exchange.getResponse().getHeaders();
-		assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/css"));
-		assertThat(headers.getContentLength()).isEqualTo(17);
-		assertThat(headers.containsKey("Last-Modified")).isFalse();
-		assertResponseBody(exchange, "h1 { color:red; }");
+		assertEquals("max-age=3600", exchange.getResponse().getHeaders().getCacheControl());
 	}
 
 
@@ -675,7 +635,8 @@ public class ResourceWebHandlerTests {
 
 	private void assertResponseBody(MockServerWebExchange exchange, String responseBody) {
 		StepVerifier.create(exchange.getResponse().getBody())
-				.consumeNextWith(buf -> assertThat(buf.toString(UTF_8)).isEqualTo(responseBody))
+				.consumeNextWith(buf -> assertEquals(responseBody,
+						DataBufferTestUtils.dumpString(buf, StandardCharsets.UTF_8)))
 				.expectComplete()
 				.verify();
 	}

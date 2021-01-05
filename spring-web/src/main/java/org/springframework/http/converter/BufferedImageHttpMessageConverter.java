@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
@@ -151,7 +150,7 @@ public class BufferedImageHttpMessageConverter implements HttpMessageConverter<B
 	}
 
 	private boolean isWritable(@Nullable MediaType mediaType) {
-		if (mediaType == null || MediaType.ALL.equalsTypeAndSubtype(mediaType)) {
+		if (mediaType == null || MediaType.ALL.equals(mediaType)) {
 			return true;
 		}
 		Iterator<ImageWriter> imageWriters = ImageIO.getImageWritersByMIMEType(mediaType.toString());
@@ -173,7 +172,7 @@ public class BufferedImageHttpMessageConverter implements HttpMessageConverter<B
 			imageInputStream = createImageInputStream(inputMessage.getBody());
 			MediaType contentType = inputMessage.getHeaders().getContentType();
 			if (contentType == null) {
-				throw new HttpMessageNotReadableException("No Content-Type header", inputMessage);
+				throw new HttpMessageNotReadableException("No Content-Type header");
 			}
 			Iterator<ImageReader> imageReaders = ImageIO.getImageReadersByMIMEType(contentType.toString());
 			if (imageReaders.hasNext()) {
@@ -185,8 +184,7 @@ public class BufferedImageHttpMessageConverter implements HttpMessageConverter<B
 			}
 			else {
 				throw new HttpMessageNotReadableException(
-						"Could not find javax.imageio.ImageReader for Content-Type [" + contentType + "]",
-						inputMessage);
+						"Could not find javax.imageio.ImageReader for Content-Type [" + contentType + "]");
 			}
 		}
 		finally {
@@ -206,7 +204,7 @@ public class BufferedImageHttpMessageConverter implements HttpMessageConverter<B
 
 	private ImageInputStream createImageInputStream(InputStream is) throws IOException {
 		if (this.cacheDir != null) {
-			return new FileCacheImageInputStream(is, this.cacheDir);
+			return new FileCacheImageInputStream(is, cacheDir);
 		}
 		else {
 			return new MemoryCacheImageInputStream(is);

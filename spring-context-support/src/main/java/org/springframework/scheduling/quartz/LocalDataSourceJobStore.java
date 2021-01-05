@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,7 @@
 package org.springframework.scheduling.quartz;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
-
 import javax.sql.DataSource;
 
 import org.quartz.SchedulerConfigException;
@@ -111,7 +109,7 @@ public class LocalDataSourceJobStore extends JobStoreCMT {
 					public void shutdown() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
 					}
-					@Override
+					/* Quartz 2.2 initialize method */
 					public void initialize() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
 					}
@@ -139,7 +137,7 @@ public class LocalDataSourceJobStore extends JobStoreCMT {
 					public void shutdown() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
 					}
-					@Override
+					/* Quartz 2.2 initialize method */
 					public void initialize() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
 					}
@@ -148,8 +146,7 @@ public class LocalDataSourceJobStore extends JobStoreCMT {
 
 		// No, if HSQL is the platform, we really don't want to use locks...
 		try {
-			String productName = JdbcUtils.extractDatabaseMetaData(this.dataSource,
-					DatabaseMetaData::getDatabaseProductName);
+			String productName = JdbcUtils.extractDatabaseMetaData(this.dataSource, "getDatabaseProductName");
 			productName = JdbcUtils.commonDatabaseName(productName);
 			if (productName != null && productName.toLowerCase().contains("hsql")) {
 				setUseDBLocks(false);

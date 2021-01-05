@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package org.springframework.context.annotation;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.beans.factory.support.DefaultBeanNameGenerator;
 import org.springframework.context.annotation.ComponentScan.Filter;
@@ -33,7 +33,7 @@ public class ComponentScanAnnotationTests {
 
 	@Test
 	public void noop() {
-		// no-op; the @ComponentScan-annotated MyConfig class below simply exercises
+		// no-op; the @ComponentScan-annotated MyConfig class below simply excercises
 		// available attributes of the annotation.
 	}
 }

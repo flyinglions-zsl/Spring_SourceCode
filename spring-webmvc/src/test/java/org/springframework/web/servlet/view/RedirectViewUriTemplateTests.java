@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,19 +19,18 @@ package org.springframework.web.servlet.view;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.FlashMap;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.support.SessionFlashMapManager;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.junit.Assert.*;
 
 public class RedirectViewUriTemplateTests {
 
@@ -39,7 +38,7 @@ public class RedirectViewUriTemplateTests {
 
 	private MockHttpServletResponse response;
 
-	@BeforeEach
+	@Before
 	public void setUp() {
 		this.request = new MockHttpServletRequest();
 		this.response = new MockHttpServletResponse();
@@ -56,7 +55,7 @@ public class RedirectViewUriTemplateTests {
 		RedirectView redirectView = new RedirectView(baseUrl + "/{foo}");
 		redirectView.renderMergedOutputModel(model, this.request, this.response);
 
-		assertThat(this.response.getRedirectedUrl()).isEqualTo((baseUrl + "/bar"));
+		assertEquals(baseUrl + "/bar", this.response.getRedirectedUrl());
 	}
 
 	@Test
@@ -68,7 +67,7 @@ public class RedirectViewUriTemplateTests {
 		RedirectView redirectView = new RedirectView(baseUrl + "/context path/{foo}");
 		redirectView.renderMergedOutputModel(model, this.request, this.response);
 
-		assertThat(this.response.getRedirectedUrl()).isEqualTo((baseUrl + "/context path/bar%2Fbar%20baz"));
+		assertEquals(baseUrl + "/context path/bar%2Fbar%20baz", this.response.getRedirectedUrl());
 	}
 
 	@Test
@@ -80,7 +79,7 @@ public class RedirectViewUriTemplateTests {
 		RedirectView redirectView = new RedirectView("/foo/{foo}");
 		redirectView.renderMergedOutputModel(model, this.request, this.response);
 
-		assertThat(this.response.getRedirectedUrl()).isEqualTo("/foo/bar?fooArr=baz&fooArr=bazz");
+		assertEquals("/foo/bar?fooArr=baz&fooArr=bazz", this.response.getRedirectedUrl());
 	}
 
 	@Test
@@ -91,7 +90,7 @@ public class RedirectViewUriTemplateTests {
 		RedirectView redirectView = new RedirectView("/foo/{foo}");
 		redirectView.renderMergedOutputModel(model, this.request, this.response);
 
-		assertThat(this.response.getRedirectedUrl()).isEqualTo("/foo/611");
+		assertEquals("/foo/611", this.response.getRedirectedUrl());
 	}
 
 	@Test
@@ -111,13 +110,12 @@ public class RedirectViewUriTemplateTests {
 		RedirectView redirectView = new RedirectView(url + "/{key1}/{var1}/{name}");
 		redirectView.renderMergedOutputModel(model, this.request, this.response);
 
-		assertThat(this.response.getRedirectedUrl()).isEqualTo((url + "/value1/v1/value2?key3=value3"));
+		assertEquals(url + "/value1/v1/value2?key3=value3", this.response.getRedirectedUrl());
 	}
 
-	@Test
+	@Test(expected = IllegalArgumentException.class)
 	public void uriTemplateNullValue() throws Exception {
-		assertThatIllegalArgumentException().isThrownBy(() ->
-				new RedirectView("/{foo}").renderMergedOutputModel(new ModelMap(), this.request, this.response));
+		new RedirectView("/{foo}").renderMergedOutputModel(new ModelMap(), this.request, this.response);
 	}
 
 	@Test
@@ -127,7 +125,7 @@ public class RedirectViewUriTemplateTests {
 		RedirectView redirectView = new RedirectView("");
 		redirectView.renderMergedOutputModel(model, this.request, this.response);
 
-		assertThat(this.response.getRedirectedUrl()).isEqualTo("");
+		assertEquals("", this.response.getRedirectedUrl());
 	}
 
 	// SPR-9016
@@ -139,7 +137,7 @@ public class RedirectViewUriTemplateTests {
 		redirectView.setExpandUriTemplateVariables(false);
 		redirectView.renderMergedOutputModel(new ModelMap(), this.request, this.response);
 
-		assertThat(this.response.getRedirectedUrl()).isEqualTo(url);
+		assertEquals(url, this.response.getRedirectedUrl());
 	}
 
 }

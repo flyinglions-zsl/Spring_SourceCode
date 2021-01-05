@@ -37,8 +37,9 @@ import org.springframework.util.ResourceUtils;
  * <p>This is the class resolved by {@link DefaultResourceLoader} for a "file:..."
  * URL location, allowing a downcast to {@link WritableResource} for it.
  *
- * <p>Alternatively, for direct construction from a {@link java.io.File} handle
- * or NIO {@link java.nio.file.Path}, consider using {@link FileSystemResource}.
+ * <p>Alternatively, for direct construction from a {@link java.io.File} handle,
+ * consider using {@link FileSystemResource}. For an NIO {@link java.nio.file.Path},
+ * consider using {@link PathResource} instead.
  *
  * @author Juergen Hoeller
  * @since 5.0.2
@@ -109,7 +110,10 @@ public class FileUrlResource extends UrlResource implements WritableResource {
 
 	@Override
 	public Resource createRelative(String relativePath) throws MalformedURLException {
-		return new FileUrlResource(createRelativeURL(relativePath));
+		if (relativePath.startsWith("/")) {
+			relativePath = relativePath.substring(1);
+		}
+		return new FileUrlResource(new URL(getURL(), relativePath));
 	}
 
 }

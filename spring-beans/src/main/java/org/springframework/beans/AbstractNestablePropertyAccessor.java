@@ -86,7 +86,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	@Nullable
 	Object rootObject;
 
-	/** Map with cached nested Accessors: nested path -> Accessor instance. */
+	/** Map with cached nested Accessors: nested path -> Accessor instance */
 	@Nullable
 	private Map<String, AbstractNestablePropertyAccessor> nestedPropertyAccessors;
 
@@ -115,7 +115,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 
 	/**
 	 * Create a new accessor for the given object.
-	 * @param object the object wrapped by this accessor
+	 * @param object object wrapped by this accessor
 	 */
 	protected AbstractNestablePropertyAccessor(Object object) {
 		registerDefaultEditors();
@@ -134,7 +134,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	/**
 	 * Create a new accessor for the given object,
 	 * registering a nested path that the object is in.
-	 * @param object the object wrapped by this accessor
+	 * @param object object wrapped by this accessor
 	 * @param nestedPath the nested path of the object
 	 * @param rootObject the root object at the top of the path
 	 */
@@ -146,7 +146,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	/**
 	 * Create a new accessor for the given object,
 	 * registering a nested path that the object is in.
-	 * @param object the object wrapped by this accessor
+	 * @param object object wrapped by this accessor
 	 * @param nestedPath the nested path of the object
 	 * @param parent the containing accessor (must not be {@code null})
 	 */
@@ -740,7 +740,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	/**
 	 * Create a new nested property accessor instance.
 	 * Can be overridden in subclasses to create a PropertyAccessor subclass.
-	 * @param object the object wrapped by this PropertyAccessor
+	 * @param object object wrapped by this PropertyAccessor
 	 * @param nestedPath the nested path of the object
 	 * @return the nested PropertyAccessor instance
 	 */
@@ -839,7 +839,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		PropertyTokenHolder tokens = getPropertyNameTokens(nestedProperty);
 		String canonicalName = tokens.canonicalName;
 		Object value = getPropertyValue(tokens);
-		if (value == null || (value instanceof Optional && !((Optional<?>) value).isPresent())) {
+		if (value == null || (value instanceof Optional && !((Optional) value).isPresent())) {
 			if (isAutoGrowNestedPaths()) {
 				value = setDefaultValue(tokens);
 			}
@@ -935,7 +935,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 			int keyStart = propertyName.indexOf(PROPERTY_KEY_PREFIX, searchIndex);
 			searchIndex = -1;
 			if (keyStart != -1) {
-				int keyEnd = getPropertyNameKeyEnd(propertyName, keyStart + PROPERTY_KEY_PREFIX.length());
+				int keyEnd = propertyName.indexOf(PROPERTY_KEY_SUFFIX, keyStart + PROPERTY_KEY_PREFIX.length());
 				if (keyEnd != -1) {
 					if (actualName == null) {
 						actualName = propertyName.substring(0, keyStart);
@@ -960,40 +960,17 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		return tokens;
 	}
 
-	private int getPropertyNameKeyEnd(String propertyName, int startIndex) {
-		int unclosedPrefixes = 0;
-		int length = propertyName.length();
-		for (int i = startIndex; i < length; i++) {
-			switch (propertyName.charAt(i)) {
-				case PropertyAccessor.PROPERTY_KEY_PREFIX_CHAR:
-					// The property name contains opening prefix(es)...
-					unclosedPrefixes++;
-					break;
-				case PropertyAccessor.PROPERTY_KEY_SUFFIX_CHAR:
-					if (unclosedPrefixes == 0) {
-						// No unclosed prefix(es) in the property name (left) ->
-						// this is the suffix we are looking for.
-						return i;
-					}
-					else {
-						// This suffix does not close the initial prefix but rather
-						// just one that occurred within the property name.
-						unclosedPrefixes--;
-					}
-					break;
-			}
-		}
-		return -1;
-	}
-
 
 	@Override
 	public String toString() {
-		String className = getClass().getName();
-		if (this.wrappedObject == null) {
-			return className + ": no wrapped object set";
+		StringBuilder sb = new StringBuilder(getClass().getName());
+		if (this.wrappedObject != null) {
+			sb.append(": wrapping object [").append(ObjectUtils.identityToString(this.wrappedObject)).append("]");
 		}
-		return className + ": wrapping object [" + ObjectUtils.identityToString(this.wrappedObject) + ']';
+		else {
+			sb.append(": no wrapped object set");
+		}
+		return sb.toString();
 	}
 
 

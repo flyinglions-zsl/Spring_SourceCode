@@ -35,9 +35,7 @@ import org.springframework.util.StringValueResolver;
  * @author Rob Harrop
  * @author Juergen Hoeller
  * @since 2.0
- * @deprecated as of 5.2, in favor of custom annotation attribute processing
  */
-@Deprecated
 public abstract class AnnotationBeanUtils {
 
 	/**

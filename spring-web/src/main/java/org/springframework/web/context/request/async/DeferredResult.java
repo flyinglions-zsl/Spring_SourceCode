@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.web.context.request.async;
 import java.util.PriorityQueue;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,7 +60,7 @@ public class DeferredResult<T> {
 	@Nullable
 	private final Long timeoutValue;
 
-	private final Supplier<?> timeoutResult;
+	private final Object timeoutResult;
 
 	private Runnable timeoutCallback;
 
@@ -73,14 +72,14 @@ public class DeferredResult<T> {
 
 	private volatile Object result = RESULT_NONE;
 
-	private volatile boolean expired;
+	private volatile boolean expired = false;
 
 
 	/**
 	 * Create a DeferredResult.
 	 */
 	public DeferredResult() {
-		this(null, () -> RESULT_NONE);
+		this(null, RESULT_NONE);
 	}
 
 	/**
@@ -91,7 +90,7 @@ public class DeferredResult<T> {
 	 * @param timeoutValue timeout value in milliseconds
 	 */
 	public DeferredResult(Long timeoutValue) {
-		this(timeoutValue, () -> RESULT_NONE);
+		this(timeoutValue, RESULT_NONE);
 	}
 
 	/**
@@ -101,18 +100,6 @@ public class DeferredResult<T> {
 	 * @param timeoutResult the result to use
 	 */
 	public DeferredResult(@Nullable Long timeoutValue, Object timeoutResult) {
-		this.timeoutValue = timeoutValue;
-		this.timeoutResult = () -> timeoutResult;
-	}
-
-	/**
-	 * Variant of {@link #DeferredResult(Long, Object)} that accepts a dynamic
-	 * fallback value based on a {@link Supplier}.
-	 * @param timeoutValue timeout value in milliseconds (ignored if {@code null})
-	 * @param timeoutResult the result supplier to use
-	 * @since 5.1.1
-	 */
-	public DeferredResult(@Nullable Long timeoutValue, Supplier<?> timeoutResult) {
 		this.timeoutValue = timeoutValue;
 		this.timeoutResult = timeoutResult;
 	}
@@ -223,7 +210,7 @@ public class DeferredResult<T> {
 			resultHandler.handleResult(resultToHandle);
 		}
 		catch (Throwable ex) {
-			logger.debug("Failed to process async result", ex);
+			logger.debug("Failed to handle existing result", ex);
 		}
 	}
 
@@ -294,11 +281,10 @@ public class DeferredResult<T> {
 					}
 				}
 				finally {
-					Object value = timeoutResult.get();
-					if (value != RESULT_NONE) {
+					if (timeoutResult != RESULT_NONE) {
 						continueProcessing = false;
 						try {
-							setResultInternal(value);
+							setResultInternal(timeoutResult);
 						}
 						catch (Throwable ex) {
 							logger.debug("Failed to handle timeout result", ex);

@@ -22,7 +22,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import javax.enterprise.concurrent.ManagedExecutors;
 import javax.enterprise.concurrent.ManagedTask;
 
@@ -170,6 +169,14 @@ public class ConcurrentTaskExecutor implements AsyncListenableTaskExecutor, Sche
 	@Override
 	public <T> ListenableFuture<T> submitListenable(Callable<T> task) {
 		return this.adaptedExecutor.submitListenable(task);
+	}
+
+	/**
+	 * This task executor prefers short-lived work units.
+	 */
+	@Override
+	public boolean prefersShortLivedTasks() {
+		return true;
 	}
 
 

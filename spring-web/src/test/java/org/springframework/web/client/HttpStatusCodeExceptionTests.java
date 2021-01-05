@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.http.HttpStatus;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link HttpStatusCodeException} and subclasses.
@@ -50,14 +51,7 @@ public class HttpStatusCodeExceptionTests {
 		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 		HttpStatusCodeException ex2 =
 				(HttpStatusCodeException) new ObjectInputStream(in).readObject();
-		assertThat(ex2.getResponseBodyAsString()).isEqualTo(ex1.getResponseBodyAsString());
-	}
-
-	@Test
-	public void emptyStatusText() {
-		HttpStatusCodeException ex = new HttpClientErrorException(HttpStatus.NOT_FOUND, "");
-
-		assertThat(ex.getMessage()).isEqualTo("404 Not Found");
+		assertThat(ex2.getResponseBodyAsString(), equalTo(ex1.getResponseBodyAsString()));
 	}
 
 }

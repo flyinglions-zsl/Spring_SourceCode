@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-
 import javax.sql.DataSource;
 
 import org.springframework.dao.DataAccessException;
@@ -40,10 +39,10 @@ public abstract class AbstractIdentityColumnMaxValueIncrementer extends Abstract
 
 	private boolean deleteSpecificValues = false;
 
-	/** The current cache of values. */
+	/** The current cache of values */
 	private long[] valueCache;
 
-	/** The next id to serve from the value cache. */
+	/** The next id to serve from the value cache */
 	private int nextValueIndex = -1;
 
 

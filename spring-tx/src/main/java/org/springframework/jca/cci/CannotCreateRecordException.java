@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,17 +26,14 @@ import org.springframework.dao.DataAccessResourceFailureException;
  *
  * @author Juergen Hoeller
  * @since 1.2
- * @deprecated as of 5.3, in favor of specific data access APIs
- * (or native CCI usage if there is no alternative)
  */
-@Deprecated
 @SuppressWarnings("serial")
 public class CannotCreateRecordException extends DataAccessResourceFailureException {
 
 	/**
 	 * Constructor for CannotCreateRecordException.
 	 * @param msg message
-	 * @param ex the root ResourceException cause
+	 * @param ex ResourceException root cause
 	 */
 	public CannotCreateRecordException(String msg, ResourceException ex) {
 		super(msg, ex);

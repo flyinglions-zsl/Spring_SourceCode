@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -36,6 +36,7 @@ import org.springframework.http.client.reactive.ClientHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.ObjectUtils;
 
 /**
  * Container for request and response details for exchanges performed through
@@ -63,17 +64,12 @@ public class ExchangeResult {
 
 	private final ClientHttpResponse response;
 
-	private final Mono<byte[]> requestBody;
+	private final MonoProcessor<byte[]> requestBody;
 
-	private final Mono<byte[]> responseBody;
-
-	private final Duration timeout;
+	private final MonoProcessor<byte[]> responseBody;
 
 	@Nullable
 	private final String uriTemplate;
-
-	@Nullable
-	final Object mockServerResult;
 
 
 	/**
@@ -84,13 +80,11 @@ public class ExchangeResult {
 	 * @param response the HTTP response
 	 * @param requestBody capture of serialized request body content
 	 * @param responseBody capture of serialized response body content
-	 * @param timeout how long to wait for content to materialize
 	 * @param uriTemplate the URI template used to set up the request, if any
-	 * @param serverResult the result of a mock server exchange if applicable.
 	 */
 	ExchangeResult(ClientHttpRequest request, ClientHttpResponse response,
-			Mono<byte[]> requestBody, Mono<byte[]> responseBody, Duration timeout, @Nullable String uriTemplate,
-			@Nullable Object serverResult) {
+			MonoProcessor<byte[]> requestBody, MonoProcessor<byte[]> responseBody,
+			@Nullable String uriTemplate) {
 
 		Assert.notNull(request, "ClientHttpRequest is required");
 		Assert.notNull(response, "ClientHttpResponse is required");
@@ -101,9 +95,7 @@ public class ExchangeResult {
 		this.response = response;
 		this.requestBody = requestBody;
 		this.responseBody = responseBody;
-		this.timeout = timeout;
 		this.uriTemplate = uriTemplate;
-		this.mockServerResult = serverResult;
 	}
 
 	/**
@@ -114,9 +106,7 @@ public class ExchangeResult {
 		this.response = other.response;
 		this.requestBody = other.requestBody;
 		this.responseBody = other.responseBody;
-		this.timeout = other.timeout;
 		this.uriTemplate = other.uriTemplate;
-		this.mockServerResult = other.mockServerResult;
 	}
 
 
@@ -150,31 +140,22 @@ public class ExchangeResult {
 	}
 
 	/**
-	 * Return the raw request body content written through the request.
-	 * <p><strong>Note:</strong> If the request content has not been consumed
-	 * for any reason yet, use of this method will trigger consumption.
-	 * @throws IllegalStateException if the request body is not been fully written.
+	 * Return the raw request body content written as a {@code byte[]}.
+	 * @throws IllegalStateException if the request body is not fully written yet.
 	 */
 	@Nullable
 	public byte[] getRequestBodyContent() {
-		return this.requestBody.block(this.timeout);
+		MonoProcessor<byte[]> body = this.requestBody;
+		Assert.isTrue(body.isTerminated(), "Request body incomplete.");
+		return body.block(Duration.ZERO);
 	}
 
 
 	/**
-	 * Return the HTTP status code as an {@link HttpStatus} enum value.
+	 * Return the status of the executed request.
 	 */
 	public HttpStatus getStatus() {
 		return this.response.getStatusCode();
-	}
-
-	/**
-	 * Return the HTTP status code (potentially non-standard and not resolvable
-	 * through the {@link HttpStatus} enum) as an integer.
-	 * @since 5.1.10
-	 */
-	public int getRawStatusCode() {
-		return this.response.getRawStatusCode();
 	}
 
 	/**
@@ -192,26 +173,16 @@ public class ExchangeResult {
 	}
 
 	/**
-	 * Return the raw request body content written to the response.
-	 * <p><strong>Note:</strong> If the response content has not been consumed
-	 * yet, use of this method will trigger consumption.
-	 * @throws IllegalStateException if the response is not been fully read.
+	 * Return the raw request body content written as a {@code byte[]}.
+	 * @throws IllegalStateException if the response is not fully read yet.
 	 */
 	@Nullable
 	public byte[] getResponseBodyContent() {
-		return this.responseBody.block(this.timeout);
+		MonoProcessor<byte[]> body = this.responseBody;
+		Assert.state(body.isTerminated(), "Response body incomplete");
+		return body.block(Duration.ZERO);
 	}
 
-	/**
-	 * Return the result from the mock server exchange, if applicable, for
-	 * further assertions on the state of the server response.
-	 * @since 5.3
-	 * @see org.springframework.test.web.servlet.client.MockMvcWebTestClient#resultActionsFor(ExchangeResult)
-	 */
-	@Nullable
-	public Object getMockServerResult() {
-		return this.mockServerResult;
-	}
 
 	/**
 	 * Execute the given Runnable, catch any {@link AssertionError}, decorate
@@ -236,11 +207,14 @@ public class ExchangeResult {
 				"\n" +
 				formatBody(getRequestHeaders().getContentType(), this.requestBody) + "\n" +
 				"\n" +
-				"< " + getStatus() + " " + getStatus().getReasonPhrase() + "\n" +
+				"< " + getStatus() + " " + getStatusReason() + "\n" +
 				"< " + formatHeaders(getResponseHeaders(), "\n< ") + "\n" +
 				"\n" +
-				formatBody(getResponseHeaders().getContentType(), this.responseBody) +"\n" +
-				formatMockServerResult();
+				formatBody(getResponseHeaders().getContentType(), this.responseBody) +"\n";
+	}
+
+	private String getStatusReason() {
+		return getStatus().getReasonPhrase();
 	}
 
 	private String formatHeaders(HttpHeaders headers, String delimiter) {
@@ -249,31 +223,30 @@ public class ExchangeResult {
 				.collect(Collectors.joining(delimiter));
 	}
 
-	@Nullable
-	private String formatBody(@Nullable MediaType contentType, Mono<byte[]> body) {
-		return body
-				.map(bytes -> {
-					if (contentType == null) {
-						return bytes.length + " bytes of content (unknown content-type).";
-					}
-					Charset charset = contentType.getCharset();
-					if (charset != null) {
-						return new String(bytes, charset);
-					}
-					if (PRINTABLE_MEDIA_TYPES.stream().anyMatch(contentType::isCompatibleWith)) {
-						return new String(bytes, StandardCharsets.UTF_8);
-					}
-					return bytes.length + " bytes of content.";
-				})
-				.defaultIfEmpty("No content")
-				.onErrorResume(ex -> Mono.just("Failed to obtain content: " + ex.getMessage()))
-				.block(this.timeout);
-	}
-
-	private String formatMockServerResult() {
-		return (this.mockServerResult != null ?
-				"\n======================  MockMvc (Server) ===============================\n" +
-						this.mockServerResult + "\n" : "");
+	private String formatBody(@Nullable MediaType contentType, MonoProcessor<byte[]> body) {
+		if (body.isSuccess()) {
+			byte[] bytes = body.block(Duration.ZERO);
+			if (ObjectUtils.isEmpty(bytes)) {
+				return "No content";
+			}
+			if (contentType == null) {
+				return "Unknown content type (" + bytes.length + " bytes)";
+			}
+			Charset charset = contentType.getCharset();
+			if (charset != null) {
+				return new String(bytes, charset);
+			}
+			if (PRINTABLE_MEDIA_TYPES.stream().anyMatch(contentType::isCompatibleWith)) {
+				return new String(bytes, StandardCharsets.UTF_8);
+			}
+			return "Unknown charset (" + bytes.length + " bytes)";
+		}
+		else if (body.isError()) {
+			return "I/O failure: " + body.getError();
+		}
+		else {
+			return "Content not available yet";
+		}
 	}
 
 }

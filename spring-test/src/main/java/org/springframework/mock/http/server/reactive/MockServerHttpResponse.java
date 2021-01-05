@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,18 @@ package org.springframework.mock.http.server.reactive;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
 
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.AbstractServerHttpResponse;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
@@ -57,17 +54,10 @@ public class MockServerHttpResponse extends AbstractServerHttpResponse {
 
 
 	public MockServerHttpResponse() {
-		this(DefaultDataBufferFactory.sharedInstance);
-	}
-
-	public MockServerHttpResponse(DataBufferFactory dataBufferFactory) {
-		super(dataBufferFactory);
+		super(new DefaultDataBufferFactory());
 		this.writeHandler = body -> {
-			// Avoid .then() that causes data buffers to be discarded and released
-			Sinks.Empty<Void> completion = Sinks.unsafe().empty();
 			this.body = body.cache();
-			this.body.subscribe(aVoid -> {}, completion::tryEmitError, completion::tryEmitEmpty); // Signals are serialized
-			return completion.asMono();
+			return this.body.then();
 		};
 	}
 
@@ -102,11 +92,8 @@ public class MockServerHttpResponse extends AbstractServerHttpResponse {
 
 	@Override
 	protected void applyCookies() {
-		for (List<ResponseCookie> cookies : getCookies().values()) {
-			for (ResponseCookie cookie : cookies) {
-				getHeaders().add(HttpHeaders.SET_COOKIE, cookie.toString());
-			}
-		}
+		getCookies().values().stream().flatMap(Collection::stream)
+				.forEach(cookie -> getHeaders().add(HttpHeaders.SET_COOKIE, cookie.toString()));
 	}
 
 	@Override
@@ -138,17 +125,21 @@ public class MockServerHttpResponse extends AbstractServerHttpResponse {
 	 * charset or "UTF-8" by default.
 	 */
 	public Mono<String> getBodyAsString() {
-
 		Charset charset = Optional.ofNullable(getHeaders().getContentType()).map(MimeType::getCharset)
 				.orElse(StandardCharsets.UTF_8);
-
-		return DataBufferUtils.join(getBody())
-				.map(buffer -> {
-					String s = buffer.toString(charset);
-					DataBufferUtils.release(buffer);
-					return s;
+		return getBody()
+				.reduce(bufferFactory().allocateBuffer(), (previous, current) -> {
+					previous.write(current);
+					DataBufferUtils.release(current);
+					return previous;
 				})
-				.defaultIfEmpty("");
+				.map(buffer -> bufferToString(buffer, charset));
+	}
+
+	private static String bufferToString(DataBuffer buffer, Charset charset) {
+		byte[] bytes = new byte[buffer.readableByteCount()];
+		buffer.read(bytes);
+		return new String(bytes, charset);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.jndi;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
 import javax.naming.Context;
 import javax.naming.NamingException;
 
@@ -245,11 +244,11 @@ public class JndiObjectFactoryBean extends JndiObjectLocator
 		}
 		catch (NamingException ex) {
 			if (this.defaultObject != null) {
-				if (logger.isTraceEnabled()) {
-					logger.trace("JNDI lookup failed - returning specified default object instead", ex);
+				if (logger.isDebugEnabled()) {
+					logger.debug("JNDI lookup failed - returning specified default object instead", ex);
 				}
-				else if (logger.isDebugEnabled()) {
-					logger.debug("JNDI lookup failed - returning specified default object instead: " + ex);
+				else if (logger.isInfoEnabled()) {
+					logger.info("JNDI lookup failed - returning specified default object instead: " + ex);
 				}
 				return this.defaultObject;
 			}
@@ -368,7 +367,6 @@ public class JndiObjectFactoryBean extends JndiObjectLocator
 		}
 
 		@Override
-		@Nullable
 		public Object invoke(MethodInvocation invocation) throws Throwable {
 			Context ctx = (isEligible(invocation.getMethod()) ? this.jndiTemplate.getContext() : null);
 			try {

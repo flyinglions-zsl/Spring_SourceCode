@@ -21,7 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
-
+import java.util.Arrays;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamResult;
@@ -72,7 +72,7 @@ public class MarshallingMessageConverter extends AbstractMessageConverter {
 	 * @param supportedMimeTypes the MIME types
 	 */
 	public MarshallingMessageConverter(MimeType... supportedMimeTypes) {
-		super(supportedMimeTypes);
+		super(Arrays.asList(supportedMimeTypes));
 	}
 
 	/**

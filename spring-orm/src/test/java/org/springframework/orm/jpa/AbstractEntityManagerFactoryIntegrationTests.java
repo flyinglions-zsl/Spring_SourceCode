@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Query;
 import javax.sql.DataSource;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -33,12 +33,13 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Rod Johnson
@@ -47,8 +48,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class AbstractEntityManagerFactoryIntegrationTests {
 
 	protected static final String[] ECLIPSELINK_CONFIG_LOCATIONS = new String[] {
-			"/org/springframework/orm/jpa/eclipselink/eclipselink-manager.xml",
-			"/org/springframework/orm/jpa/memdb.xml", "/org/springframework/orm/jpa/inject.xml"};
+			"/org/springframework/orm/jpa/eclipselink/eclipselink-manager.xml", "/org/springframework/orm/jpa/memdb.xml",
+			"/org/springframework/orm/jpa/inject.xml"};
+
+	protected static final String[] HIBERNATE_CONFIG_LOCATIONS = new String[] {
+			"/org/springframework/orm/jpa/hibernate/hibernate-manager.xml", "/org/springframework/orm/jpa/memdb.xml",
+			"/org/springframework/orm/jpa/inject.xml"};
 
 
 	private static ConfigurableApplicationContext applicationContext;
@@ -59,7 +64,7 @@ public abstract class AbstractEntityManagerFactoryIntegrationTests {
 
 	protected PlatformTransactionManager transactionManager;
 
-	protected DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
+	protected TransactionDefinition transactionDefinition = new DefaultTransactionDefinition();
 
 	protected TransactionStatus transactionStatus;
 
@@ -87,7 +92,7 @@ public abstract class AbstractEntityManagerFactoryIntegrationTests {
 	}
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		if (applicationContext == null) {
 			applicationContext = new ClassPathXmlApplicationContext(getConfigLocations());
@@ -103,19 +108,19 @@ public abstract class AbstractEntityManagerFactoryIntegrationTests {
 		return ECLIPSELINK_CONFIG_LOCATIONS;
 	}
 
-	@AfterEach
+	@After
 	public void cleanup() {
 		if (this.transactionStatus != null && !this.transactionStatus.isCompleted()) {
 			endTransaction();
 		}
 
-		assertThat(TransactionSynchronizationManager.getResourceMap().isEmpty()).isTrue();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
-		assertThat(TransactionSynchronizationManager.isCurrentTransactionReadOnly()).isFalse();
-		assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+		assertTrue(TransactionSynchronizationManager.getResourceMap().isEmpty());
+		assertFalse(TransactionSynchronizationManager.isSynchronizationActive());
+		assertFalse(TransactionSynchronizationManager.isCurrentTransactionReadOnly());
+		assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
 	}
 
-	@AfterAll
+	@AfterClass
 	public static void closeContext() {
 		if (applicationContext != null) {
 			applicationContext.close();

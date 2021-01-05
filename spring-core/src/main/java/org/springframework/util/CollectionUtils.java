@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,14 +43,6 @@ import org.springframework.lang.Nullable;
 public abstract class CollectionUtils {
 
 	/**
-	 * Default load factor for {@link HashMap}/{@link LinkedHashMap} variants.
-	 * @see #newHashMap(int)
-	 * @see #newLinkedHashMap(int)
-	 */
-	static final float DEFAULT_LOAD_FACTOR = 0.75f;
-
-
-	/**
 	 * Return {@code true} if the supplied Collection is {@code null} or empty.
 	 * Otherwise, return {@code false}.
 	 * @param collection the Collection to check
@@ -72,40 +63,6 @@ public abstract class CollectionUtils {
 	}
 
 	/**
-	 * Instantiate a new {@link HashMap} with an initial capacity
-	 * that can accommodate the specified number of elements without
-	 * any immediate resize/rehash operations to be expected.
-	 * <p>This differs from the regular {@link HashMap} constructor
-	 * which takes an initial capacity relative to a load factor
-	 * but is effectively aligned with the JDK's
-	 * {@link java.util.concurrent.ConcurrentHashMap#ConcurrentHashMap(int)}.
-	 * @param expectedSize the expected number of elements (with a corresponding
-	 * capacity to be derived so that no resize/rehash operations are needed)
-	 * @since 5.3
-	 * @see #newLinkedHashMap(int)
-	 */
-	public static <K, V> HashMap<K, V> newHashMap(int expectedSize) {
-		return new HashMap<>((int) (expectedSize / DEFAULT_LOAD_FACTOR), DEFAULT_LOAD_FACTOR);
-	}
-
-	/**
-	 * Instantiate a new {@link LinkedHashMap} with an initial capacity
-	 * that can accommodate the specified number of elements without
-	 * any immediate resize/rehash operations to be expected.
-	 * <p>This differs from the regular {@link LinkedHashMap} constructor
-	 * which takes an initial capacity relative to a load factor but is
-	 * aligned with Spring's own {@link LinkedCaseInsensitiveMap} and
-	 * {@link LinkedMultiValueMap} constructor semantics as of 5.3.
-	 * @param expectedSize the expected number of elements (with a corresponding
-	 * capacity to be derived so that no resize/rehash operations are needed)
-	 * @since 5.3
-	 * @see #newHashMap(int)
-	 */
-	public static <K, V> LinkedHashMap<K, V> newLinkedHashMap(int expectedSize) {
-		return new LinkedHashMap<>((int) (expectedSize / DEFAULT_LOAD_FACTOR), DEFAULT_LOAD_FACTOR);
-	}
-
-	/**
 	 * Convert the supplied array into a List. A primitive array gets converted
 	 * into a List of the appropriate wrapper type.
 	 * <p><b>NOTE:</b> Generally prefer the standard {@link Arrays#asList} method.
@@ -117,7 +74,8 @@ public abstract class CollectionUtils {
 	 * @see ObjectUtils#toObjectArray(Object)
 	 * @see Arrays#asList(Object[])
 	 */
-	public static List<?> arrayToList(@Nullable Object source) {
+	@SuppressWarnings("rawtypes")
+	public static List arrayToList(@Nullable Object source) {
 		return Arrays.asList(ObjectUtils.toObjectArray(source));
 	}
 
@@ -221,7 +179,15 @@ public abstract class CollectionUtils {
 	 * @return whether any of the candidates has been found
 	 */
 	public static boolean containsAny(Collection<?> source, Collection<?> candidates) {
-		return findFirstMatch(source, candidates) != null;
+		if (isEmpty(source) || isEmpty(candidates)) {
+			return false;
+		}
+		for (Object candidate : candidates) {
+			if (source.contains(candidate)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -346,47 +312,6 @@ public abstract class CollectionUtils {
 	}
 
 	/**
-	 * Retrieve the first element of the given Set, using {@link SortedSet#first()}
-	 * or otherwise using the iterator.
-	 * @param set the Set to check (may be {@code null} or empty)
-	 * @return the first element, or {@code null} if none
-	 * @since 5.2.3
-	 * @see SortedSet
-	 * @see LinkedHashMap#keySet()
-	 * @see java.util.LinkedHashSet
-	 */
-	@Nullable
-	public static <T> T firstElement(@Nullable Set<T> set) {
-		if (isEmpty(set)) {
-			return null;
-		}
-		if (set instanceof SortedSet) {
-			return ((SortedSet<T>) set).first();
-		}
-
-		Iterator<T> it = set.iterator();
-		T first = null;
-		if (it.hasNext()) {
-			first = it.next();
-		}
-		return first;
-	}
-
-	/**
-	 * Retrieve the first element of the given List, accessing the zero index.
-	 * @param list the List to check (may be {@code null} or empty)
-	 * @return the first element, or {@code null} if none
-	 * @since 5.2.3
-	 */
-	@Nullable
-	public static <T> T firstElement(@Nullable List<T> list) {
-		if (isEmpty(list)) {
-			return null;
-		}
-		return list.get(0);
-	}
-
-	/**
 	 * Retrieve the last element of the given Set, using {@link SortedSet#last()}
 	 * or otherwise iterating over all elements (assuming a linked set).
 	 * @param set the Set to check (may be {@code null} or empty)
@@ -457,6 +382,7 @@ public abstract class CollectionUtils {
 	 * @since 3.1
 	 */
 	public static <K, V> MultiValueMap<K, V> toMultiValueMap(Map<K, List<V>> targetMap) {
+		Assert.notNull(targetMap, "'targetMap' must not be null");
 		return new MultiValueMapAdapter<>(targetMap);
 	}
 
@@ -471,7 +397,7 @@ public abstract class CollectionUtils {
 			MultiValueMap<? extends K, ? extends V> targetMap) {
 
 		Assert.notNull(targetMap, "'targetMap' must not be null");
-		Map<K, List<V>> result = newLinkedHashMap(targetMap.size());
+		Map<K, List<V>> result = new LinkedHashMap<>(targetMap.size());
 		targetMap.forEach((key, value) -> {
 			List<? extends V> values = Collections.unmodifiableList(value);
 			result.put(key, (List<V>) values);

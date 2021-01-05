@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,76 +16,61 @@
 
 package org.springframework.core.codec;
 
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
-import org.junit.jupiter.api.Test;
-import org.reactivestreams.Publisher;
+import org.junit.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.buffer.AbstractDataBufferAllocatingTestCase;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.testfixture.codec.AbstractEncoderTests;
-import org.springframework.lang.Nullable;
-import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Arjen Poutsma
  */
-class ResourceEncoderTests extends AbstractEncoderTests<ResourceEncoder> {
+public class ResourceEncoderTests extends AbstractDataBufferAllocatingTestCase {
 
-	private final byte[] bytes = "foo".getBytes(UTF_8);
+	private final ResourceEncoder encoder = new ResourceEncoder();
 
-
-	ResourceEncoderTests() {
-		super(new ResourceEncoder());
-	}
-
-	@Override
 	@Test
-	public void canEncode() {
-		assertThat(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class),
-				MimeTypeUtils.TEXT_PLAIN)).isTrue();
-		assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteArrayResource.class),
-				MimeTypeUtils.TEXT_PLAIN)).isTrue();
-		assertThat(this.encoder.canEncode(ResolvableType.forClass(Resource.class),
-				MimeTypeUtils.TEXT_PLAIN)).isTrue();
-		assertThat(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class),
-				MimeTypeUtils.APPLICATION_JSON)).isTrue();
+	public void canEncode() throws Exception {
+		assertTrue(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class),
+				MimeTypeUtils.TEXT_PLAIN));
+		assertTrue(this.encoder.canEncode(ResolvableType.forClass(ByteArrayResource.class),
+				MimeTypeUtils.TEXT_PLAIN));
+		assertTrue(this.encoder.canEncode(ResolvableType.forClass(Resource.class),
+				MimeTypeUtils.TEXT_PLAIN));
+		assertTrue(this.encoder.canEncode(ResolvableType.forClass(InputStreamResource.class),
+				MimeTypeUtils.APPLICATION_JSON));
 
 		// SPR-15464
-		assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();
+		assertFalse(this.encoder.canEncode(ResolvableType.NONE, null));
 	}
 
-	@Override
 	@Test
-	public void encode() {
-		Flux<Resource> input = Flux.just(new ByteArrayResource(this.bytes));
+	public void encode() throws Exception {
+		String s = "foo";
+		Resource resource = new ByteArrayResource(s.getBytes(StandardCharsets.UTF_8));
 
-		testEncodeAll(input, Resource.class, step -> step
-				.consumeNextWith(expectBytes(this.bytes))
-				.verifyComplete());
-	}
+		Mono<Resource> source = Mono.just(resource);
 
-	@Override
-	protected void testEncodeError(Publisher<?> input, ResolvableType outputType,
-			@Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {
+		Flux<DataBuffer> output = this.encoder.encode(source, this.bufferFactory,
+				ResolvableType.forClass(Resource.class),
+				null, Collections.emptyMap());
 
-		Flux<Resource> i = Flux.error(new InputException());
-
-		Flux<DataBuffer> result = ((Encoder<Resource>) this.encoder).encode(i,
-				this.bufferFactory, outputType,
-				mimeType, hints);
-
-		StepVerifier.create(result)
-				.expectError(InputException.class)
+		StepVerifier.create(output)
+				.consumeNextWith(stringConsumer(s))
+				.expectComplete()
 				.verify();
 	}
 

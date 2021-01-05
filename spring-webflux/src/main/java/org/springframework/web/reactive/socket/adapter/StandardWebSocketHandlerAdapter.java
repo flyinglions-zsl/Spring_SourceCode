@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.web.reactive.socket.adapter;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
-
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
@@ -38,7 +37,7 @@ import org.springframework.web.reactive.socket.WebSocketSession;
 /**
  * Adapter for Java WebSocket API (JSR-356) that delegates events to a reactive
  * {@link WebSocketHandler} and its session.
- *
+ * 
  * @author Violeta Georgieva
  * @author Rossen Stoyanchev
  * @since 5.0
@@ -81,9 +80,7 @@ public class StandardWebSocketHandlerAdapter extends Endpoint {
 			this.delegateSession.handleMessage(webSocketMessage.getType(), webSocketMessage);
 		});
 
-		this.delegateHandler.handle(this.delegateSession)
-				.checkpoint(session.getRequestURI() + " [StandardWebSocketHandlerAdapter]")
-				.subscribe(this.delegateSession);
+		this.delegateHandler.handle(this.delegateSession).subscribe(this.delegateSession);
 	}
 
 	private <T> WebSocketMessage toMessage(T message) {
@@ -110,7 +107,7 @@ public class StandardWebSocketHandlerAdapter extends Endpoint {
 	public void onClose(Session session, CloseReason reason) {
 		if (this.delegateSession != null) {
 			int code = reason.getCloseCode().getCode();
-			this.delegateSession.handleClose(CloseStatus.create(code, reason.getReasonPhrase()));
+			this.delegateSession.handleClose(new CloseStatus(code, reason.getReasonPhrase()));
 		}
 	}
 

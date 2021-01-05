@@ -139,7 +139,7 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * Determine a cleaned URL for the given original URL.
 	 * @param originalUrl the original URL
 	 * @param originalPath the original URL path
-	 * @return the cleaned URL (possibly the original URL as-is)
+	 * @return the cleaned URL
 	 * @see org.springframework.util.StringUtils#cleanPath
 	 */
 	private static URL getCleanedUrl(URL originalUrl, String originalPath) {
@@ -242,31 +242,16 @@ public class UrlResource extends AbstractFileResolvingResource {
 	}
 
 	/**
-	 * This implementation creates a {@code UrlResource}, delegating to
-	 * {@link #createRelativeURL(String)} for adapting the relative path.
-	 * @see #createRelativeURL(String)
+	 * This implementation creates a {@code UrlResource}, applying the given path
+	 * relative to the path of the underlying URL of this resource descriptor.
+	 * @see java.net.URL#URL(java.net.URL, String)
 	 */
 	@Override
 	public Resource createRelative(String relativePath) throws MalformedURLException {
-		return new UrlResource(createRelativeURL(relativePath));
-	}
-
-	/**
-	 * This delegate creates a {@code java.net.URL}, applying the given path
-	 * relative to the path of the underlying URL of this resource descriptor.
-	 * A leading slash will get dropped; a "#" symbol will get encoded.
-	 * @since 5.2
-	 * @see #createRelative(String)
-	 * @see java.net.URL#URL(java.net.URL, String)
-	 */
-	protected URL createRelativeURL(String relativePath) throws MalformedURLException {
 		if (relativePath.startsWith("/")) {
 			relativePath = relativePath.substring(1);
 		}
-		// # can appear in filenames, java.net.URL should not treat it as a fragment
-		relativePath = StringUtils.replace(relativePath, "#", "%23");
-		// Use the URL constructor for applying the relative path as a URL spec
-		return new URL(this.url, relativePath);
+		return new UrlResource(new URL(this.url, relativePath));
 	}
 
 	/**
@@ -291,7 +276,7 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * This implementation compares the underlying URL references.
 	 */
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		return (this == other || (other instanceof UrlResource &&
 				getCleanedUrl().equals(((UrlResource) other).getCleanedUrl())));
 	}

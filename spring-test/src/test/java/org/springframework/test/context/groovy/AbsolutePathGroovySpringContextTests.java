@@ -28,7 +28,7 @@ import org.springframework.test.context.ContextConfiguration;
  * @see RelativePathGroovySpringContextTests
  */
 @ContextConfiguration(locations = "/org/springframework/test/context/groovy/context.groovy", inheritLocations = false)
-class AbsolutePathGroovySpringContextTests extends GroovySpringContextTests {
+public class AbsolutePathGroovySpringContextTests extends GroovySpringContextTests {
 
 	/* all tests are in the superclass */
 

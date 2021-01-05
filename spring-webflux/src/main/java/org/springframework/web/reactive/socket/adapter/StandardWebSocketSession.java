@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.web.reactive.socket.adapter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-
 import javax.websocket.CloseReason;
 import javax.websocket.CloseReason.CloseCodes;
 import javax.websocket.SendHandler;
@@ -27,7 +26,7 @@ import javax.websocket.SendResult;
 import javax.websocket.Session;
 
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.MonoProcessor;
 
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.lang.Nullable;
@@ -39,7 +38,7 @@ import org.springframework.web.reactive.socket.WebSocketSession;
 /**
  * Spring {@link WebSocketSession} adapter for a standard Java (JSR 356)
  * {@link javax.websocket.Session}.
- *
+ * 
  * @author Violeta Georgieva
  * @author Rossen Stoyanchev
  * @since 5.0
@@ -47,18 +46,11 @@ import org.springframework.web.reactive.socket.WebSocketSession;
 public class StandardWebSocketSession extends AbstractListenerWebSocketSession<Session> {
 
 	public StandardWebSocketSession(Session session, HandshakeInfo info, DataBufferFactory factory) {
-		this(session, info, factory, (Sinks.Empty<Void>) null);
+		this(session, info, factory, null);
 	}
 
 	public StandardWebSocketSession(Session session, HandshakeInfo info, DataBufferFactory factory,
-			@Nullable Sinks.Empty<Void> completionSink) {
-
-		super(session, session.getId(), info, factory, completionSink);
-	}
-
-	@Deprecated
-	public StandardWebSocketSession(Session session, HandshakeInfo info, DataBufferFactory factory,
-			@Nullable reactor.core.publisher.MonoProcessor<Void> completionMono) {
+			@Nullable MonoProcessor<Void> completionMono) {
 
 		super(session, session.getId(), info, factory, completionMono);
 	}
@@ -104,18 +96,13 @@ public class StandardWebSocketSession extends AbstractListenerWebSocketSession<S
 	}
 
 	@Override
-	public boolean isOpen() {
-		return getDelegate().isOpen();
-	}
-
-	@Override
 	public Mono<Void> close(CloseStatus status) {
 		try {
 			CloseReason.CloseCode code = CloseCodes.getCloseCode(status.getCode());
 			getDelegate().close(new CloseReason(code, status.getReason()));
 		}
-		catch (IOException ex) {
-			return Mono.error(ex);
+		catch (IOException e) {
+			return Mono.error(e);
 		}
 		return Mono.empty();
 	}

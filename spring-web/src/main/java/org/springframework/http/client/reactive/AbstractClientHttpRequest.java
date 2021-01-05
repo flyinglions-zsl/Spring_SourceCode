@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,9 +60,6 @@ public abstract class AbstractClientHttpRequest implements ClientHttpRequest {
 
 	private final List<Supplier<? extends Publisher<Void>>> commitActions = new ArrayList<>(4);
 
-	@Nullable
-	private HttpHeaders readOnlyHeaders;
-
 
 	public AbstractClientHttpRequest() {
 		this(new HttpHeaders());
@@ -77,16 +74,10 @@ public abstract class AbstractClientHttpRequest implements ClientHttpRequest {
 
 	@Override
 	public HttpHeaders getHeaders() {
-		if (this.readOnlyHeaders != null) {
-			return this.readOnlyHeaders;
+		if (State.COMMITTED.equals(this.state.get())) {
+			return HttpHeaders.readOnlyHttpHeaders(this.headers);
 		}
-		else if (State.COMMITTED.equals(this.state.get())) {
-			this.readOnlyHeaders = HttpHeaders.readOnlyHttpHeaders(this.headers);
-			return this.readOnlyHeaders;
-		}
-		else {
-			return this.headers;
-		}
+		return this.headers;
 	}
 
 	@Override
@@ -146,13 +137,13 @@ public abstract class AbstractClientHttpRequest implements ClientHttpRequest {
 
 
 	/**
-	 * Apply header changes from {@link #getHeaders()} to the underlying request.
+	 * Apply header changes from {@link #getHeaders()} to the underlying response.
 	 * This method is called once only.
 	 */
 	protected abstract void applyHeaders();
 
 	/**
-	 * Add cookies from {@link #getHeaders()} to the underlying request.
+	 * Add cookies from {@link #getHeaders()} to the underlying response.
 	 * This method is called once only.
 	 */
 	protected abstract void applyCookies();

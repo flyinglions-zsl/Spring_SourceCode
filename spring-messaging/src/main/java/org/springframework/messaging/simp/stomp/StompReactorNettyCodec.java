@@ -53,7 +53,6 @@ public class StompReactorNettyCodec extends AbstractNioBufferReactorNettyCodec<b
 		return this.decoder.decode(nioBuffer);
 	}
 
-	@Override
 	protected ByteBuffer encodeInternal(Message<byte[]> message) {
 		return ByteBuffer.wrap(this.encoder.encode(message));
 	}

@@ -28,18 +28,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 import org.springframework.lang.Nullable;
+import org.springframework.util.MimeType.SpecificityComparator;
 
 /**
  * Miscellaneous {@link MimeType} utility methods.
  *
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
- * @author Dimitrios Liapis
- * @author Brian Clozel
- * @author Sam Brannen
  * @since 4.0
  */
 public abstract class MimeTypeUtils {
@@ -53,7 +50,7 @@ public abstract class MimeTypeUtils {
 	/**
 	 * Comparator used by {@link #sortBySpecificity(List)}.
 	 */
-	public static final Comparator<MimeType> SPECIFICITY_COMPARATOR = new MimeType.SpecificityComparator<>();
+	public static final Comparator<MimeType> SPECIFICITY_COMPARATOR = new SpecificityComparator<>();
 
 	/**
 	 * Public constant mime type that includes all media ranges (i.e. "&#42;/&#42;").
@@ -155,31 +152,26 @@ public abstract class MimeTypeUtils {
 	 */
 	public static final String TEXT_XML_VALUE = "text/xml";
 
-
-	private static final ConcurrentLruCache<String, MimeType> cachedMimeTypes =
-			new ConcurrentLruCache<>(64, MimeTypeUtils::parseMimeTypeInternal);
-
 	@Nullable
 	private static volatile Random random;
 
+
 	static {
-		// Not using "parseMimeType" to avoid static init cost
-		ALL = new MimeType("*", "*");
-		APPLICATION_JSON = new MimeType("application", "json");
-		APPLICATION_OCTET_STREAM = new MimeType("application", "octet-stream");
-		APPLICATION_XML = new MimeType("application", "xml");
-		IMAGE_GIF = new MimeType("image", "gif");
-		IMAGE_JPEG = new MimeType("image", "jpeg");
-		IMAGE_PNG = new MimeType("image", "png");
-		TEXT_HTML = new MimeType("text", "html");
-		TEXT_PLAIN = new MimeType("text", "plain");
-		TEXT_XML = new MimeType("text", "xml");
+		ALL = MimeType.valueOf(ALL_VALUE);
+		APPLICATION_JSON = MimeType.valueOf(APPLICATION_JSON_VALUE);
+		APPLICATION_OCTET_STREAM = MimeType.valueOf(APPLICATION_OCTET_STREAM_VALUE);
+		APPLICATION_XML = MimeType.valueOf(APPLICATION_XML_VALUE);
+		IMAGE_GIF = MimeType.valueOf(IMAGE_GIF_VALUE);
+		IMAGE_JPEG = MimeType.valueOf(IMAGE_JPEG_VALUE);
+		IMAGE_PNG = MimeType.valueOf(IMAGE_PNG_VALUE);
+		TEXT_HTML = MimeType.valueOf(TEXT_HTML_VALUE);
+		TEXT_PLAIN = MimeType.valueOf(TEXT_PLAIN_VALUE);
+		TEXT_XML = MimeType.valueOf(TEXT_XML_VALUE);
 	}
 
 
 	/**
 	 * Parse the given String into a single {@code MimeType}.
-	 * Recently parsed {@code MimeType} are cached for further retrieval.
 	 * @param mimeType the string to parse
 	 * @return the mime type
 	 * @throws InvalidMimeTypeException if the string cannot be parsed
@@ -188,14 +180,7 @@ public abstract class MimeTypeUtils {
 		if (!StringUtils.hasLength(mimeType)) {
 			throw new InvalidMimeTypeException(mimeType, "'mimeType' must not be empty");
 		}
-		// do not cache multipart mime types with random boundaries
-		if (mimeType.startsWith("multipart")) {
-			return parseMimeTypeInternal(mimeType);
-		}
-		return cachedMimeTypes.get(mimeType);
-	}
 
-	private static MimeType parseMimeTypeInternal(String mimeType) {
 		int index = mimeType.indexOf(';');
 		String fullType = (index >= 0 ? mimeType.substring(0, index) : mimeType).trim();
 		if (fullType.isEmpty()) {
@@ -243,7 +228,7 @@ public abstract class MimeTypeUtils {
 				int eqIndex = parameter.indexOf('=');
 				if (eqIndex >= 0) {
 					String attribute = parameter.substring(0, eqIndex).trim();
-					String value = parameter.substring(eqIndex + 1).trim();
+					String value = parameter.substring(eqIndex + 1, parameter.length()).trim();
 					parameters.put(attribute, value);
 				}
 			}
@@ -263,56 +248,21 @@ public abstract class MimeTypeUtils {
 	}
 
 	/**
-	 * Parse the comma-separated string into a list of {@code MimeType} objects.
+	 * Parse the given, comma-separated string into a list of {@code MimeType} objects.
 	 * @param mimeTypes the string to parse
 	 * @return the list of mime types
-	 * @throws InvalidMimeTypeException if the string cannot be parsed
+	 * @throws IllegalArgumentException if the string cannot be parsed
 	 */
 	public static List<MimeType> parseMimeTypes(String mimeTypes) {
 		if (!StringUtils.hasLength(mimeTypes)) {
 			return Collections.emptyList();
 		}
-		return tokenize(mimeTypes).stream()
-				.filter(StringUtils::hasText)
-				.map(MimeTypeUtils::parseMimeType)
-				.collect(Collectors.toList());
-	}
-
-	/**
-	 * Tokenize the given comma-separated string of {@code MimeType} objects
-	 * into a {@code List<String>}. Unlike simple tokenization by ",", this
-	 * method takes into account quoted parameters.
-	 * @param mimeTypes the string to tokenize
-	 * @return the list of tokens
-	 * @since 5.1.3
-	 */
-	public static List<String> tokenize(String mimeTypes) {
-		if (!StringUtils.hasLength(mimeTypes)) {
-			return Collections.emptyList();
+		String[] tokens = StringUtils.tokenizeToStringArray(mimeTypes, ",");
+		List<MimeType> result = new ArrayList<>(tokens.length);
+		for (String token : tokens) {
+			result.add(parseMimeType(token));
 		}
-		List<String> tokens = new ArrayList<>();
-		boolean inQuotes = false;
-		int startIndex = 0;
-		int i = 0;
-		while (i < mimeTypes.length()) {
-			switch (mimeTypes.charAt(i)) {
-				case '"':
-					inQuotes = !inQuotes;
-					break;
-				case ',':
-					if (!inQuotes) {
-						tokens.add(mimeTypes.substring(startIndex, i));
-						startIndex = i + 1;
-					}
-					break;
-				case '\\':
-					i++;
-					break;
-			}
-			i++;
-		}
-		tokens.add(mimeTypes.substring(startIndex));
-		return tokens;
+		return result;
 	}
 
 	/**
@@ -332,6 +282,7 @@ public abstract class MimeTypeUtils {
 		}
 		return builder.toString();
 	}
+
 
 	/**
 	 * Sorts the given list of {@code MimeType} objects by specificity.

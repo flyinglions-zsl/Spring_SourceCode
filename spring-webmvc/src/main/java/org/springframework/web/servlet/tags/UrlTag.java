@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,11 @@ package org.springframework.web.servlet.tags;
 
 import java.io.IOException;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -206,8 +205,8 @@ public class UrlTag extends HtmlEscapingAwareTag implements ParamAware {
 	}
 
 	/**
-	 * Set the scope to export the URL variable to. This attribute has no
-	 * meaning unless var is also defined.
+	 * Set the scope to export the URL variable to.
+	 * This attribute has no meaning unless {@code var} is also defined.
 	 */
 	public void setScope(String scope) {
 		this.scope = TagUtils.getScope(scope);
@@ -229,7 +228,7 @@ public class UrlTag extends HtmlEscapingAwareTag implements ParamAware {
 
 	@Override
 	public int doStartTagInternal() throws JspException {
-		this.params = new ArrayList<>();
+		this.params = new LinkedList<>();
 		this.templateParams = new HashSet<>();
 		return EVAL_BODY_INCLUDE;
 	}
@@ -363,7 +362,7 @@ public class UrlTag extends HtmlEscapingAwareTag implements ParamAware {
 				usedParams.add(param.getName());
 				String value = param.getValue();
 				try {
-					uri = StringUtils.replace(uri, template,
+					uri = uri.replace(template,
 							(value != null ? UriUtils.encodePath(value, encoding) : ""));
 				}
 				catch (UnsupportedCharsetException ex) {
@@ -376,7 +375,7 @@ public class UrlTag extends HtmlEscapingAwareTag implements ParamAware {
 					usedParams.add(param.getName());
 					String value = param.getValue();
 					try {
-						uri = StringUtils.replace(uri, template,
+						uri = uri.replace(template,
 								(value != null ? UriUtils.encodePathSegment(value, encoding) : ""));
 					}
 					catch (UnsupportedCharsetException ex) {

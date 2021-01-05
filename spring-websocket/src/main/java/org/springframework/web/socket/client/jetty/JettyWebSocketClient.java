@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
@@ -155,8 +154,8 @@ public class JettyWebSocketClient extends AbstractWebSocketClient implements Lif
 		final JettyWebSocketHandlerAdapter listener = new JettyWebSocketHandlerAdapter(wsHandler, wsSession);
 
 		Callable<WebSocketSession> connectTask = () -> {
-			Future<Session> future = this.client.connect(listener, uri, request);
-			future.get(this.client.getConnectTimeout() + 2000, TimeUnit.MILLISECONDS);
+			Future<Session> future = client.connect(listener, uri, request);
+			future.get();
 			return wsSession;
 		};
 
@@ -171,8 +170,8 @@ public class JettyWebSocketClient extends AbstractWebSocketClient implements Lif
 	}
 
 	/**
-	 * Return the user to make available through {@link WebSocketSession#getPrincipal()}.
-	 * By default this method returns {@code null}
+	 * @return the user to make available through {@link WebSocketSession#getPrincipal()};
+	 * 	by default this method returns {@code null}
 	 */
 	@Nullable
 	protected Principal getUser() {

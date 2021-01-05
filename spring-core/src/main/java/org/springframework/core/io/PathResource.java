@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,21 +32,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * {@link Resource} implementation for {@link java.nio.file.Path} handles,
- * performing all operations and transformations via the {@code Path} API.
- * Supports resolution as a {@link File} and also as a {@link URL}.
+ * {@link Resource} implementation for {@code java.nio.file.Path} handles.
+ * Supports resolution as File, and also as URL.
  * Implements the extended {@link WritableResource} interface.
- *
- * <p>Note: As of 5.1, {@link java.nio.file.Path} support is also available
- * in {@link FileSystemResource#FileSystemResource(Path) FileSystemResource},
- * applying Spring's standard String-based path transformations but
- * performing all operations via the {@link java.nio.file.Files} API.
- * This {@code PathResource} is effectively a pure {@code java.nio.path.Path}
- * based alternative with different {@code createRelative} behavior.
  *
  * @author Philippe Marschall
  * @author Juergen Hoeller
@@ -254,7 +245,7 @@ public class PathResource extends AbstractResource implements WritableResource {
 	 * @see java.nio.file.Path#resolve(String)
 	 */
 	@Override
-	public Resource createRelative(String relativePath) {
+	public Resource createRelative(String relativePath) throws IOException {
 		return new PathResource(this.path.resolve(relativePath));
 	}
 
@@ -277,7 +268,7 @@ public class PathResource extends AbstractResource implements WritableResource {
 	 * This implementation compares the underlying Path references.
 	 */
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		return (this == other || (other instanceof PathResource &&
 				this.path.equals(((PathResource) other).path)));
 	}

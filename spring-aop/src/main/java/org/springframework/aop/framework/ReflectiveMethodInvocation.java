@@ -170,8 +170,7 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 			// been evaluated and found to match.
 			InterceptorAndDynamicMethodMatcher dm =
 					(InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
-			Class<?> targetClass = (this.targetClass != null ? this.targetClass : this.method.getDeclaringClass());
-			if (dm.methodMatcher.matches(this.method, targetClass, this.arguments)) {
+			if (dm.methodMatcher.matches(this.method, this.targetClass, this.arguments)) {
 				return dm.interceptor.invoke(this);
 			}
 			else {
@@ -212,7 +211,8 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		Object[] cloneArguments = this.arguments;
 		if (this.arguments.length > 0) {
 			// Build an independent copy of the arguments array.
-			cloneArguments = this.arguments.clone();
+			cloneArguments = new Object[this.arguments.length];
+			System.arraycopy(this.arguments, 0, cloneArguments, 0, this.arguments.length);
 		}
 		return invocableClone(cloneArguments);
 	}

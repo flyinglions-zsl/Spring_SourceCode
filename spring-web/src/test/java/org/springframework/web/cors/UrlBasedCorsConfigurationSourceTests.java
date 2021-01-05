@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,96 +16,41 @@
 
 package org.springframework.web.cors;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.function.Function;
-import java.util.stream.Stream;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.util.ServletRequestPathUtils;
-import org.springframework.web.util.UrlPathHelper;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 
 /**
  * Unit tests for {@link UrlBasedCorsConfigurationSource}.
  * @author Sebastien Deleuze
- * @author Rossen Stoyanchev
  */
-class UrlBasedCorsConfigurationSourceTests {
+public class UrlBasedCorsConfigurationSourceTests {
 
-	@Retention(RetentionPolicy.RUNTIME)
-	@Target(ElementType.METHOD)
-	@ParameterizedTest
-	@MethodSource("pathPatternsArguments")
-	@interface PathPatternsParameterizedTest {
-	}
+	private final UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
 
-	@SuppressWarnings("unused")
-	private static Stream<Function<String, MockHttpServletRequest>> pathPatternsArguments() {
-		return Stream.of(
-				requestUri -> {
-					MockHttpServletRequest request = new MockHttpServletRequest("GET", requestUri);
-					ServletRequestPathUtils.parseAndCache(request);
-					return request;
-				},
-				requestUri -> {
-					MockHttpServletRequest request = new MockHttpServletRequest("GET", requestUri);
-					UrlPathHelper.defaultInstance.getLookupPathForRequest(request);
-					return request;
-				}
-		);
-	}
-
-
-	@PathPatternsParameterizedTest
-	void empty(Function<String, MockHttpServletRequest> requestFactory) {
-		CorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		assertThat(source.getCorsConfiguration(requestFactory.apply("/bar/test.html"))).isNull();
-	}
-
-	@PathPatternsParameterizedTest
-	void registerAndMatch(Function<String, MockHttpServletRequest> requestFactory) {
-		CorsConfiguration config = new CorsConfiguration();
-		UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
-		configSource.registerCorsConfiguration("/bar/**", config);
-
-		MockHttpServletRequest request = requestFactory.apply("/foo/test.html");
-		assertThat(configSource.getCorsConfiguration(request)).isNull();
-
-		request = requestFactory.apply("/bar/test.html");
-		assertThat(configSource.getCorsConfiguration(request)).isEqualTo(config);
+	@Test
+	public void empty() {
+		MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.GET.name(), "/bar/test.html");
+		assertNull(this.configSource.getCorsConfiguration(request));
 	}
 
 	@Test
-	void unmodifiableConfigurationsMap() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> {
-					UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-					source.getCorsConfigurations().put("/**", new CorsConfiguration());
-				});
-	}
-
-	@Test
-	void allowInitLookupPath() {
+	public void registerAndMatch() {
 		CorsConfiguration config = new CorsConfiguration();
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", config);
+		this.configSource.registerCorsConfiguration("/bar/**", config);
 
-		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/foo");
-		assertThat(source.getCorsConfiguration(request))
-				.as("The path should be resolved lazily by default")
-				.isSameAs(config);
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/foo/test.html");
+		assertNull(this.configSource.getCorsConfiguration(request));
 
-		source.setAllowInitLookupPath(false);
-		assertThatIllegalArgumentException().isThrownBy(() -> source.getCorsConfiguration(request));
+		request.setRequestURI("/bar/test.html");
+		assertEquals(config, this.configSource.getCorsConfiguration(request));
 	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	public void unmodifiableConfigurationsMap() {
+		this.configSource.getCorsConfigurations().put("/**", new CorsConfiguration());
+	}
+
 }

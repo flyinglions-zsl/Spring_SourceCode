@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,23 @@
 package org.springframework.web.reactive.result.method.annotation;
 
 
+import java.time.Duration;
 import java.util.HashSet;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.SessionAttributes;
 import org.springframework.web.server.WebSession;
-import org.springframework.web.testfixture.server.MockWebSession;
+import org.springframework.web.server.session.InMemoryWebSessionStore;
 
 import static java.util.Arrays.asList;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test fixture with {@link SessionAttributesHandler}.
@@ -41,64 +46,72 @@ public class SessionAttributesHandlerTests {
 
 
 	@Test
-	public void isSessionAttribute() {
-		assertThat(this.sessionAttributesHandler.isHandlerSessionAttribute("attr1", String.class)).isTrue();
-		assertThat(this.sessionAttributesHandler.isHandlerSessionAttribute("attr2", String.class)).isTrue();
-		assertThat(this.sessionAttributesHandler.isHandlerSessionAttribute("simple", TestBean.class)).isTrue();
-		assertThat(this.sessionAttributesHandler.isHandlerSessionAttribute("simple", String.class)).isFalse();
+	public void isSessionAttribute() throws Exception {
+		assertTrue(this.sessionAttributesHandler.isHandlerSessionAttribute("attr1", String.class));
+		assertTrue(this.sessionAttributesHandler.isHandlerSessionAttribute("attr2", String.class));
+		assertTrue(this.sessionAttributesHandler.isHandlerSessionAttribute("simple", TestBean.class));
+		assertFalse(this.sessionAttributesHandler.isHandlerSessionAttribute("simple", String.class));
 	}
 
 	@Test
-	public void retrieveAttributes() {
-		WebSession session = new MockWebSession();
+	public void retrieveAttributes() throws Exception {
+		WebSession session = new InMemoryWebSessionStore().createWebSession().block(Duration.ZERO);
+		assertNotNull(session);
+
 		session.getAttributes().put("attr1", "value1");
 		session.getAttributes().put("attr2", "value2");
 		session.getAttributes().put("attr3", new TestBean());
 		session.getAttributes().put("attr4", new TestBean());
 
-		assertThat(sessionAttributesHandler.retrieveAttributes(session).keySet()).as("Named attributes (attr1, attr2) should be 'known' right away").isEqualTo(new HashSet<>(asList("attr1", "attr2")));
+		assertEquals("Named attributes (attr1, attr2) should be 'known' right away",
+				new HashSet<>(asList("attr1", "attr2")),
+				sessionAttributesHandler.retrieveAttributes(session).keySet());
 
 		// Resolve 'attr3' by type
 		sessionAttributesHandler.isHandlerSessionAttribute("attr3", TestBean.class);
 
-		assertThat(sessionAttributesHandler.retrieveAttributes(session).keySet()).as("Named attributes (attr1, attr2) and resolved attribute (att3) should be 'known'").isEqualTo(new HashSet<>(asList("attr1", "attr2", "attr3")));
+		assertEquals("Named attributes (attr1, attr2) and resolved attribute (att3) should be 'known'",
+				new HashSet<>(asList("attr1", "attr2", "attr3")),
+				sessionAttributesHandler.retrieveAttributes(session).keySet());
 	}
 
 	@Test
-	public void cleanupAttributes() {
-		WebSession session = new MockWebSession();
+	public void cleanupAttributes() throws Exception {
+		WebSession session = new InMemoryWebSessionStore().createWebSession().block(Duration.ZERO);
+		assertNotNull(session);
+
 		session.getAttributes().put("attr1", "value1");
 		session.getAttributes().put("attr2", "value2");
 		session.getAttributes().put("attr3", new TestBean());
 
 		this.sessionAttributesHandler.cleanupAttributes(session);
 
-		assertThat(session.getAttributes().get("attr1")).isNull();
-		assertThat(session.getAttributes().get("attr2")).isNull();
-		assertThat(session.getAttributes().get("attr3")).isNotNull();
+		assertNull(session.getAttributes().get("attr1"));
+		assertNull(session.getAttributes().get("attr2"));
+		assertNotNull(session.getAttributes().get("attr3"));
 
 		// Resolve 'attr3' by type
 		this.sessionAttributesHandler.isHandlerSessionAttribute("attr3", TestBean.class);
 		this.sessionAttributesHandler.cleanupAttributes(session);
 
-		assertThat(session.getAttributes().get("attr3")).isNull();
+		assertNull(session.getAttributes().get("attr3"));
 	}
 
 	@Test
-	public void storeAttributes() {
+	public void storeAttributes() throws Exception {
+		WebSession session = new InMemoryWebSessionStore().createWebSession().block(Duration.ZERO);
+		assertNotNull(session);
 
 		ModelMap model = new ModelMap();
 		model.put("attr1", "value1");
 		model.put("attr2", "value2");
 		model.put("attr3", new TestBean());
 
-		WebSession session = new MockWebSession();
 		sessionAttributesHandler.storeAttributes(session, model);
 
-		assertThat(session.getAttributes().get("attr1")).isEqualTo("value1");
-		assertThat(session.getAttributes().get("attr2")).isEqualTo("value2");
-		boolean condition = session.getAttributes().get("attr3") instanceof TestBean;
-		assertThat(condition).isTrue();
+		assertEquals("value1", session.getAttributes().get("attr1"));
+		assertEquals("value2", session.getAttributes().get("attr2"));
+		assertTrue(session.getAttributes().get("attr3") instanceof TestBean);
 	}
 
 

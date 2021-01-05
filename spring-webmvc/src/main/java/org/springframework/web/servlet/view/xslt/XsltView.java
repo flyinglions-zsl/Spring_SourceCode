@@ -22,7 +22,6 @@ import java.io.Reader;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.transform.ErrorListener;
@@ -429,6 +428,9 @@ public class XsltView extends AbstractUrlBasedView {
 		Source stylesheetSource = getStylesheetSource();
 		try {
 			Templates templates = getTransformerFactory().newTemplates(stylesheetSource);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Loading templates '" + templates + "'");
+			}
 			return templates;
 		}
 		catch (TransformerConfigurationException ex) {
@@ -464,7 +466,7 @@ public class XsltView extends AbstractUrlBasedView {
 		Assert.state(url != null, "'url' not set");
 
 		if (logger.isDebugEnabled()) {
-			logger.debug("Applying stylesheet [" + url + "]");
+			logger.debug("Loading XSLT stylesheet from '" + url + "'");
 		}
 		try {
 			Resource resource = obtainApplicationContext().getResource(url);

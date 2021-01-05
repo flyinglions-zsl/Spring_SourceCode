@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,17 @@
 package org.springframework.messaging.simp.stomp;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
@@ -111,7 +110,7 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 	 * Create a new instance to be populated with new header values.
 	 */
 	public StompHeaders() {
-		this(new LinkedMultiValueMap<>(3), false);
+		this(new LinkedMultiValueMap<>(4), false);
 	}
 
 	private StompHeaders(Map<String, List<String>> headers, boolean readOnly) {
@@ -283,7 +282,7 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 		if (rawValues == null) {
 			return null;
 		}
-		return new long[] {Long.parseLong(rawValues[0]), Long.parseLong(rawValues[1])};
+		return new long[] {Long.valueOf(rawValues[0]), Long.valueOf(rawValues[1])};
 	}
 
 	/**
@@ -432,7 +431,7 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 	@Override
 	@Nullable
 	public String getFirst(String headerName) {
-		List<String> headerValues = this.headers.get(headerName);
+		List<String> headerValues = headers.get(headerName);
 		return headerValues != null ? headerValues.get(0) : null;
 	}
 
@@ -446,13 +445,13 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 	 */
 	@Override
 	public void add(String headerName, @Nullable String headerValue) {
-		List<String> headerValues = this.headers.computeIfAbsent(headerName, k -> new ArrayList<>(1));
+		List<String> headerValues = headers.computeIfAbsent(headerName, k -> new LinkedList<>());
 		headerValues.add(headerValue);
 	}
 
 	@Override
 	public void addAll(String headerName, List<? extends String> headerValues) {
-		List<String> currentValues = this.headers.computeIfAbsent(headerName, k -> new ArrayList<>(1));
+		List<String> currentValues = headers.computeIfAbsent(headerName, k -> new LinkedList<>());
 		currentValues.addAll(headerValues);
 	}
 
@@ -471,9 +470,9 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 	 */
 	@Override
 	public void set(String headerName, @Nullable String headerValue) {
-		List<String> headerValues = new ArrayList<>(1);
+		List<String> headerValues = new LinkedList<>();
 		headerValues.add(headerValue);
-		this.headers.put(headerName, headerValues);
+		headers.put(headerName, headerValues);
 	}
 
 	@Override
@@ -483,8 +482,8 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 
 	@Override
 	public Map<String, String> toSingleValueMap() {
-		LinkedHashMap<String, String> singleValueMap = CollectionUtils.newLinkedHashMap(this.headers.size());
-		this.headers.forEach((key, value) -> singleValueMap.put(key, value.get(0)));
+		LinkedHashMap<String, String> singleValueMap = new LinkedHashMap<>(this.headers.size());
+		headers.forEach((key, value) -> singleValueMap.put(key, value.get(0)));
 		return singleValueMap;
 	}
 
@@ -553,7 +552,7 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		return (this == other || (other instanceof StompHeaders &&
 				this.headers.equals(((StompHeaders) other).headers)));
 	}

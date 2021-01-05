@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
@@ -37,7 +38,6 @@ import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.converter.MessageConversionException;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.converter.SimpleMessageConverter;
-import org.springframework.messaging.simp.SimpLogging;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.messaging.tcp.TcpConnection;
@@ -45,7 +45,6 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.util.AlternativeJdkIdGenerator;
 import org.springframework.util.Assert;
 import org.springframework.util.IdGenerator;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
@@ -59,13 +58,10 @@ import org.springframework.util.concurrent.SettableListenableFuture;
  */
 public class DefaultStompSession implements ConnectionHandlingStompSession {
 
-	private static final Log logger = SimpLogging.forLogName(DefaultStompSession.class);
+	private static final Log logger = LogFactory.getLog(DefaultStompSession.class);
 
 	private static final IdGenerator idGenerator = new AlternativeJdkIdGenerator();
 
-	/**
-	 * An empty payload.
-	 */
 	public static final byte[] EMPTY_PAYLOAD = new byte[0];
 
 	/* STOMP spec: receiver SHOULD take into account an error margin */
@@ -112,7 +108,7 @@ public class DefaultStompSession implements ConnectionHandlingStompSession {
 	private final Map<String, ReceiptHandler> receiptHandlers = new ConcurrentHashMap<>(4);
 
 	/* Whether the client is willfully closing the connection */
-	private volatile boolean closing;
+	private volatile boolean closing = false;
 
 
 	/**
@@ -132,13 +128,6 @@ public class DefaultStompSession implements ConnectionHandlingStompSession {
 	@Override
 	public String getSessionId() {
 		return this.sessionId;
-	}
-
-	@Override
-	public StompHeaderAccessor getConnectHeaders() {
-		StompHeaderAccessor accessor = createHeaderAccessor(StompCommand.CONNECT);
-		accessor.addNativeHeaders(this.connectHeaders);
-		return accessor;
 	}
 
 	/**
@@ -264,8 +253,11 @@ public class DefaultStompSession implements ConnectionHandlingStompSession {
 	private Message<byte[]> createMessage(StompHeaderAccessor accessor, @Nullable Object payload) {
 		accessor.updateSimpMessageHeadersFromStompHeaders();
 		Message<byte[]> message;
-		if (ObjectUtils.isEmpty(payload)) {
+		if (payload == null) {
 			message = MessageBuilder.createMessage(EMPTY_PAYLOAD, accessor.getMessageHeaders());
+		}
+		else if (payload instanceof byte[]) {
+			message = MessageBuilder.createMessage((byte[]) payload, accessor.getMessageHeaders());
 		}
 		else {
 			message = (Message<byte[]>) getMessageConverter().toMessage(payload, accessor.getMessageHeaders());
@@ -365,17 +357,9 @@ public class DefaultStompSession implements ConnectionHandlingStompSession {
 
 	@Override
 	public void disconnect() {
-		disconnect(null);
-	}
-
-	@Override
-	public void disconnect(@Nullable StompHeaders headers) {
 		this.closing = true;
 		try {
 			StompHeaderAccessor accessor = createHeaderAccessor(StompCommand.DISCONNECT);
-			if (headers != null) {
-				accessor.addNativeHeaders(headers);
-			}
 			Message<byte[]> message = createMessage(accessor, EMPTY_PAYLOAD);
 			execute(message);
 		}

@@ -21,7 +21,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
-
 import javax.jws.WebService;
 import javax.xml.ws.Endpoint;
 import javax.xml.ws.WebServiceFeature;
@@ -49,6 +48,7 @@ import org.springframework.util.Assert;
  * @see javax.jws.WebService
  * @see javax.xml.ws.Endpoint
  * @see SimpleJaxWsServiceExporter
+ * @see SimpleHttpServerJaxWsServiceExporter
  */
 public abstract class AbstractJaxWsServiceExporter implements BeanFactoryAware, InitializingBean, DisposableBean {
 

@@ -59,7 +59,7 @@ public interface ToStringStyler {
 
 	/**
 	 * Style the field separator.
-	 * @param buffer the buffer to print to
+	 * @param buffer buffer to print to
 	 */
 	void styleFieldSeparator(StringBuilder buffer);
 

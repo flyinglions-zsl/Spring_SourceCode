@@ -40,7 +40,7 @@ import org.springframework.util.ObjectUtils;
  */
 public abstract class AbstractMessageChannel implements MessageChannel, InterceptableChannel, BeanNameAware {
 
-	protected Log logger = LogFactory.getLog(getClass());
+	protected final Log logger = LogFactory.getLog(getClass());
 
 	private String beanName;
 
@@ -51,23 +51,6 @@ public abstract class AbstractMessageChannel implements MessageChannel, Intercep
 		this.beanName = getClass().getSimpleName() + "@" + ObjectUtils.getIdentityHexString(this);
 	}
 
-
-	/**
-	 * Set an alternative logger to use than the one based on the class name.
-	 * @param logger the logger to use
-	 * @since 5.1
-	 */
-	public void setLogger(Log logger) {
-		this.logger = logger;
-	}
-
-	/**
-	 * Return the currently configured Logger.
-	 * @since 5.1
-	 */
-	public Log getLogger() {
-		return logger;
-	}
 
 	/**
 	 * A message channel uses the bean name primarily for logging purposes.
@@ -87,20 +70,19 @@ public abstract class AbstractMessageChannel implements MessageChannel, Intercep
 
 	@Override
 	public void setInterceptors(List<ChannelInterceptor> interceptors) {
-		Assert.noNullElements(interceptors, "'interceptors' must not contain null elements");
 		this.interceptors.clear();
 		this.interceptors.addAll(interceptors);
 	}
 
 	@Override
 	public void addInterceptor(ChannelInterceptor interceptor) {
-		Assert.notNull(interceptor, "'interceptor' must not be null");
+		Assert.notNull(interceptor, "ChannelInterceptor must not be null");
 		this.interceptors.add(interceptor);
 	}
 
 	@Override
 	public void addInterceptor(int index, ChannelInterceptor interceptor) {
-		Assert.notNull(interceptor, "'interceptor' must not be null");
+		Assert.notNull(interceptor, "ChannelInterceptor must not be null");
 		this.interceptors.add(index, interceptor);
 	}
 

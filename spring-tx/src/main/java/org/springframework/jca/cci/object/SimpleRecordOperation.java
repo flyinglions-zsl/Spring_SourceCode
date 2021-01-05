@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,10 +30,7 @@ import org.springframework.util.Assert;
  *
  * @author Juergen Hoeller
  * @since 1.2
- * @deprecated as of 5.3, in favor of specific data access APIs
- * (or native CCI usage if there is no alternative)
  */
-@Deprecated
 public class SimpleRecordOperation extends EisOperation {
 
 	/**
@@ -45,7 +42,7 @@ public class SimpleRecordOperation extends EisOperation {
 	/**
 	 * Convenient constructor with ConnectionFactory and specifications
 	 * (connection and interaction).
-	 * @param connectionFactory the ConnectionFactory to use to obtain connections
+	 * @param connectionFactory ConnectionFactory to use to obtain connections
 	 */
 	public SimpleRecordOperation(ConnectionFactory connectionFactory, InteractionSpec interactionSpec) {
 		getCciTemplate().setConnectionFactory(connectionFactory);

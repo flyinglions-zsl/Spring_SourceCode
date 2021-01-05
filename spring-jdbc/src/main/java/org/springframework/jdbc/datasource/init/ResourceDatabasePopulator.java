@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import javax.sql.DataSource;
 
 import org.springframework.core.io.Resource;
@@ -48,7 +47,6 @@ import org.springframework.util.StringUtils;
  * @author Oliver Gierke
  * @author Sam Brannen
  * @author Chris Baldwin
- * @author Phillip Webb
  * @since 3.0
  * @see DatabasePopulatorUtils
  * @see ScriptUtils
@@ -62,7 +60,7 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 
 	private String separator = ScriptUtils.DEFAULT_STATEMENT_SEPARATOR;
 
-	private String[] commentPrefixes = ScriptUtils.DEFAULT_COMMENT_PREFIXES;
+	private String commentPrefix = ScriptUtils.DEFAULT_COMMENT_PREFIX;
 
 	private String blockCommentStartDelimiter = ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER;
 
@@ -78,6 +76,7 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 * @since 4.0.3
 	 */
 	public ResourceDatabasePopulator() {
+		/* no-op */
 	}
 
 	/**
@@ -88,6 +87,7 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 * @since 4.0.3
 	 */
 	public ResourceDatabasePopulator(Resource... scripts) {
+		this();
 		setScripts(scripts);
 	}
 
@@ -97,8 +97,8 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 * logged but not cause a failure
 	 * @param ignoreFailedDrops flag to indicate that a failed SQL {@code DROP}
 	 * statement can be ignored
-	 * @param sqlScriptEncoding the encoding for the supplied SQL scripts
-	 * (may be {@code null} or <em>empty</em> to indicate platform encoding)
+	 * @param sqlScriptEncoding the encoding for the supplied SQL scripts; may
+	 * be {@code null} or <em>empty</em> to indicate platform encoding
 	 * @param scripts the scripts to execute to initialize or clean up the database
 	 * (never {@code null})
 	 * @since 4.0.3
@@ -106,10 +106,10 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	public ResourceDatabasePopulator(boolean continueOnError, boolean ignoreFailedDrops,
 			@Nullable String sqlScriptEncoding, Resource... scripts) {
 
+		this(scripts);
 		this.continueOnError = continueOnError;
 		this.ignoreFailedDrops = ignoreFailedDrops;
 		setSqlScriptEncoding(sqlScriptEncoding);
-		setScripts(scripts);
 	}
 
 
@@ -118,7 +118,7 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 * @param script the path to an SQL script (never {@code null})
 	 */
 	public void addScript(Resource script) {
-		Assert.notNull(script, "'script' must not be null");
+		Assert.notNull(script, "Script must not be null");
 		this.scripts.add(script);
 	}
 
@@ -143,15 +143,15 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	}
 
 	private void assertContentsOfScriptArray(Resource... scripts) {
-		Assert.notNull(scripts, "'scripts' must not be null");
-		Assert.noNullElements(scripts, "'scripts' must not contain null elements");
+		Assert.notNull(scripts, "Scripts array must not be null");
+		Assert.noNullElements(scripts, "Scripts array must not contain null elements");
 	}
 
 	/**
-	 * Specify the encoding for the configured SQL scripts,
-	 * if different from the platform encoding.
-	 * @param sqlScriptEncoding the encoding used in scripts
-	 * (may be {@code null} or empty to indicate platform encoding)
+	 * Specify the encoding for the configured SQL scripts, if different from the
+	 * platform encoding.
+	 * @param sqlScriptEncoding the encoding used in scripts; may be {@code null}
+	 * or empty to indicate platform encoding
 	 * @see #addScript(Resource)
 	 */
 	public void setSqlScriptEncoding(@Nullable String sqlScriptEncoding) {
@@ -173,23 +173,9 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 * Set the prefix that identifies single-line comments within the SQL scripts.
 	 * <p>Defaults to {@code "--"}.
 	 * @param commentPrefix the prefix for single-line comments
-	 * @see #setCommentPrefixes(String...)
 	 */
 	public void setCommentPrefix(String commentPrefix) {
-		Assert.hasText(commentPrefix, "'commentPrefix' must not be null or empty");
-		this.commentPrefixes = new String[] { commentPrefix };
-	}
-
-	/**
-	 * Set the prefixes that identify single-line comments within the SQL scripts.
-	 * <p>Defaults to {@code ["--"]}.
-	 * @param commentPrefixes the prefixes for single-line comments
-	 * @since 5.2
-	 */
-	public void setCommentPrefixes(String... commentPrefixes) {
-		Assert.notEmpty(commentPrefixes, "'commentPrefixes' must not be null or empty");
-		Assert.noNullElements(commentPrefixes, "'commentPrefixes' must not contain null elements");
-		this.commentPrefixes = commentPrefixes;
+		this.commentPrefix = commentPrefix;
 	}
 
 	/**
@@ -202,7 +188,7 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 * @see #setBlockCommentEndDelimiter
 	 */
 	public void setBlockCommentStartDelimiter(String blockCommentStartDelimiter) {
-		Assert.hasText(blockCommentStartDelimiter, "'blockCommentStartDelimiter' must not be null or empty");
+		Assert.hasText(blockCommentStartDelimiter, "BlockCommentStartDelimiter must not be null or empty");
 		this.blockCommentStartDelimiter = blockCommentStartDelimiter;
 	}
 
@@ -216,7 +202,7 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 * @see #setBlockCommentStartDelimiter
 	 */
 	public void setBlockCommentEndDelimiter(String blockCommentEndDelimiter) {
-		Assert.hasText(blockCommentEndDelimiter, "'blockCommentEndDelimiter' must not be null or empty");
+		Assert.hasText(blockCommentEndDelimiter, "BlockCommentEndDelimiter must not be null or empty");
 		this.blockCommentEndDelimiter = blockCommentEndDelimiter;
 	}
 
@@ -248,11 +234,11 @@ public class ResourceDatabasePopulator implements DatabasePopulator {
 	 */
 	@Override
 	public void populate(Connection connection) throws ScriptException {
-		Assert.notNull(connection, "'connection' must not be null");
+		Assert.notNull(connection, "Connection must not be null");
 		for (Resource script : this.scripts) {
 			EncodedResource encodedScript = new EncodedResource(script, this.sqlScriptEncoding);
 			ScriptUtils.executeSqlScript(connection, encodedScript, this.continueOnError, this.ignoreFailedDrops,
-					this.commentPrefixes, this.separator, this.blockCommentStartDelimiter, this.blockCommentEndDelimiter);
+					this.commentPrefix, this.separator, this.blockCommentStartDelimiter, this.blockCommentEndDelimiter);
 		}
 	}
 

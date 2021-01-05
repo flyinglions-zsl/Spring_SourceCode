@@ -22,7 +22,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -73,7 +72,7 @@ public abstract class AbstractMarshaller implements Marshaller, Unmarshaller {
 	private static final EntityResolver NO_OP_ENTITY_RESOLVER =
 			(publicId, systemId) -> new InputSource(new StringReader(""));
 
-	/** Logger available to subclasses. */
+	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	private boolean supportDtd = false;

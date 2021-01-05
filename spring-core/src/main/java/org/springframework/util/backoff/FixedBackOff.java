@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ public class FixedBackOff implements BackOff {
 	 * Return the interval between two attempts in milliseconds.
 	 */
 	public long getInterval() {
-		return this.interval;
+		return interval;
 	}
 
 	/**
@@ -83,7 +83,7 @@ public class FixedBackOff implements BackOff {
 	 * Return the maximum number of attempts in milliseconds.
 	 */
 	public long getMaxAttempts() {
-		return this.maxAttempts;
+		return maxAttempts;
 	}
 
 	@Override
@@ -109,12 +109,14 @@ public class FixedBackOff implements BackOff {
 
 		@Override
 		public String toString() {
+			final StringBuilder sb = new StringBuilder("FixedBackOff{");
+			sb.append("interval=").append(FixedBackOff.this.interval);
 			String attemptValue = (FixedBackOff.this.maxAttempts == Long.MAX_VALUE ?
 					"unlimited" : String.valueOf(FixedBackOff.this.maxAttempts));
-			return "FixedBackOff{interval=" + FixedBackOff.this.interval +
-					", currentAttempts=" + this.currentAttempts +
-					", maxAttempts=" + attemptValue +
-					'}';
+			sb.append(", currentAttempts=").append(this.currentAttempts);
+			sb.append(", maxAttempts=").append(attemptValue);
+			sb.append('}');
+			return sb.toString();
 		}
 	}
 

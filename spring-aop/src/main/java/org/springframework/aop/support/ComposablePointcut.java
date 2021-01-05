@@ -21,7 +21,6 @@ import java.io.Serializable;
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -43,7 +42,7 @@ import org.springframework.util.Assert;
  */
 public class ComposablePointcut implements Pointcut, Serializable {
 
-	/** use serialVersionUID from Spring 1.2 for interoperability. */
+	/** use serialVersionUID from Spring 1.2 for interoperability */
 	private static final long serialVersionUID = -2743223737633663832L;
 
 	private ClassFilter classFilter;
@@ -184,7 +183,7 @@ public class ComposablePointcut implements Pointcut, Serializable {
 	}
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -203,7 +202,7 @@ public class ComposablePointcut implements Pointcut, Serializable {
 
 	@Override
 	public String toString() {
-		return getClass().getName() + ": " + this.classFilter + ", " + this.methodMatcher;
+		return "ComposablePointcut: " + this.classFilter + ", " + this.methodMatcher;
 	}
 
 }

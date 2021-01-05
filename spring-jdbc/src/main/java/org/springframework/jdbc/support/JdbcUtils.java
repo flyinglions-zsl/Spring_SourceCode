@@ -16,7 +16,6 @@
 
 package org.springframework.jdbc.support;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.sql.Blob;
@@ -29,9 +28,6 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.sql.Types;
-import java.util.HashMap;
-import java.util.Map;
-
 import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
@@ -59,19 +55,6 @@ public abstract class JdbcUtils {
 	public static final int TYPE_UNKNOWN = Integer.MIN_VALUE;
 
 	private static final Log logger = LogFactory.getLog(JdbcUtils.class);
-
-	private static final Map<Integer, String> typeNames = new HashMap<>();
-
-	static {
-		try {
-			for (Field field : Types.class.getFields()) {
-				typeNames.put((Integer) field.get(null), field.getName());
-			}
-		}
-		catch (Exception ex) {
-			throw new IllegalStateException("Failed to resolve JDBC Types constants", ex);
-		}
-	}
 
 
 	/**
@@ -329,7 +312,7 @@ public abstract class JdbcUtils {
 	 * @throws MetaDataAccessException if meta-data access failed
 	 * @see java.sql.DatabaseMetaData
 	 */
-	public static <T> T extractDatabaseMetaData(DataSource dataSource, DatabaseMetaDataCallback<T> action)
+	public static Object extractDatabaseMetaData(DataSource dataSource, DatabaseMetaDataCallback action)
 			throws MetaDataAccessException {
 
 		Connection con = null;
@@ -383,11 +366,7 @@ public abstract class JdbcUtils {
 	 * @throws MetaDataAccessException if we couldn't access the DatabaseMetaData
 	 * or failed to invoke the specified method
 	 * @see java.sql.DatabaseMetaData
-	 * @deprecated as of 5.2.9, in favor of
-	 * {@link #extractDatabaseMetaData(DataSource, DatabaseMetaDataCallback)}
-	 * with a lambda expression or method reference and a generically typed result
 	 */
-	@Deprecated
 	@SuppressWarnings("unchecked")
 	public static <T> T extractDatabaseMetaData(DataSource dataSource, final String metaDataMethodName)
 			throws MetaDataAccessException {
@@ -457,9 +436,6 @@ public abstract class JdbcUtils {
 		if (source != null && source.startsWith("DB2")) {
 			name = "DB2";
 		}
-		else if ("MariaDB".equals(source)) {
-			name = "MySQL";
-		}
 		else if ("Sybase SQL Server".equals(source) ||
 				"Adaptive Server Enterprise".equals(source) ||
 				"ASE".equals(source) ||
@@ -479,18 +455,6 @@ public abstract class JdbcUtils {
 				Types.DOUBLE == sqlType || Types.FLOAT == sqlType || Types.INTEGER == sqlType ||
 				Types.NUMERIC == sqlType || Types.REAL == sqlType || Types.SMALLINT == sqlType ||
 				Types.TINYINT == sqlType);
-	}
-
-	/**
-	 * Resolve the standard type name for the given SQL type, if possible.
-	 * @param sqlType the SQL type to resolve
-	 * @return the corresponding constant name in {@link java.sql.Types}
-	 * (e.g. "VARCHAR"/"NUMERIC"), or {@code null} if not resolvable
-	 * @since 5.2
-	 */
-	@Nullable
-	public static String resolveTypeName(int sqlType) {
-		return typeNames.get(sqlType);
 	}
 
 	/**

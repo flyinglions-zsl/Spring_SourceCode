@@ -34,7 +34,7 @@ import static org.springframework.test.util.AssertionErrors.fail;
  * ModelAndView} objects.
  *
  * <p>Intended for use with JUnit 4 and TestNG. All {@code assert*()} methods
- * throw {@link AssertionError AssertionErrors}.
+ * throw {@link AssertionError}s.
  *
  * @author Sam Brannen
  * @author Alef Arendsen

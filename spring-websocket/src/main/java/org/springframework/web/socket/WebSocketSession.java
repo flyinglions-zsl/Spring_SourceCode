@@ -130,7 +130,7 @@ public interface WebSocketSession extends Closeable {
 	void sendMessage(WebSocketMessage<?> message) throws IOException;
 
 	/**
-	 * Whether the underlying connection is open.
+	 * Return whether the connection is still open.
 	 */
 	boolean isOpen();
 

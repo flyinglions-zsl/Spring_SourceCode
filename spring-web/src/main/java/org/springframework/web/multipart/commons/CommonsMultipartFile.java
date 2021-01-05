@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
@@ -29,8 +27,6 @@ import org.apache.commons.fileupload.disk.DiskFileItem;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.springframework.core.log.LogFormatUtils;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -109,7 +105,7 @@ public class CommonsMultipartFile implements MultipartFile, Serializable {
 		// Check for Windows-style path
 		int winSep = filename.lastIndexOf('\\');
 		// Cut off at latest possible point
-		int pos = Math.max(winSep, unixSep);
+		int pos = (winSep > unixSep ? winSep : unixSep);
 		if (pos != -1)  {
 			// Any sort of path separator found...
 			return filename.substring(pos + 1);
@@ -166,15 +162,15 @@ public class CommonsMultipartFile implements MultipartFile, Serializable {
 
 		try {
 			this.fileItem.write(dest);
-			LogFormatUtils.traceDebug(logger, traceOn -> {
+			if (logger.isDebugEnabled()) {
 				String action = "transferred";
 				if (!this.fileItem.isInMemory()) {
 					action = (isAvailable() ? "copied" : "moved");
 				}
-				return "Part '" + getName() + "',  filename '" + getOriginalFilename() + "'" +
-						(traceOn ? ", stored " + getStorageDescription() : "") +
-						": " + action + " to [" + dest.getAbsolutePath() + "]";
-			});
+				logger.debug("Multipart file '" + getName() + "' with original filename [" +
+						getOriginalFilename() + "], stored " + getStorageDescription() + ": " +
+						action + " to [" + dest.getAbsolutePath() + "]");
+			}
 		}
 		catch (FileUploadException ex) {
 			throw new IllegalStateException(ex.getMessage(), ex);
@@ -187,15 +183,6 @@ public class CommonsMultipartFile implements MultipartFile, Serializable {
 		catch (Exception ex) {
 			throw new IOException("File transfer failed", ex);
 		}
-	}
-
-	@Override
-	public void transferTo(Path dest) throws IOException, IllegalStateException {
-		if (!isAvailable()) {
-			throw new IllegalStateException("File has already been moved - cannot be transferred again");
-		}
-
-		FileCopyUtils.copy(this.fileItem.getInputStream(), Files.newOutputStream(dest));
 	}
 
 	/**
@@ -232,11 +219,4 @@ public class CommonsMultipartFile implements MultipartFile, Serializable {
 		}
 	}
 
-	@Override
-	public String toString() {
-		return "MultipartFile[field=\"" + this.fileItem.getFieldName() + "\"" +
-				(this.fileItem.getName() != null ? ", filename=" + this.fileItem.getName() : "" ) +
-				(this.fileItem.getContentType() != null ? ", contentType=" + this.fileItem.getContentType() : "") +
-				", size=" + this.fileItem.getSize() + "]";
-	}
 }

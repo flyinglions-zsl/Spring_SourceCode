@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ public class CustomizableTraceInterceptor extends AbstractTraceInterceptor {
 
 	/**
 	 * The {@code $[targetClassName]} placeholder.
-	 * Replaced with the fully-qualified name of the {@code Class}
+	 * Replaced with the fully-qualifed name of the {@code Class}
 	 * of the method invocation target.
 	 */
 	public static final String PLACEHOLDER_TARGET_CLASS_NAME = "$[targetClassName]";
@@ -147,7 +147,7 @@ public class CustomizableTraceInterceptor extends AbstractTraceInterceptor {
 	/**
 	 * The {@code Pattern} used to match placeholders.
 	 */
-	private static final Pattern PATTERN = Pattern.compile("\\$\\[\\p{Alpha}+]");
+	private static final Pattern PATTERN = Pattern.compile("\\$\\[\\p{Alpha}+\\]");
 
 	/**
 	 * The {@code Set} of allowed placeholders.
@@ -296,8 +296,6 @@ public class CustomizableTraceInterceptor extends AbstractTraceInterceptor {
 			@Nullable Object returnValue, @Nullable Throwable throwable, long invocationTime) {
 
 		Matcher matcher = PATTERN.matcher(message);
-		Object target = methodInvocation.getThis();
-		Assert.state(target != null, "Target must not be null");
 
 		StringBuffer output = new StringBuffer();
 		while (matcher.find()) {
@@ -306,11 +304,11 @@ public class CustomizableTraceInterceptor extends AbstractTraceInterceptor {
 				matcher.appendReplacement(output, Matcher.quoteReplacement(methodInvocation.getMethod().getName()));
 			}
 			else if (PLACEHOLDER_TARGET_CLASS_NAME.equals(match)) {
-				String className = getClassForLogging(target).getName();
+				String className = getClassForLogging(methodInvocation.getThis()).getName();
 				matcher.appendReplacement(output, Matcher.quoteReplacement(className));
 			}
 			else if (PLACEHOLDER_TARGET_CLASS_SHORT_NAME.equals(match)) {
-				String shortName = ClassUtils.getShortName(getClassForLogging(target));
+				String shortName = ClassUtils.getShortName(getClassForLogging(methodInvocation.getThis()));
 				matcher.appendReplacement(output, Matcher.quoteReplacement(shortName));
 			}
 			else if (PLACEHOLDER_ARGUMENTS.equals(match)) {

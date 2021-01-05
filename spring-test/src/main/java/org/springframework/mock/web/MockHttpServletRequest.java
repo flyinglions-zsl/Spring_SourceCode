@@ -42,7 +42,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
-
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
@@ -181,12 +180,6 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	@Nullable
 	private String contentType;
 
-	@Nullable
-	private ServletInputStream inputStream;
-
-	@Nullable
-	private BufferedReader reader;
-
 	private final Map<String, String[]> parameters = new LinkedHashMap<>(16);
 
 	private String protocol = DEFAULT_PROTOCOL;
@@ -201,8 +194,8 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	private String remoteHost = DEFAULT_REMOTE_HOST;
 
-	/** List of locales in descending order. */
-	private final LinkedList<Locale> locales = new LinkedList<>();
+	/** List of locales in descending order */
+	private final List<Locale> locales = new LinkedList<>();
 
 	private boolean secure = false;
 
@@ -406,11 +399,12 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	private void updateContentTypeHeader() {
 		if (StringUtils.hasLength(this.contentType)) {
-			String value = this.contentType;
-			if (StringUtils.hasLength(this.characterEncoding) && !this.contentType.toLowerCase().contains(CHARSET_PREFIX)) {
-				value += ';' + CHARSET_PREFIX + this.characterEncoding;
+			StringBuilder sb = new StringBuilder(this.contentType);
+			if (!this.contentType.toLowerCase().contains(CHARSET_PREFIX) &&
+					StringUtils.hasLength(this.characterEncoding)) {
+				sb.append(";").append(CHARSET_PREFIX).append(this.characterEncoding);
 			}
-			doAddHeaderValue(HttpHeaders.CONTENT_TYPE, value, true);
+			doAddHeaderValue(HttpHeaders.CONTENT_TYPE, sb.toString(), true);
 		}
 	}
 
@@ -425,8 +419,6 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	 */
 	public void setContent(@Nullable byte[] content) {
 		this.content = content;
-		this.inputStream = null;
-		this.reader = null;
 	}
 
 	/**
@@ -502,18 +494,12 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public ServletInputStream getInputStream() {
-		if (this.inputStream != null) {
-			return this.inputStream;
+		if (this.content != null) {
+			return new DelegatingServletInputStream(new ByteArrayInputStream(this.content));
 		}
-		else if (this.reader != null) {
-			throw new IllegalStateException(
-					"Cannot call getInputStream() after getReader() has already been called for the current request")			;
+		else {
+			return EMPTY_SERVLET_INPUT_STREAM;
 		}
-
-		this.inputStream = (this.content != null ?
-				new DelegatingServletInputStream(new ByteArrayInputStream(this.content)) :
-				EMPTY_SERVLET_INPUT_STREAM);
-		return this.inputStream;
 	}
 
 	/**
@@ -717,25 +703,16 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public BufferedReader getReader() throws UnsupportedEncodingException {
-		if (this.reader != null) {
-			return this.reader;
-		}
-		else if (this.inputStream != null) {
-			throw new IllegalStateException(
-					"Cannot call getReader() after getInputStream() has already been called for the current request")			;
-		}
-
 		if (this.content != null) {
 			InputStream sourceStream = new ByteArrayInputStream(this.content);
 			Reader sourceReader = (this.characterEncoding != null) ?
 					new InputStreamReader(sourceStream, this.characterEncoding) :
 					new InputStreamReader(sourceStream);
-			this.reader = new BufferedReader(sourceReader);
+			return new BufferedReader(sourceReader);
 		}
 		else {
-			this.reader = EMPTY_BUFFERED_READER;
+			return EMPTY_BUFFERED_READER;
 		}
-		return this.reader;
 	}
 
 	public void setRemoteAddr(String remoteAddr) {
@@ -788,7 +765,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	 */
 	public void addPreferredLocale(Locale locale) {
 		Assert.notNull(locale, "Locale must not be null");
-		this.locales.addFirst(locale);
+		this.locales.add(0, locale);
 		updateAcceptLanguageHeader();
 	}
 
@@ -826,7 +803,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	 */
 	@Override
 	public Locale getLocale() {
-		return this.locales.getFirst();
+		return this.locales.get(0);
 	}
 
 	/**
@@ -1030,9 +1007,6 @@ public class MockHttpServletRequest implements HttpServletRequest {
 				List<Locale> locales = headers.getAcceptLanguageAsLocales();
 				this.locales.clear();
 				this.locales.addAll(locales);
-				if (this.locales.isEmpty()) {
-					this.locales.add(Locale.ENGLISH);
-				}
 			}
 			catch (IllegalArgumentException ex) {
 				// Invalid Accept-Language format -> just store plain header
@@ -1045,7 +1019,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	}
 
 	private void doAddHeaderValue(String name, @Nullable Object value, boolean replace) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		Assert.notNull(value, "Header value must not be null");
 		if (header == null || replace) {
 			header = new HeaderValueHolder();
@@ -1085,7 +1059,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	 */
 	@Override
 	public long getDateHeader(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		Object value = (header != null ? header.getValue() : null);
 		if (value instanceof Date) {
 			return ((Date) value).getTime();
@@ -1122,13 +1096,13 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	@Override
 	@Nullable
 	public String getHeader(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		return (header != null ? header.getStringValue() : null);
 	}
 
 	@Override
 	public Enumeration<String> getHeaders(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		return Collections.enumeration(header != null ? header.getStringValues() : new LinkedList<>());
 	}
 
@@ -1139,7 +1113,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public int getIntHeader(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		Object value = (header != null ? header.getValue() : null);
 		if (value instanceof Number) {
 			return ((Number) value).intValue();

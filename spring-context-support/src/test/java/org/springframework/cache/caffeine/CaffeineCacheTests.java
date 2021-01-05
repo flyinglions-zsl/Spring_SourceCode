@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,19 @@
 package org.springframework.cache.caffeine;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
+import org.springframework.cache.AbstractValueAdaptingCacheTests;
 import org.springframework.cache.Cache;
-import org.springframework.cache.Cache.ValueWrapper;
-import org.springframework.context.testfixture.cache.AbstractValueAdaptingCacheTests;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.junit.Assert.*;
 
 /**
- * Tests for {@link CaffeineCache}.
- *
  * @author Ben Manes
  * @author Stephane Nicoll
  */
-class CaffeineCacheTests extends AbstractValueAdaptingCacheTests<CaffeineCache> {
+public class CaffeineCacheTests extends AbstractValueAdaptingCacheTests<CaffeineCache> {
 
 	private com.github.benmanes.caffeine.cache.Cache<Object, Object> nativeCache;
 
@@ -41,13 +37,13 @@ class CaffeineCacheTests extends AbstractValueAdaptingCacheTests<CaffeineCache> 
 
 	private CaffeineCache cacheNoNull;
 
-	@BeforeEach
-	void setUp() {
+	@Before
+	public void setUp() {
 		nativeCache = Caffeine.newBuilder().build();
 		cache = new CaffeineCache(CACHE_NAME, nativeCache);
 		com.github.benmanes.caffeine.cache.Cache<Object, Object> nativeCacheNoNull
 				= Caffeine.newBuilder().build();
-		cacheNoNull = new CaffeineCache(CACHE_NAME_NO_NULL, nativeCacheNoNull, false);
+		cacheNoNull =  new CaffeineCache(CACHE_NAME_NO_NULL, nativeCacheNoNull, false);
 	}
 
 	@Override
@@ -66,49 +62,19 @@ class CaffeineCacheTests extends AbstractValueAdaptingCacheTests<CaffeineCache> 
 	}
 
 	@Test
-	void testLoadingCacheGet() {
-		Object value = new Object();
-		CaffeineCache loadingCache = new CaffeineCache(CACHE_NAME, Caffeine.newBuilder()
-				.build(key -> value));
-		ValueWrapper valueWrapper = loadingCache.get(new Object());
-		assertThat(valueWrapper).isNotNull();
-		assertThat(valueWrapper.get()).isEqualTo(value);
-	}
-
-	@Test
-	void testLoadingCacheGetWithType() {
-		String value = "value";
-		CaffeineCache loadingCache = new CaffeineCache(CACHE_NAME, Caffeine.newBuilder()
-				.build(key -> value));
-		String valueWrapper = loadingCache.get(new Object(), String.class);
-		assertThat(valueWrapper).isNotNull();
-		assertThat(valueWrapper).isEqualTo(value);
-	}
-
-	@Test
-	void testLoadingCacheGetWithWrongType() {
-		String value = "value";
-		CaffeineCache loadingCache = new CaffeineCache(CACHE_NAME, Caffeine.newBuilder()
-				.build(key -> value));
-		assertThatIllegalStateException().isThrownBy(() -> loadingCache.get(new Object(), Long.class));
-	}
-
-	@Test
-	void testPutIfAbsentNullValue() {
+	public void testPutIfAbsentNullValue() throws Exception {
 		CaffeineCache cache = getCache();
 
 		Object key = new Object();
 		Object value = null;
 
-		assertThat(cache.get(key)).isNull();
-		assertThat(cache.putIfAbsent(key, value)).isNull();
-		assertThat(cache.get(key).get()).isEqualTo(value);
+		assertNull(cache.get(key));
+		assertNull(cache.putIfAbsent(key, value));
+		assertEquals(value, cache.get(key).get());
 		Cache.ValueWrapper wrapper = cache.putIfAbsent(key, "anotherValue");
-		// A value is set but is 'null'
-		assertThat(wrapper).isNotNull();
-		assertThat(wrapper.get()).isEqualTo(null);
-		// not changed
-		assertThat(cache.get(key).get()).isEqualTo(value);
+		assertNotNull(wrapper); // A value is set but is 'null'
+		assertEquals(null, wrapper.get());
+		assertEquals(value, cache.get(key).get()); // not changed
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,19 @@
 
 package org.springframework.beans.factory.config;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.junit.Assert.*;
+import static org.springframework.tests.TestResourceUtils.*;
 
 /**
  * Simple test to illustrate and verify scope usage.
@@ -42,12 +42,12 @@ public class SimpleScopeTests {
 	private DefaultListableBeanFactory beanFactory;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		beanFactory = new DefaultListableBeanFactory();
 		Scope scope = new NoOpScope() {
 			private int index;
-			private List<TestBean> objects = new ArrayList<>(); {
+			private List<TestBean> objects = new LinkedList<>(); {
 				objects.add(new TestBean());
 				objects.add(new TestBean());
 			}
@@ -63,9 +63,9 @@ public class SimpleScopeTests {
 		beanFactory.registerScope("myScope", scope);
 
 		String[] scopeNames = beanFactory.getRegisteredScopeNames();
-		assertThat(scopeNames.length).isEqualTo(1);
-		assertThat(scopeNames[0]).isEqualTo("myScope");
-		assertThat(beanFactory.getRegisteredScope("myScope")).isSameAs(scope);
+		assertEquals(1, scopeNames.length);
+		assertEquals("myScope", scopeNames[0]);
+		assertSame(scope, beanFactory.getRegisteredScope("myScope"));
 
 		new XmlBeanDefinitionReader(beanFactory).loadBeanDefinitions(
 				qualifiedResource(SimpleScopeTests.class, "context.xml"));
@@ -76,9 +76,9 @@ public class SimpleScopeTests {
 	public void testCanGetScopedObject() {
 		TestBean tb1 = (TestBean) beanFactory.getBean("usesScope");
 		TestBean tb2 = (TestBean) beanFactory.getBean("usesScope");
-		assertThat(tb2).isNotSameAs(tb1);
+		assertNotSame(tb1, tb2);
 		TestBean tb3 = (TestBean) beanFactory.getBean("usesScope");
-		assertThat(tb1).isSameAs(tb3);
+		assertSame(tb3, tb1);
 	}
 
 }

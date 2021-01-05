@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.lang.Nullable;
@@ -56,28 +55,25 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 * if 0, the condition will match to every request
 	 */
 	public HeadersRequestCondition(String... headers) {
-		this.expressions = parseExpressions(headers);
+		this(parseExpressions(headers));
 	}
 
-	private static Set<HeaderExpression> parseExpressions(String... headers) {
-		Set<HeaderExpression> result = null;
-		if (!ObjectUtils.isEmpty(headers)) {
-			for (String header : headers) {
-				HeaderExpression expr = new HeaderExpression(header);
-				if ("Accept".equalsIgnoreCase(expr.name) || "Content-Type".equalsIgnoreCase(expr.name)) {
-					continue;
-				}
-				result = (result != null ? result : new LinkedHashSet<>(headers.length));
-				result.add(expr);
+	private HeadersRequestCondition(Collection<HeaderExpression> conditions) {
+		this.expressions = Collections.unmodifiableSet(new LinkedHashSet<>(conditions));
+	}
+
+
+	private static Collection<HeaderExpression> parseExpressions(String... headers) {
+		Set<HeaderExpression> expressions = new LinkedHashSet<>();
+		for (String header : headers) {
+			HeaderExpression expr = new HeaderExpression(header);
+			if ("Accept".equalsIgnoreCase(expr.name) || "Content-Type".equalsIgnoreCase(expr.name)) {
+				continue;
 			}
+			expressions.add(expr);
 		}
-		return (result != null ? result : Collections.emptySet());
+		return expressions;
 	}
-
-	private HeadersRequestCondition(Set<HeaderExpression> conditions) {
-		this.expressions = conditions;
-	}
-
 
 	/**
 	 * Return the contained request header expressions.
@@ -102,15 +98,6 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 */
 	@Override
 	public HeadersRequestCondition combine(HeadersRequestCondition other) {
-		if (isEmpty() && other.isEmpty()) {
-			return this;
-		}
-		else if (other.isEmpty()) {
-			return this;
-		}
-		else if (isEmpty()) {
-			return other;
-		}
 		Set<HeaderExpression> set = new LinkedHashSet<>(this.expressions);
 		set.addAll(other.expressions);
 		return new HeadersRequestCondition(set);
@@ -126,7 +113,7 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 		if (CorsUtils.isPreFlightRequest(request)) {
 			return PRE_FLIGHT_MATCH;
 		}
-		for (HeaderExpression expression : this.expressions) {
+		for (HeaderExpression expression : expressions) {
 			if (!expression.match(request)) {
 				return null;
 			}
@@ -135,33 +122,19 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	}
 
 	/**
-	 * Compare to another condition based on header expressions. A condition
-	 * is considered to be a more specific match, if it has:
-	 * <ol>
-	 * <li>A greater number of expressions.
-	 * <li>A greater number of non-negated expressions with a concrete value.
-	 * </ol>
+	 * Returns:
+	 * <ul>
+	 * <li>0 if the two conditions have the same number of header expressions
+	 * <li>Less than 0 if "this" instance has more header expressions
+	 * <li>Greater than 0 if the "other" instance has more header expressions
+	 * </ul>
 	 * <p>It is assumed that both instances have been obtained via
 	 * {@link #getMatchingCondition(HttpServletRequest)} and each instance
 	 * contains the matching header expression only or is otherwise empty.
 	 */
 	@Override
 	public int compareTo(HeadersRequestCondition other, HttpServletRequest request) {
-		int result = other.expressions.size() - this.expressions.size();
-		if (result != 0) {
-			return result;
-		}
-		return (int) (getValueMatchCount(other.expressions) - getValueMatchCount(this.expressions));
-	}
-
-	private long getValueMatchCount(Set<HeaderExpression> expressions) {
-		long count = 0;
-		for (HeaderExpression e : expressions) {
-			if (e.getValue() != null && !e.isNegated()) {
-				count++;
-			}
-		}
-		return count;
+		return other.expressions.size() - this.expressions.size();
 	}
 
 
@@ -170,7 +143,7 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 */
 	static class HeaderExpression extends AbstractNameValueExpression<String> {
 
-		HeaderExpression(String expression) {
+		public HeaderExpression(String expression) {
 			super(expression);
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,9 @@
 
 package org.springframework.jms.listener;
 
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
-
 import javax.jms.Connection;
 import javax.jms.JMSException;
 
@@ -67,7 +66,7 @@ public abstract class AbstractJmsListeningContainer extends JmsDestinationAccess
 
 	private boolean autoStartup = true;
 
-	private int phase = DEFAULT_PHASE;
+	private int phase = Integer.MAX_VALUE;
 
 	@Nullable
 	private String beanName;
@@ -81,9 +80,9 @@ public abstract class AbstractJmsListeningContainer extends JmsDestinationAccess
 
 	private boolean active = false;
 
-	private volatile boolean running;
+	private volatile boolean running = false;
 
-	private final List<Object> pausedTasks = new ArrayList<>();
+	private final List<Object> pausedTasks = new LinkedList<>();
 
 	protected final Object lifecycleMonitor = new Object();
 
@@ -318,6 +317,12 @@ public abstract class AbstractJmsListeningContainer extends JmsDestinationAccess
 		catch (JMSException ex) {
 			throw convertJmsAccessException(ex);
 		}
+	}
+
+	@Override
+	public void stop(Runnable callback) {
+		stop();
+		callback.run();
 	}
 
 	/**

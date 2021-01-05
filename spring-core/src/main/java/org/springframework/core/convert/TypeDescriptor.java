@@ -113,18 +113,17 @@ public class TypeDescriptor implements Serializable {
 	}
 
 	/**
-	 * Create a new type descriptor from a {@link ResolvableType}.
-	 * <p>This constructor is used internally and may also be used by subclasses
-	 * that support non-Java languages with extended type systems. It is public
-	 * as of 5.1.4 whereas it was protected before.
+	 * Create a new type descriptor from a {@link ResolvableType}. This protected
+	 * constructor is used internally and may also be used by subclasses that support
+	 * non-Java languages with extended type systems.
 	 * @param resolvableType the resolvable type
 	 * @param type the backing type (or {@code null} if it should get resolved)
 	 * @param annotations the type annotations
 	 * @since 4.0
 	 */
-	public TypeDescriptor(ResolvableType resolvableType, @Nullable Class<?> type, @Nullable Annotation[] annotations) {
+	protected TypeDescriptor(ResolvableType resolvableType, @Nullable Class<?> type, @Nullable Annotation[] annotations) {
 		this.resolvableType = resolvableType;
-		this.type = (type != null ? type : resolvableType.toClass());
+		this.type = (type != null ? type : resolvableType.resolve(Object.class));
 		this.annotatedElement = new AnnotatedElementAdapter(annotations);
 	}
 
@@ -454,7 +453,7 @@ public class TypeDescriptor implements Serializable {
 	}
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -767,7 +766,7 @@ public class TypeDescriptor implements Serializable {
 
 		@Override
 		public Annotation[] getAnnotations() {
-			return (this.annotations != null ? this.annotations.clone() : EMPTY_ANNOTATION_ARRAY);
+			return (this.annotations != null ? this.annotations : EMPTY_ANNOTATION_ARRAY);
 		}
 
 		@Override
@@ -780,7 +779,7 @@ public class TypeDescriptor implements Serializable {
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
+		public boolean equals(Object other) {
 			return (this == other || (other instanceof AnnotatedElementAdapter &&
 					Arrays.equals(this.annotations, ((AnnotatedElementAdapter) other).annotations)));
 		}

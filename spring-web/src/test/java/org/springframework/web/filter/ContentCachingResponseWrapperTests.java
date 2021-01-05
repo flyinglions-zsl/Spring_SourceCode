@@ -19,14 +19,17 @@ import java.nio.charset.StandardCharsets;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link ContentCachingResponseWrapper}.
@@ -35,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ContentCachingResponseWrapperTests {
 
 	@Test
-	void copyBodyToResponse() throws Exception {
+	public void copyBodyToResponse() throws Exception {
 		byte[] responseBody = "Hello World".getBytes(StandardCharsets.UTF_8);
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -44,13 +47,13 @@ public class ContentCachingResponseWrapperTests {
 		FileCopyUtils.copy(responseBody, responseWrapper.getOutputStream());
 		responseWrapper.copyBodyToResponse();
 
-		assertThat(response.getStatus()).isEqualTo(200);
-		assertThat(response.getContentLength() > 0).isTrue();
-		assertThat(response.getContentAsByteArray()).isEqualTo(responseBody);
+		assertEquals(200, response.getStatus());
+		assertTrue(response.getContentLength() > 0);
+		assertArrayEquals(responseBody, response.getContentAsByteArray());
 	}
 
 	@Test
-	void copyBodyToResponseWithTransferEncoding() throws Exception {
+	public void copyBodyToResponseWithTransferEncoding() throws Exception {
 		byte[] responseBody = "6\r\nHello 5\r\nWorld0\r\n\r\n".getBytes(StandardCharsets.UTF_8);
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -60,10 +63,10 @@ public class ContentCachingResponseWrapperTests {
 		FileCopyUtils.copy(responseBody, responseWrapper.getOutputStream());
 		responseWrapper.copyBodyToResponse();
 
-		assertThat(response.getStatus()).isEqualTo(200);
-		assertThat(response.getHeader(HttpHeaders.TRANSFER_ENCODING)).isEqualTo("chunked");
-		assertThat(response.getHeader(HttpHeaders.CONTENT_LENGTH)).isNull();
-		assertThat(response.getContentAsByteArray()).isEqualTo(responseBody);
+		assertEquals(200, response.getStatus());
+		assertEquals("chunked", response.getHeader(HttpHeaders.TRANSFER_ENCODING));
+		assertNull(response.getHeader(HttpHeaders.CONTENT_LENGTH));
+		assertArrayEquals(responseBody, response.getContentAsByteArray());
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import org.springframework.lang.Nullable;
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @see org.springframework.web.servlet.view.InternalResourceViewResolver
- * @see org.springframework.web.servlet.view.ContentNegotiatingViewResolver
- * @see org.springframework.web.servlet.view.BeanNameViewResolver
+ * @see org.springframework.web.servlet.view.ResourceBundleViewResolver
+ * @see org.springframework.web.servlet.view.XmlViewResolver
  */
 public interface ViewResolver {
 
@@ -45,7 +45,7 @@ public interface ViewResolver {
 	 * to build View objects with the given name, unable to return {@code null}
 	 * (rather throwing an exception when View creation failed).
 	 * @param viewName name of the view to resolve
-	 * @param locale the Locale in which to resolve the view.
+	 * @param locale Locale in which to resolve the view.
 	 * ViewResolvers that support internationalization should respect this.
 	 * @return the View object, or {@code null} if not found
 	 * (optional, to allow for ViewResolver chaining)

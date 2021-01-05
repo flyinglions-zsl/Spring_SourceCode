@@ -18,7 +18,6 @@ package org.springframework.beans.support;
 
 import java.io.Serializable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 /**
@@ -155,7 +154,7 @@ public class MutableSortDefinition implements SortDefinition, Serializable {
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

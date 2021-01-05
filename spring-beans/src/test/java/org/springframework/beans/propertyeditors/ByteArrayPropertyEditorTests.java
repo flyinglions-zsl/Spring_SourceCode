@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package org.springframework.beans.propertyeditors;
 
 import java.beans.PropertyEditor;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for the {@link ByteArrayPropertyEditor} class.
@@ -37,20 +37,21 @@ public class ByteArrayPropertyEditorTests {
 		byteEditor.setAsText(text);
 
 		Object value = byteEditor.getValue();
-		assertThat(value).isNotNull().isInstanceOf(byte[].class);
+		assertNotNull(value);
+		assertTrue(value instanceof byte[]);
 		byte[] bytes = (byte[]) value;
 		for (int i = 0; i < text.length(); ++i) {
-			assertThat(bytes[i]).as("cyte[] differs at index '" + i + "'").isEqualTo((byte) text.charAt(i));
+			assertEquals("cyte[] differs at index '" + i + "'", text.charAt(i), bytes[i]);
 		}
-		assertThat(byteEditor.getAsText()).isEqualTo(text);
+		assertEquals(text, byteEditor.getAsText());
 	}
 
 	@Test
 	public void getAsTextReturnsEmptyStringIfValueIsNull() throws Exception {
-		assertThat(byteEditor.getAsText()).isEqualTo("");
+		assertEquals("", byteEditor.getAsText());
 
 		byteEditor.setAsText(null);
-		assertThat(byteEditor.getAsText()).isEqualTo("");
+		assertEquals("", byteEditor.getAsText());
 	}
 
 }

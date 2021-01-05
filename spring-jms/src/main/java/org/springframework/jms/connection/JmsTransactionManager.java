@@ -96,8 +96,6 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	@Nullable
 	private ConnectionFactory connectionFactory;
 
-	private boolean lazyResourceRetrieval = false;
-
 
 	/**
 	 * Create a new JmsTransactionManager for bean-style usage.
@@ -162,19 +160,6 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	}
 
 	/**
-	 * Specify whether this transaction manager should lazily retrieve a JMS
-	 * Connection and Session on access within a transaction ({@code true}).
-	 * By default, it will eagerly create a JMS Connection and Session at
-	 * transaction begin ({@code false}).
-	 * @since 5.1.6
-	 * @see JmsResourceHolder#getConnection()
-	 * @see JmsResourceHolder#getSession()
-	 */
-	public void setLazyResourceRetrieval(boolean lazyResourceRetrieval) {
-		this.lazyResourceRetrieval = lazyResourceRetrieval;
-	}
-
-	/**
 	 * Make sure the ConnectionFactory has been set.
 	 */
 	@Override
@@ -215,18 +200,12 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 		Connection con = null;
 		Session session = null;
 		try {
-			JmsResourceHolder resourceHolder;
-			if (this.lazyResourceRetrieval) {
-				resourceHolder = new LazyJmsResourceHolder(connectionFactory);
+			con = createConnection();
+			session = createSession(con);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Created JMS transaction on Session [" + session + "] from Connection [" + con + "]");
 			}
-			else {
-				con = createConnection();
-				session = createSession(con);
-				if (logger.isDebugEnabled()) {
-					logger.debug("Created JMS transaction on Session [" + session + "] from Connection [" + con + "]");
-				}
-				resourceHolder = new JmsResourceHolder(connectionFactory, con, session);
-			}
+			JmsResourceHolder resourceHolder = new JmsResourceHolder(connectionFactory, con, session);
 			resourceHolder.setSynchronizedWithTransaction(true);
 			int timeout = determineTimeout(definition);
 			if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
@@ -271,7 +250,7 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	@Override
 	protected void doCommit(DefaultTransactionStatus status) {
 		JmsTransactionObject txObject = (JmsTransactionObject) status.getTransaction();
-		Session session = txObject.getResourceHolder().getOriginalSession();
+		Session session = txObject.getResourceHolder().getSession();
 		if (session != null) {
 			try {
 				if (status.isDebug()) {
@@ -291,7 +270,7 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	@Override
 	protected void doRollback(DefaultTransactionStatus status) {
 		JmsTransactionObject txObject = (JmsTransactionObject) status.getTransaction();
-		Session session = txObject.getResourceHolder().getOriginalSession();
+		Session session = txObject.getResourceHolder().getSession();
 		if (session != null) {
 			try {
 				if (status.isDebug()) {
@@ -339,85 +318,6 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	 */
 	protected Session createSession(Connection con) throws JMSException {
 		return con.createSession(true, Session.AUTO_ACKNOWLEDGE);
-	}
-
-
-	/**
-	 * Lazily initializing variant of {@link JmsResourceHolder},
-	 * initializing a JMS Connection and Session on user access.
-	 */
-	private class LazyJmsResourceHolder extends JmsResourceHolder {
-
-		private boolean connectionInitialized = false;
-
-		private boolean sessionInitialized = false;
-
-		public LazyJmsResourceHolder(@Nullable ConnectionFactory connectionFactory) {
-			super(connectionFactory);
-		}
-
-		@Override
-		@Nullable
-		public Connection getConnection() {
-			initializeConnection();
-			return super.getConnection();
-		}
-
-		@Override
-		@Nullable
-		public <C extends Connection> C getConnection(Class<C> connectionType) {
-			initializeConnection();
-			return super.getConnection(connectionType);
-		}
-
-		@Override
-		@Nullable
-		public Session getSession() {
-			initializeSession();
-			return super.getSession();
-		}
-
-		@Override
-		@Nullable
-		public <S extends Session> S getSession(Class<S> sessionType) {
-			initializeSession();
-			return super.getSession(sessionType);
-		}
-
-		@Override
-		@Nullable
-		public <S extends Session> S getSession(Class<S> sessionType, @Nullable Connection connection) {
-			initializeSession();
-			return super.getSession(sessionType, connection);
-		}
-
-		private void initializeConnection() {
-			if (!this.connectionInitialized) {
-				try {
-					addConnection(createConnection());
-				}
-				catch (JMSException ex) {
-					throw new CannotCreateTransactionException(
-							"Failed to lazily initialize JMS Connection for transaction", ex);
-				}
-				this.connectionInitialized = true;
-			}
-		}
-
-		private void initializeSession() {
-			if (!this.sessionInitialized) {
-				Connection con = getConnection();
-				Assert.state(con != null, "No transactional JMS Connection");
-				try {
-					addSession(createSession(con), con);
-				}
-				catch (JMSException ex) {
-					throw new CannotCreateTransactionException(
-							"Failed to lazily initialize JMS Session for transaction", ex);
-				}
-				this.sessionInitialized = true;
-			}
-		}
 	}
 
 

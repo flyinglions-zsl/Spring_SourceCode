@@ -53,7 +53,7 @@ import org.springframework.web.util.UriUtils;
  */
 public class RedirectView extends AbstractUrlBasedView {
 
-	private static final Pattern URI_TEMPLATE_VARIABLE_PATTERN = Pattern.compile("\\{([^/]+?)}");
+	private static final Pattern URI_TEMPLATE_VARIABLE_PATTERN = Pattern.compile("\\{([^/]+?)\\}");
 
 
 	private HttpStatus statusCode = HttpStatus.SEE_OTHER;
@@ -220,9 +220,10 @@ public class RedirectView extends AbstractUrlBasedView {
 		return (processor != null ? processor.processUrl(exchange, result) : result);
 	}
 
+	@SuppressWarnings("unchecked")
 	private Map<String, String> getCurrentUriVariables(ServerWebExchange exchange) {
 		String name = HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE;
-		return exchange.getAttributeOrDefault(name, Collections.emptyMap());
+		return exchange.getAttributeOrDefault(name, Collections.<String, String>emptyMap());
 	}
 
 	/**
@@ -249,7 +250,7 @@ public class RedirectView extends AbstractUrlBasedView {
 			endLastMatch = matcher.end();
 			found = matcher.find();
 		}
-		result.append(targetUrl, endLastMatch, targetUrl.length());
+		result.append(targetUrl.substring(endLastMatch));
 		return result;
 	}
 

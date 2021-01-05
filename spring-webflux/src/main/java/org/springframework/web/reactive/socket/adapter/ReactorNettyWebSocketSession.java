@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,16 @@
  */
 package org.springframework.web.reactive.socket.adapter;
 
-import java.util.function.Consumer;
-
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.Connection;
-import reactor.netty.NettyInbound;
-import reactor.netty.NettyOutbound;
-import reactor.netty.http.websocket.WebsocketInbound;
-import reactor.netty.http.websocket.WebsocketOutbound;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.web.reactive.socket.CloseStatus;
@@ -44,76 +43,36 @@ import org.springframework.web.reactive.socket.WebSocketSession;
 public class ReactorNettyWebSocketSession
 		extends NettyWebSocketSessionSupport<ReactorNettyWebSocketSession.WebSocketConnection> {
 
-	private final int maxFramePayloadLength;
 
-
-	/**
-	 * Constructor for the session, using the {@link #DEFAULT_FRAME_MAX_SIZE} value.
-	 */
 	public ReactorNettyWebSocketSession(WebsocketInbound inbound, WebsocketOutbound outbound,
 			HandshakeInfo info, NettyDataBufferFactory bufferFactory) {
 
-		this(inbound, outbound, info, bufferFactory, DEFAULT_FRAME_MAX_SIZE);
-	}
-
-	/**
-	 * Constructor with an additional maxFramePayloadLength argument.
-	 * @since 5.1
-	 */
-	public ReactorNettyWebSocketSession(WebsocketInbound inbound, WebsocketOutbound outbound,
-			HandshakeInfo info, NettyDataBufferFactory bufferFactory,
-			int maxFramePayloadLength) {
-
 		super(new WebSocketConnection(inbound, outbound), info, bufferFactory);
-		this.maxFramePayloadLength = maxFramePayloadLength;
 	}
 
 
 	@Override
 	public Flux<WebSocketMessage> receive() {
 		return getDelegate().getInbound()
-				.aggregateFrames(this.maxFramePayloadLength)
+				.aggregateFrames(DEFAULT_FRAME_MAX_SIZE)
 				.receiveFrames()
-				.map(super::toMessage)
-				.doOnNext(message -> {
-					if (logger.isTraceEnabled()) {
-						logger.trace(getLogPrefix() + "Received " + message);
-					}
-				});
+				.map(super::toMessage);
 	}
 
 	@Override
 	public Mono<Void> send(Publisher<WebSocketMessage> messages) {
-		Flux<WebSocketFrame> frames = Flux.from(messages)
-				.doOnNext(message -> {
-					if (logger.isTraceEnabled()) {
-						logger.trace(getLogPrefix() + "Sending " + message);
-					}
-				})
-				.map(this::toFrame);
+		Flux<WebSocketFrame> frames = Flux.from(messages).map(this::toFrame);
 		return getDelegate().getOutbound()
+				.options(NettyPipeline.SendOptions::flushOnEach)
 				.sendObject(frames)
 				.then();
 	}
 
 	@Override
-	public boolean isOpen() {
-		DisposedCallback callback = new DisposedCallback();
-		getDelegate().getInbound().withConnection(callback);
-		return callback.isDisposed();
-	}
-
-	@Override
 	public Mono<Void> close(CloseStatus status) {
-		// this will notify WebSocketInbound.receiveCloseStatus()
 		return getDelegate().getOutbound().sendClose(status.getCode(), status.getReason());
 	}
 
-	@Override
-	public Mono<CloseStatus> closeStatus() {
-		return getDelegate().getInbound().receiveCloseStatus()
-				.map(status -> CloseStatus.create(status.code(), status.reasonText()));
-	}
 
 	/**
 	 * Simple container for {@link NettyInbound} and {@link NettyOutbound}.
@@ -136,21 +95,6 @@ public class ReactorNettyWebSocketSession
 
 		public WebsocketOutbound getOutbound() {
 			return this.outbound;
-		}
-	}
-
-
-	private static class DisposedCallback implements Consumer<Connection> {
-
-		private boolean disposed;
-
-		public boolean isDisposed() {
-			return this.disposed;
-		}
-
-		@Override
-		public void accept(Connection connection) {
-			this.disposed = connection.isDisposed();
 		}
 	}
 

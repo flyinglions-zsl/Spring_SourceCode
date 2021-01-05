@@ -17,7 +17,6 @@
 package org.springframework.web.servlet.resource;
 
 import java.util.List;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.webjars.WebJarAssetLocator;
@@ -106,7 +105,7 @@ public class WebJarsResourceResolver extends AbstractResourceResolver {
 		if (endOffset != -1) {
 			String webjar = path.substring(startOffset, endOffset);
 			String partialPath = path.substring(endOffset + 1);
-			String webJarPath = this.webJarAssetLocator.getFullPathExact(webjar, partialPath);
+			String webJarPath = webJarAssetLocator.getFullPathExact(webjar, partialPath);
 			if (webJarPath != null) {
 				return webJarPath.substring(WEBJARS_LOCATION_LENGTH);
 			}

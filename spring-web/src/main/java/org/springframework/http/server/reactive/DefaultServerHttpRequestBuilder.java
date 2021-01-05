@@ -19,7 +19,7 @@ package org.springframework.http.server.reactive;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.function.Consumer;
 
 import reactor.core.publisher.Flux;
@@ -30,6 +30,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 
@@ -44,9 +45,11 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 
 	private URI uri;
 
-	private HttpHeaders headers;
+	private HttpHeaders httpHeaders;
 
 	private String httpMethodValue;
+
+	private final MultiValueMap<String, HttpCookie> cookies;
 
 	@Nullable
 	private String uriPath;
@@ -57,9 +60,6 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 	@Nullable
 	private SslInfo sslInfo;
 
-	@Nullable
-	private InetSocketAddress remoteAddress;
-
 	private Flux<DataBuffer> body;
 
 	private final ServerHttpRequest originalRequest;
@@ -69,12 +69,20 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 		Assert.notNull(original, "ServerHttpRequest is required");
 
 		this.uri = original.getURI();
-		this.headers = HttpHeaders.writableHttpHeaders(original.getHeaders());
 		this.httpMethodValue = original.getMethodValue();
-		this.contextPath = original.getPath().contextPath().value();
-		this.remoteAddress = original.getRemoteAddress();
 		this.body = original.getBody();
+
+		this.httpHeaders = new HttpHeaders();
+		copyMultiValueMap(original.getHeaders(), this.httpHeaders);
+
+		this.cookies = new LinkedMultiValueMap<>(original.getCookies().size());
+		copyMultiValueMap(original.getCookies(), this.cookies);
+
 		this.originalRequest = original;
+	}
+
+	private static <K, V> void copyMultiValueMap(MultiValueMap<K,V> source, MultiValueMap<K,V> target) {
+		source.forEach((key, value) -> target.put(key, new LinkedList<>(value)));
 	}
 
 
@@ -104,15 +112,15 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 	}
 
 	@Override
-	public ServerHttpRequest.Builder header(String headerName, String... headerValues) {
-		this.headers.put(headerName, Arrays.asList(headerValues));
+	public ServerHttpRequest.Builder header(String key, String value) {
+		this.httpHeaders.add(key, value);
 		return this;
 	}
 
 	@Override
 	public ServerHttpRequest.Builder headers(Consumer<HttpHeaders> headersConsumer) {
 		Assert.notNull(headersConsumer, "'headersConsumer' must not be null");
-		headersConsumer.accept(this.headers);
+		headersConsumer.accept(this.httpHeaders);
 		return this;
 	}
 
@@ -123,15 +131,9 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 	}
 
 	@Override
-	public ServerHttpRequest.Builder remoteAddress(InetSocketAddress remoteAddress) {
-		this.remoteAddress = remoteAddress;
-		return this;
-	}
-
-	@Override
 	public ServerHttpRequest build() {
-		return new MutatedServerHttpRequest(getUriToUse(), this.contextPath,
-				this.httpMethodValue, this.sslInfo, this.remoteAddress, this.body, this.originalRequest);
+		return new MutatedServerHttpRequest(getUriToUse(), this.contextPath, this.httpHeaders,
+				this.httpMethodValue, this.cookies, this.sslInfo, this.body, this.originalRequest);
 	}
 
 	private URI getUriToUse() {
@@ -177,11 +179,13 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 
 		private final String methodValue;
 
-		@Nullable
-		private final SslInfo sslInfo;
+		private final MultiValueMap<String, HttpCookie> cookies;
 
 		@Nullable
-		private InetSocketAddress remoteAddress;
+		private final InetSocketAddress remoteAddress;
+
+		@Nullable
+		private final SslInfo sslInfo;
 
 		private final Flux<DataBuffer> body;
 
@@ -189,13 +193,14 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 
 
 		public MutatedServerHttpRequest(URI uri, @Nullable String contextPath,
-				String methodValue, @Nullable SslInfo sslInfo, @Nullable InetSocketAddress remoteAddress,
-				Flux<DataBuffer> body, ServerHttpRequest originalRequest) {
+				HttpHeaders headers, String methodValue, MultiValueMap<String, HttpCookie> cookies,
+				@Nullable SslInfo sslInfo, Flux<DataBuffer> body, ServerHttpRequest originalRequest) {
 
-			super(uri, contextPath, originalRequest.getHeaders());
+			super(uri, contextPath, headers);
 			this.methodValue = methodValue;
-			this.remoteAddress = (remoteAddress != null ? remoteAddress : originalRequest.getRemoteAddress());
-			this.sslInfo = (sslInfo != null ? sslInfo : originalRequest.getSslInfo());
+			this.cookies = cookies;
+			this.remoteAddress = originalRequest.getRemoteAddress();
+			this.sslInfo = sslInfo != null ? sslInfo : originalRequest.getSslInfo();
 			this.body = body;
 			this.originalRequest = originalRequest;
 		}
@@ -207,13 +212,7 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 
 		@Override
 		protected MultiValueMap<String, HttpCookie> initCookies() {
-			return this.originalRequest.getCookies();
-		}
-
-		@Override
-		@Nullable
-		public InetSocketAddress getLocalAddress() {
-			return this.originalRequest.getLocalAddress();
+			return this.cookies;
 		}
 
 		@Override
@@ -237,11 +236,6 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 		@Override
 		public <T> T getNativeRequest() {
 			return (T) this.originalRequest;
-		}
-
-		@Override
-		public String getId() {
-			return this.originalRequest.getId();
 		}
 	}
 

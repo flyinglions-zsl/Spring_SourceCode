@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,24 +18,20 @@ package org.springframework.jms.core;
 
 import javax.jms.Session;
 
-import org.junit.jupiter.api.BeforeEach;
-
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
+import static org.mockito.BDDMockito.*;
 
 /**
  * @author Juergen Hoeller
  * @author Stephane Nicoll
  * @since 06.01.2005
  */
-class JmsTemplateTransactedTests extends JmsTemplateTests {
+public class JmsTemplateTransactedTests extends JmsTemplateTests {
 
 	private Session localSession;
 
 
 	@Override
-	@BeforeEach
-	void setupMocks() throws Exception {
+	public void setupMocks() throws Exception {
 		super.setupMocks();
 		this.localSession = mock(Session.class);
 		given(this.connection.createSession(false, Session.AUTO_ACKNOWLEDGE)).willReturn(this.localSession);

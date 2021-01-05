@@ -69,13 +69,13 @@ import org.springframework.lang.Nullable;
  */
 public class GroovyWebApplicationContext extends AbstractRefreshableWebApplicationContext implements GroovyObject {
 
-	/** Default config location for the root context. */
+	/** Default config location for the root context */
 	public static final String DEFAULT_CONFIG_LOCATION = "/WEB-INF/applicationContext.groovy";
 
-	/** Default prefix for building a config location for a namespace. */
+	/** Default prefix for building a config location for a namespace */
 	public static final String DEFAULT_CONFIG_LOCATION_PREFIX = "/WEB-INF/";
 
-	/** Default suffix for building a config location for a namespace. */
+	/** Default suffix for building a config location for a namespace */
 	public static final String DEFAULT_CONFIG_LOCATION_SUFFIX = ".groovy";
 
 
@@ -154,27 +154,22 @@ public class GroovyWebApplicationContext extends AbstractRefreshableWebApplicati
 
 	// Implementation of the GroovyObject interface
 
-	@Override
 	public void setMetaClass(MetaClass metaClass) {
 		this.metaClass = metaClass;
 	}
 
-	@Override
 	public MetaClass getMetaClass() {
 		return this.metaClass;
 	}
 
-	@Override
 	public Object invokeMethod(String name, Object args) {
 		return this.metaClass.invokeMethod(this, name, args);
 	}
 
-	@Override
 	public void setProperty(String property, Object newValue) {
 		this.metaClass.setProperty(this, property, newValue);
 	}
 
-	@Override
 	@Nullable
 	public Object getProperty(String property) {
 		if (containsBean(property)) {

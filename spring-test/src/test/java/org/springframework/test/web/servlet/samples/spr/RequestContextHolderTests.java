@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,15 @@
 package org.springframework.test.web.servlet.samples.spr;
 
 import java.io.IOException;
-
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,14 +36,13 @@ import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.annotation.RequestScope;
-import org.springframework.web.context.annotation.SessionScope;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -52,7 +50,11 @@ import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
@@ -69,7 +71,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
  * @author Sam Brannen
  * @see CustomRequestAttributesRequestContextHolderTests
  */
-@ExtendWith(SpringExtension.class)
+@RunWith(SpringJUnit4ClassRunner.class)
 @WebAppConfiguration
 @ContextConfiguration
 @DirtiesContext
@@ -102,7 +104,7 @@ public class RequestContextHolderTests {
 	private MockMvc mockMvc;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		this.mockRequest.setAttribute(FROM_TCF_MOCK, FROM_TCF_MOCK);
 
@@ -120,23 +122,23 @@ public class RequestContextHolderTests {
 
 	@Test
 	public void requestScopedController() throws Exception {
-		assertThat(AopUtils.isCglibProxy(this.requestScopedController)).as("request-scoped controller must be a CGLIB proxy").isTrue();
+		assertTrue("request-scoped controller must be a CGLIB proxy", AopUtils.isCglibProxy(this.requestScopedController));
 		this.mockMvc.perform(get("/requestScopedController").requestAttr(FROM_MVC_TEST_MOCK, FROM_MVC_TEST_MOCK));
 	}
 
 	@Test
 	public void requestScopedService() throws Exception {
-		assertThat(AopUtils.isCglibProxy(this.requestScopedService)).as("request-scoped service must be a CGLIB proxy").isTrue();
+		assertTrue("request-scoped service must be a CGLIB proxy", AopUtils.isCglibProxy(this.requestScopedService));
 		this.mockMvc.perform(get("/requestScopedService").requestAttr(FROM_MVC_TEST_MOCK, FROM_MVC_TEST_MOCK));
 	}
 
 	@Test
 	public void sessionScopedService() throws Exception {
-		assertThat(AopUtils.isCglibProxy(this.sessionScopedService)).as("session-scoped service must be a CGLIB proxy").isTrue();
+		assertTrue("session-scoped service must be a CGLIB proxy", AopUtils.isCglibProxy(this.sessionScopedService));
 		this.mockMvc.perform(get("/sessionScopedService").requestAttr(FROM_MVC_TEST_MOCK, FROM_MVC_TEST_MOCK));
 	}
 
-	@AfterEach
+	@After
 	public void verifyRestoredRequestAttributes() {
 		assertRequestAttributes(false);
 	}
@@ -161,6 +163,7 @@ public class RequestContextHolderTests {
 
 		@Bean
 		@RequestScope
+		@Scope(scopeName = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
 		public RequestScopedService requestScopedService() {
 			return new RequestScopedService();
 		}
@@ -171,7 +174,7 @@ public class RequestContextHolderTests {
 		}
 
 		@Bean
-		@SessionScope
+		@Scope(scopeName = "session", proxyMode = ScopedProxyMode.TARGET_CLASS)
 		public SessionScopedService sessionScopedService() {
 			return new SessionScopedService();
 		}
@@ -188,7 +191,7 @@ public class RequestContextHolderTests {
 	}
 
 	@RestController
-	static class SingletonController {
+	private static class SingletonController {
 
 		@RequestMapping("/singletonController")
 		public void handle() {
@@ -197,7 +200,7 @@ public class RequestContextHolderTests {
 	}
 
 	@RestController
-	static class RequestScopedController {
+	private static class RequestScopedController {
 
 		@Autowired
 		private ServletRequest request;
@@ -210,7 +213,7 @@ public class RequestContextHolderTests {
 		}
 	}
 
-	static class RequestScopedService {
+	private static class RequestScopedService {
 
 		@Autowired
 		private ServletRequest request;
@@ -221,7 +224,7 @@ public class RequestContextHolderTests {
 		}
 	}
 
-	static class SessionScopedService {
+	private static class SessionScopedService {
 
 		@Autowired
 		private ServletRequest request;
@@ -233,7 +236,7 @@ public class RequestContextHolderTests {
 	}
 
 	@RestController
-	static class ControllerWithRequestScopedService {
+	private static class ControllerWithRequestScopedService {
 
 		@Autowired
 		private RequestScopedService service;
@@ -247,7 +250,7 @@ public class RequestContextHolderTests {
 	}
 
 	@RestController
-	static class ControllerWithSessionScopedService {
+	private static class ControllerWithSessionScopedService {
 
 		@Autowired
 		private SessionScopedService service;
@@ -260,7 +263,7 @@ public class RequestContextHolderTests {
 		}
 	}
 
-	static class FilterWithSessionScopedService extends GenericFilterBean {
+	private static class FilterWithSessionScopedService extends GenericFilterBean {
 
 		@Autowired
 		private SessionScopedService service;
@@ -275,7 +278,7 @@ public class RequestContextHolderTests {
 		}
 	}
 
-	static class RequestFilter extends GenericFilterBean {
+	private static class RequestFilter extends GenericFilterBean {
 
 		@Override
 		public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -284,7 +287,7 @@ public class RequestContextHolderTests {
 		}
 	}
 
-	static class RequestAttributesFilter extends GenericFilterBean {
+	private static class RequestAttributesFilter extends GenericFilterBean {
 
 		@Override
 		public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -300,7 +303,7 @@ public class RequestContextHolderTests {
 
 	private static void assertRequestAttributes(boolean withinMockMvc) {
 		RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-		assertThat(requestAttributes).isInstanceOf(ServletRequestAttributes.class);
+		assertThat(requestAttributes, instanceOf(ServletRequestAttributes.class));
 		assertRequestAttributes(((ServletRequestAttributes) requestAttributes).getRequest(), withinMockMvc);
 	}
 
@@ -310,18 +313,18 @@ public class RequestContextHolderTests {
 
 	private static void assertRequestAttributes(ServletRequest request, boolean withinMockMvc) {
 		if (withinMockMvc) {
-			assertThat(request.getAttribute(FROM_TCF_MOCK)).isNull();
-			assertThat(request.getAttribute(FROM_MVC_TEST_DEFAULT)).isEqualTo(FROM_MVC_TEST_DEFAULT);
-			assertThat(request.getAttribute(FROM_MVC_TEST_MOCK)).isEqualTo(FROM_MVC_TEST_MOCK);
-			assertThat(request.getAttribute(FROM_REQUEST_FILTER)).isEqualTo(FROM_REQUEST_FILTER);
-			assertThat(request.getAttribute(FROM_REQUEST_ATTRIBUTES_FILTER)).isEqualTo(FROM_REQUEST_ATTRIBUTES_FILTER);
+			assertThat(request.getAttribute(FROM_TCF_MOCK), is(nullValue()));
+			assertThat(request.getAttribute(FROM_MVC_TEST_DEFAULT), is(FROM_MVC_TEST_DEFAULT));
+			assertThat(request.getAttribute(FROM_MVC_TEST_MOCK), is(FROM_MVC_TEST_MOCK));
+			assertThat(request.getAttribute(FROM_REQUEST_FILTER), is(FROM_REQUEST_FILTER));
+			assertThat(request.getAttribute(FROM_REQUEST_ATTRIBUTES_FILTER), is(FROM_REQUEST_ATTRIBUTES_FILTER));
 		}
 		else {
-			assertThat(request.getAttribute(FROM_TCF_MOCK)).isEqualTo(FROM_TCF_MOCK);
-			assertThat(request.getAttribute(FROM_MVC_TEST_DEFAULT)).isNull();
-			assertThat(request.getAttribute(FROM_MVC_TEST_MOCK)).isNull();
-			assertThat(request.getAttribute(FROM_REQUEST_FILTER)).isNull();
-			assertThat(request.getAttribute(FROM_REQUEST_ATTRIBUTES_FILTER)).isNull();
+			assertThat(request.getAttribute(FROM_TCF_MOCK), is(FROM_TCF_MOCK));
+			assertThat(request.getAttribute(FROM_MVC_TEST_DEFAULT), is(nullValue()));
+			assertThat(request.getAttribute(FROM_MVC_TEST_MOCK), is(nullValue()));
+			assertThat(request.getAttribute(FROM_REQUEST_FILTER), is(nullValue()));
+			assertThat(request.getAttribute(FROM_REQUEST_ATTRIBUTES_FILTER), is(nullValue()));
 		}
 	}
 

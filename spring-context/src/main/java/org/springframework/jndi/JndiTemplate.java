@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.jndi;
 
 import java.util.Hashtable;
 import java.util.Properties;
-
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NameNotFoundException;
@@ -80,7 +79,7 @@ public class JndiTemplate {
 
 	/**
 	 * Execute the given JNDI context callback implementation.
-	 * @param contextCallback the JndiCallback implementation to use
+	 * @param contextCallback JndiCallback implementation
 	 * @return a result object returned by the callback, or {@code null}
 	 * @throws NamingException thrown by the callback implementation
 	 * @see #createInitialContext

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,8 +106,8 @@ public abstract class TransactionSynchronizationUtils {
 			try {
 				synchronization.beforeCompletion();
 			}
-			catch (Throwable ex) {
-				logger.debug("TransactionSynchronization.beforeCompletion threw exception", ex);
+			catch (Throwable tsex) {
+				logger.error("TransactionSynchronization.beforeCompletion threw exception", tsex);
 			}
 		}
 	}
@@ -125,7 +125,7 @@ public abstract class TransactionSynchronizationUtils {
 	/**
 	 * Actually invoke the {@code afterCommit} methods of the
 	 * given Spring TransactionSynchronization objects.
-	 * @param synchronizations a List of TransactionSynchronization objects
+	 * @param synchronizations List of TransactionSynchronization objects
 	 * @see TransactionSynchronization#afterCommit()
 	 */
 	public static void invokeAfterCommit(@Nullable List<TransactionSynchronization> synchronizations) {
@@ -138,9 +138,9 @@ public abstract class TransactionSynchronizationUtils {
 
 	/**
 	 * Trigger {@code afterCompletion} callbacks on all currently registered synchronizations.
+	 * @see TransactionSynchronizationManager#getSynchronizations()
 	 * @param completionStatus the completion status according to the
 	 * constants in the TransactionSynchronization interface
-	 * @see TransactionSynchronizationManager#getSynchronizations()
 	 * @see TransactionSynchronization#afterCompletion(int)
 	 * @see TransactionSynchronization#STATUS_COMMITTED
 	 * @see TransactionSynchronization#STATUS_ROLLED_BACK
@@ -154,7 +154,7 @@ public abstract class TransactionSynchronizationUtils {
 	/**
 	 * Actually invoke the {@code afterCompletion} methods of the
 	 * given Spring TransactionSynchronization objects.
-	 * @param synchronizations a List of TransactionSynchronization objects
+	 * @param synchronizations List of TransactionSynchronization objects
 	 * @param completionStatus the completion status according to the
 	 * constants in the TransactionSynchronization interface
 	 * @see TransactionSynchronization#afterCompletion(int)
@@ -170,8 +170,8 @@ public abstract class TransactionSynchronizationUtils {
 				try {
 					synchronization.afterCompletion(completionStatus);
 				}
-				catch (Throwable ex) {
-					logger.debug("TransactionSynchronization.afterCompletion threw exception", ex);
+				catch (Throwable tsex) {
+					logger.error("TransactionSynchronization.afterCompletion threw exception", tsex);
 				}
 			}
 		}

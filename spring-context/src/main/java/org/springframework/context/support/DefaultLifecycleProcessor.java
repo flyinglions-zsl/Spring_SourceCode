@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -140,19 +139,24 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 
 	private void startBeans(boolean autoStartupOnly) {
 		Map<String, Lifecycle> lifecycleBeans = getLifecycleBeans();
-		Map<Integer, LifecycleGroup> phases = new TreeMap<>();
-
+		Map<Integer, LifecycleGroup> phases = new HashMap<>();
 		lifecycleBeans.forEach((beanName, bean) -> {
 			if (!autoStartupOnly || (bean instanceof SmartLifecycle && ((SmartLifecycle) bean).isAutoStartup())) {
 				int phase = getPhase(bean);
-				phases.computeIfAbsent(
-						phase,
-						p -> new LifecycleGroup(phase, this.timeoutPerShutdownPhase, lifecycleBeans, autoStartupOnly)
-				).add(beanName, bean);
+				LifecycleGroup group = phases.get(phase);
+				if (group == null) {
+					group = new LifecycleGroup(phase, this.timeoutPerShutdownPhase, lifecycleBeans, autoStartupOnly);
+					phases.put(phase, group);
+				}
+				group.add(beanName, bean);
 			}
 		});
 		if (!phases.isEmpty()) {
-			phases.values().forEach(LifecycleGroup::start);
+			List<Integer> keys = new ArrayList<>(phases.keySet());
+			Collections.sort(keys);
+			for (Integer key : keys) {
+				phases.get(key).start();
+			}
 		}
 	}
 
@@ -171,8 +175,8 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			}
 			if (!bean.isRunning() &&
 					(!autoStartupOnly || !(bean instanceof SmartLifecycle) || ((SmartLifecycle) bean).isAutoStartup())) {
-				if (logger.isTraceEnabled()) {
-					logger.trace("Starting bean '" + beanName + "' of type [" + bean.getClass().getName() + "]");
+				if (logger.isDebugEnabled()) {
+					logger.debug("Starting bean '" + beanName + "' of type [" + bean.getClass().getName() + "]");
 				}
 				try {
 					bean.start();
@@ -226,8 +230,8 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			try {
 				if (bean.isRunning()) {
 					if (bean instanceof SmartLifecycle) {
-						if (logger.isTraceEnabled()) {
-							logger.trace("Asking bean '" + beanName + "' of type [" +
+						if (logger.isDebugEnabled()) {
+							logger.debug("Asking bean '" + beanName + "' of type [" +
 									bean.getClass().getName() + "] to stop");
 						}
 						countDownBeanNames.add(beanName);
@@ -240,8 +244,8 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 						});
 					}
 					else {
-						if (logger.isTraceEnabled()) {
-							logger.trace("Stopping bean '" + beanName + "' of type [" +
+						if (logger.isDebugEnabled()) {
+							logger.debug("Stopping bean '" + beanName + "' of type [" +
 									bean.getClass().getName() + "]");
 						}
 						bean.stop();
@@ -348,8 +352,8 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			if (this.members.isEmpty()) {
 				return;
 			}
-			if (logger.isDebugEnabled()) {
-				logger.debug("Starting beans in phase " + this.phase);
+			if (logger.isInfoEnabled()) {
+				logger.info("Starting beans in phase " + this.phase);
 			}
 			Collections.sort(this.members);
 			for (LifecycleGroupMember member : this.members) {
@@ -361,8 +365,8 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			if (this.members.isEmpty()) {
 				return;
 			}
-			if (logger.isDebugEnabled()) {
-				logger.debug("Stopping beans in phase " + this.phase);
+			if (logger.isInfoEnabled()) {
+				logger.info("Stopping beans in phase " + this.phase);
 			}
 			this.members.sort(Collections.reverseOrder());
 			CountDownLatch latch = new CountDownLatch(this.smartMemberCount);
@@ -379,10 +383,10 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			}
 			try {
 				latch.await(this.timeout, TimeUnit.MILLISECONDS);
-				if (latch.getCount() > 0 && !countDownBeanNames.isEmpty() && logger.isInfoEnabled()) {
-					logger.info("Failed to shut down " + countDownBeanNames.size() + " bean" +
+				if (latch.getCount() > 0 && !countDownBeanNames.isEmpty() && logger.isWarnEnabled()) {
+					logger.warn("Failed to shut down " + countDownBeanNames.size() + " bean" +
 							(countDownBeanNames.size() > 1 ? "s" : "") + " with phase value " +
-							this.phase + " within timeout of " + this.timeout + "ms: " + countDownBeanNames);
+							this.phase + " within timeout of " + this.timeout + ": " + countDownBeanNames);
 				}
 			}
 			catch (InterruptedException ex) {

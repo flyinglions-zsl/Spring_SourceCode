@@ -65,7 +65,7 @@ import org.springframework.util.Assert;
 public class TransactionTemplate extends DefaultTransactionDefinition
 		implements TransactionOperations, InitializingBean {
 
-	/** Logger available to subclasses. */
+	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	@Nullable
@@ -180,7 +180,7 @@ public class TransactionTemplate extends DefaultTransactionDefinition
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		return (this == other || (super.equals(other) && (!(other instanceof TransactionTemplate) ||
 				getTransactionManager() == ((TransactionTemplate) other).getTransactionManager())));
 	}

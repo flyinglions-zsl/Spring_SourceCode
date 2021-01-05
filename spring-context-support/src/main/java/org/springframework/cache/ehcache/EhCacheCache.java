@@ -76,19 +76,6 @@ public class EhCacheCache implements Cache {
 	@SuppressWarnings("unchecked")
 	@Override
 	@Nullable
-	public <T> T get(Object key, @Nullable Class<T> type) {
-		Element element = this.cache.get(key);
-		Object value = (element != null ? element.getObjectValue() : null);
-		if (value != null && type != null && !type.isInstance(value)) {
-			throw new IllegalStateException(
-					"Cached value is not of required type [" + type.getName() + "]: " + value);
-		}
-		return (T) value;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	@Nullable
 	public <T> T get(Object key, Callable<T> valueLoader) {
 		Element element = lookup(key);
 		if (element != null) {
@@ -124,6 +111,19 @@ public class EhCacheCache implements Cache {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	@Nullable
+	public <T> T get(Object key, @Nullable Class<T> type) {
+		Element element = this.cache.get(key);
+		Object value = (element != null ? element.getObjectValue() : null);
+		if (value != null && type != null && !type.isInstance(value)) {
+			throw new IllegalStateException(
+					"Cached value is not of required type [" + type.getName() + "]: " + value);
+		}
+		return (T) value;
+	}
+
+	@Override
 	public void put(Object key, @Nullable Object value) {
 		this.cache.put(new Element(key, value));
 	}
@@ -141,20 +141,8 @@ public class EhCacheCache implements Cache {
 	}
 
 	@Override
-	public boolean evictIfPresent(Object key) {
-		return this.cache.remove(key);
-	}
-
-	@Override
 	public void clear() {
 		this.cache.removeAll();
-	}
-
-	@Override
-	public boolean invalidate() {
-		boolean notEmpty = (this.cache.getSize() > 0);
-		this.cache.removeAll();
-		return notEmpty;
 	}
 
 

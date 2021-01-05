@@ -18,7 +18,6 @@ package org.springframework.web.servlet.tags.form;
 
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Map;
-
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
@@ -245,13 +244,13 @@ import org.springframework.web.util.UriUtils;
 @SuppressWarnings("serial")
 public class FormTag extends AbstractHtmlElementTag {
 
-	/** The default HTTP method using which form values are sent to the server: "post". */
+	/** The default HTTP method using which form values are sent to the server: "post" */
 	private static final String DEFAULT_METHOD = "post";
 
-	/** The default attribute name: &quot;command&quot;. */
+	/** The default attribute name: &quot;command&quot; */
 	public static final String DEFAULT_COMMAND_NAME = "command";
 
-	/** The name of the '{@code modelAttribute}' setting. */
+	/** The name of the '{@code modelAttribute}' setting */
 	private static final String MODEL_ATTRIBUTE = "modelAttribute";
 
 	/**
@@ -705,9 +704,9 @@ public class FormTag extends AbstractHtmlElementTag {
 		if (!CollectionUtils.isEmpty(hiddenFields)) {
 			Assert.state(this.tagWriter != null, "No TagWriter set");
 			this.tagWriter.appendValue("<div>\n");
-			for (Map.Entry<String, String> entry : hiddenFields.entrySet()) {
+			for (String name : hiddenFields.keySet()) {
 				this.tagWriter.appendValue("<input type=\"hidden\" ");
-				this.tagWriter.appendValue("name=\"" + entry.getKey() + "\" value=\"" + entry.getValue() + "\" ");
+				this.tagWriter.appendValue("name=\"" + name + "\" value=\"" + hiddenFields.get(name) + "\" ");
 				this.tagWriter.appendValue("/>\n");
 			}
 			this.tagWriter.appendValue("</div>");

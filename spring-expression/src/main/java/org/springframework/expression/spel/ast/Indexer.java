@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
 
 import org.springframework.asm.MethodVisitor;
 import org.springframework.core.convert.TypeDescriptor;
@@ -91,8 +90,8 @@ public class Indexer extends SpelNodeImpl {
 	private IndexedType indexedType;
 
 
-	public Indexer(int startPos, int endPos, SpelNodeImpl expr) {
-		super(startPos, endPos, expr);
+	public Indexer(int pos, SpelNodeImpl expr) {
+		super(pos, expr);
 	}
 
 
@@ -321,11 +320,15 @@ public class Indexer extends SpelNodeImpl {
 
 	@Override
 	public String toStringAST() {
-		StringJoiner sj = new StringJoiner(",", "[", "]");
+		StringBuilder sb = new StringBuilder("[");
 		for (int i = 0; i < getChildCount(); i++) {
-			sj.add(getChild(i).toStringAST());
+			if (i > 0) {
+				sb.append(",");
+			}
+			sb.append(getChild(i).toStringAST());
 		}
-		return sj.toString();
+		sb.append("]");
+		return sb.toString();
 	}
 
 
@@ -439,7 +442,7 @@ public class Indexer extends SpelNodeImpl {
 	}
 
 	private void checkAccess(int arrayLength, int index) throws SpelEvaluationException {
-		if (index >= arrayLength) {
+		if (index > arrayLength) {
 			throw new SpelEvaluationException(getStartPosition(), SpelMessage.ARRAY_INDEX_OUT_OF_BOUNDS,
 					arrayLength, index);
 		}
@@ -712,27 +715,16 @@ public class Indexer extends SpelNodeImpl {
 				}
 				TypeDescriptor elementType = this.collectionEntryDescriptor.getElementTypeDescriptor();
 				try {
-					Constructor<?> ctor = getDefaultConstructor(elementType.getType());
+					Constructor<?> ctor = ReflectionUtils.accessibleConstructor(elementType.getType());
 					int newElements = this.index - this.collection.size();
 					while (newElements >= 0) {
-						// Insert a null value if the element type does not have a default constructor.
-						this.collection.add(ctor != null ? ctor.newInstance() : null);
+						this.collection.add(ctor.newInstance());
 						newElements--;
 					}
 				}
 				catch (Throwable ex) {
 					throw new SpelEvaluationException(getStartPosition(), ex, SpelMessage.UNABLE_TO_GROW_COLLECTION);
 				}
-			}
-		}
-
-		@Nullable
-		private Constructor<?> getDefaultConstructor(Class<?> type) {
-			try {
-				return ReflectionUtils.accessibleConstructor(type);
-			}
-			catch (Throwable ex) {
-				return null;
 			}
 		}
 

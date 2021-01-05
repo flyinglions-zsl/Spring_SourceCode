@@ -49,7 +49,9 @@ public abstract class AbstractXhrTransport implements XhrTransport {
 
 	static {
 		byte[] bytes = new byte[2048];
-		Arrays.fill(bytes, (byte) 'h');
+		for (int i = 0; i < bytes.length; i++) {
+			bytes[i] = 'h';
+		}
 		PRELUDE = new String(bytes, SockJsFrame.CHARSET);
 	}
 
@@ -82,7 +84,6 @@ public abstract class AbstractXhrTransport implements XhrTransport {
 	/**
 	 * Whether XHR streaming is disabled or not.
 	 */
-	@Override
 	public boolean isXhrStreamingDisabled() {
 		return this.xhrStreamingDisabled;
 	}

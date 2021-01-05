@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,7 @@ import org.junit.runners.model.FrameworkMethod;
 import org.springframework.test.annotation.Timed;
 import org.springframework.test.context.TestContextManager;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link SpringJUnit4ClassRunner}.
@@ -37,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class SpringJUnit4ClassRunnerTests {
 
-	@Test
+	@Test(expected = Exception.class)
 	public void checkThatExceptionsAreNotSilentlySwallowed() throws Exception {
 		SpringJUnit4ClassRunner runner = new SpringJUnit4ClassRunner(getClass()) {
 
@@ -53,8 +52,7 @@ public class SpringJUnit4ClassRunnerTests {
 				};
 			}
 		};
-		assertThatExceptionOfType(Exception.class).isThrownBy(
-				runner::createTest);
+		runner.createTest();
 	}
 
 	@Test
@@ -62,7 +60,7 @@ public class SpringJUnit4ClassRunnerTests {
 		SpringJUnit4ClassRunner runner = new SpringJUnit4ClassRunner(getClass());
 		long timeout = runner.getSpringTimeout(new FrameworkMethod(getClass().getDeclaredMethod(
 			"springTimeoutWithMetaAnnotation")));
-		assertThat(timeout).isEqualTo(10);
+		assertEquals(10, timeout);
 	}
 
 	@Test
@@ -70,7 +68,7 @@ public class SpringJUnit4ClassRunnerTests {
 		SpringJUnit4ClassRunner runner = new SpringJUnit4ClassRunner(getClass());
 		long timeout = runner.getSpringTimeout(new FrameworkMethod(getClass().getDeclaredMethod(
 			"springTimeoutWithMetaAnnotationAndOverride")));
-		assertThat(timeout).isEqualTo(42);
+		assertEquals(42, timeout);
 	}
 
 	// -------------------------------------------------------------------------

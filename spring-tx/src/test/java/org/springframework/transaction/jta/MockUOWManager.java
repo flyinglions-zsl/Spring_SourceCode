@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 package org.springframework.transaction.jta;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
 import javax.transaction.Synchronization;
 
 import com.ibm.wsspi.uow.UOWAction;
@@ -45,7 +44,7 @@ public class MockUOWManager implements UOWManager {
 
 	private final Map<Object, Object> resources = new HashMap<>();
 
-	private final List<Synchronization> synchronizations = new ArrayList<>();
+	private final List<Synchronization> synchronizations = new LinkedList<>();
 
 
 	@Override
@@ -57,7 +56,11 @@ public class MockUOWManager implements UOWManager {
 			action.run();
 			this.status = (this.rollbackOnly ? UOW_STATUS_ROLLEDBACK : UOW_STATUS_COMMITTED);
 		}
-		catch (Error | RuntimeException ex) {
+		catch (Error err) {
+			this.status = UOW_STATUS_ROLLEDBACK;
+			throw err;
+		}
+		catch (RuntimeException ex) {
 			this.status = UOW_STATUS_ROLLEDBACK;
 			throw ex;
 		}

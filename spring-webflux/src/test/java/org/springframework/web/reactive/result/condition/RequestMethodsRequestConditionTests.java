@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,23 +19,18 @@ package org.springframework.web.reactive.result.condition;
 import java.net.URISyntaxException;
 import java.util.Collections;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
-import static org.springframework.web.bind.annotation.RequestMethod.HEAD;
-import static org.springframework.web.bind.annotation.RequestMethod.OPTIONS;
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
-import static org.springframework.web.bind.annotation.RequestMethod.PUT;
+import static org.junit.Assert.*;
+import static org.springframework.web.bind.annotation.RequestMethod.*;
 
 /**
  * Unit tests for {@link RequestMethodsRequestCondition}.
@@ -44,7 +39,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.PUT;
  */
 public class RequestMethodsRequestConditionTests {
 
-	// TODO: custom method, CORS pre-flight (see @Disabledd)
+	// TODO: custom method, CORS pre-flight (see @Ignored)
 
 	@Test
 	public void getMatchingCondition() throws Exception {
@@ -56,7 +51,7 @@ public class RequestMethodsRequestConditionTests {
 	@Test
 	public void getMatchingConditionWithHttpHead() throws Exception {
 		testMatch(new RequestMethodsRequestCondition(HEAD), HEAD);
-		testMatch(new RequestMethodsRequestCondition(GET), GET);
+		testMatch(new RequestMethodsRequestCondition(GET), HEAD);
 		testNoMatch(new RequestMethodsRequestCondition(POST), HEAD);
 	}
 
@@ -66,30 +61,30 @@ public class RequestMethodsRequestConditionTests {
 		for (RequestMethod method : RequestMethod.values()) {
 			if (method != OPTIONS) {
 				ServerWebExchange exchange = getExchange(method.name());
-				assertThat(condition.getMatchingCondition(exchange)).isNotNull();
+				assertNotNull(condition.getMatchingCondition(exchange));
 			}
 		}
 		testNoMatch(condition, OPTIONS);
 	}
 
 	@Test
-	@Disabled
+	@Ignore
 	public void getMatchingConditionWithCustomMethod() throws Exception {
 		ServerWebExchange exchange = getExchange("PROPFIND");
-		assertThat(new RequestMethodsRequestCondition().getMatchingCondition(exchange)).isNotNull();
-		assertThat(new RequestMethodsRequestCondition(GET, POST).getMatchingCondition(exchange)).isNull();
+		assertNotNull(new RequestMethodsRequestCondition().getMatchingCondition(exchange));
+		assertNull(new RequestMethodsRequestCondition(GET, POST).getMatchingCondition(exchange));
 	}
 
 	@Test
-	@Disabled
+	@Ignore
 	public void getMatchingConditionWithCorsPreFlight() throws Exception {
 		ServerWebExchange exchange = getExchange("OPTIONS");
 		exchange.getRequest().getHeaders().add("Origin", "https://example.com");
 		exchange.getRequest().getHeaders().add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PUT");
 
-		assertThat(new RequestMethodsRequestCondition().getMatchingCondition(exchange)).isNotNull();
-		assertThat(new RequestMethodsRequestCondition(PUT).getMatchingCondition(exchange)).isNotNull();
-		assertThat(new RequestMethodsRequestCondition(DELETE).getMatchingCondition(exchange)).isNull();
+		assertNotNull(new RequestMethodsRequestCondition().getMatchingCondition(exchange));
+		assertNotNull(new RequestMethodsRequestCondition(PUT).getMatchingCondition(exchange));
+		assertNull(new RequestMethodsRequestCondition(DELETE).getMatchingCondition(exchange));
 	}
 
 	@Test
@@ -101,16 +96,16 @@ public class RequestMethodsRequestConditionTests {
 		ServerWebExchange exchange = getExchange("GET");
 
 		int result = c1.compareTo(c2, exchange);
-		assertThat(result < 0).as("Invalid comparison result: " + result).isTrue();
+		assertTrue("Invalid comparison result: " + result, result < 0);
 
 		result = c2.compareTo(c1, exchange);
-		assertThat(result > 0).as("Invalid comparison result: " + result).isTrue();
+		assertTrue("Invalid comparison result: " + result, result > 0);
 
 		result = c2.compareTo(c3, exchange);
-		assertThat(result < 0).as("Invalid comparison result: " + result).isTrue();
+		assertTrue("Invalid comparison result: " + result, result < 0);
 
 		result = c1.compareTo(c1, exchange);
-		assertThat(result).as("Invalid comparison result ").isEqualTo(0);
+		assertEquals("Invalid comparison result ", 0, result);
 	}
 
 	@Test
@@ -119,20 +114,20 @@ public class RequestMethodsRequestConditionTests {
 		RequestMethodsRequestCondition condition2 = new RequestMethodsRequestCondition(POST);
 
 		RequestMethodsRequestCondition result = condition1.combine(condition2);
-		assertThat(result.getContent().size()).isEqualTo(2);
+		assertEquals(2, result.getContent().size());
 	}
 
 
 	private void testMatch(RequestMethodsRequestCondition condition, RequestMethod method) throws Exception {
 		ServerWebExchange exchange = getExchange(method.name());
 		RequestMethodsRequestCondition actual = condition.getMatchingCondition(exchange);
-		assertThat(actual).isNotNull();
-		assertThat(actual.getContent()).isEqualTo(Collections.singleton(method));
+		assertNotNull(actual);
+		assertEquals(Collections.singleton(method), actual.getContent());
 	}
 
 	private void testNoMatch(RequestMethodsRequestCondition condition, RequestMethod method) throws Exception {
 		ServerWebExchange exchange = getExchange(method.name());
-		assertThat(condition.getMatchingCondition(exchange)).isNull();
+		assertNull(condition.getMatchingCondition(exchange));
 	}
 
 	private ServerWebExchange getExchange(String method) throws URISyntaxException {

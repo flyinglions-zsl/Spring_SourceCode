@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.ResolvableType;
-import org.springframework.core.codec.Hints;
-import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.log.LogFormatUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpInputMessage;
 import org.springframework.lang.Nullable;
@@ -49,21 +46,14 @@ import org.springframework.util.StringUtils;
  * @author Rossen Stoyanchev
  * @since 5.0
  */
-public class FormHttpMessageReader extends LoggingCodecSupport
-		implements HttpMessageReader<MultiValueMap<String, String>> {
+public class FormHttpMessageReader implements HttpMessageReader<MultiValueMap<String, String>> {
 
-	/**
-	 * The default charset used by the reader.
-	 */
 	public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
-	private static final ResolvableType MULTIVALUE_STRINGS_TYPE =
+	private static final ResolvableType MULTIVALUE_TYPE =
 			ResolvableType.forClassWithGenerics(MultiValueMap.class, String.class, String.class);
 
-
 	private Charset defaultCharset = DEFAULT_CHARSET;
-
-	private int maxInMemorySize = 256 * 1024;
 
 
 	/**
@@ -83,34 +73,12 @@ public class FormHttpMessageReader extends LoggingCodecSupport
 		return this.defaultCharset;
 	}
 
-	/**
-	 * Set the max number of bytes for input form data. As form data is buffered
-	 * before it is parsed, this helps to limit the amount of buffering. Once
-	 * the limit is exceeded, {@link DataBufferLimitException} is raised.
-	 * <p>By default this is set to 256K.
-	 * @param byteCount the max number of bytes to buffer, or -1 for unlimited
-	 * @since 5.1.11
-	 */
-	public void setMaxInMemorySize(int byteCount) {
-		this.maxInMemorySize = byteCount;
-	}
-
-	/**
-	 * Return the {@link #setMaxInMemorySize configured} byte count limit.
-	 * @since 5.1.11
-	 */
-	public int getMaxInMemorySize() {
-		return this.maxInMemorySize;
-	}
-
 
 	@Override
 	public boolean canRead(ResolvableType elementType, @Nullable MediaType mediaType) {
-		boolean multiValueUnresolved =
-				elementType.hasUnresolvableGenerics() &&
-						MultiValueMap.class.isAssignableFrom(elementType.toClass());
-
-		return ((MULTIVALUE_STRINGS_TYPE.isAssignableFrom(elementType) || multiValueUnresolved) &&
+		return ((MULTIVALUE_TYPE.isAssignableFrom(elementType) ||
+				(elementType.hasUnresolvableGenerics() &&
+						MultiValueMap.class.isAssignableFrom(elementType.resolve(Object.class)))) &&
 				(mediaType == null || MediaType.APPLICATION_FORM_URLENCODED.isCompatibleWith(mediaType)));
 	}
 
@@ -128,22 +96,13 @@ public class FormHttpMessageReader extends LoggingCodecSupport
 		MediaType contentType = message.getHeaders().getContentType();
 		Charset charset = getMediaTypeCharset(contentType);
 
-		return DataBufferUtils.join(message.getBody(), this.maxInMemorySize)
+		return DataBufferUtils.join(message.getBody())
 				.map(buffer -> {
 					CharBuffer charBuffer = charset.decode(buffer.asByteBuffer());
 					String body = charBuffer.toString();
 					DataBufferUtils.release(buffer);
-					MultiValueMap<String, String> formData = parseFormData(charset, body);
-					logFormData(formData, hints);
-					return formData;
+					return parseFormData(charset, body);
 				});
-	}
-
-	private void logFormData(MultiValueMap<String, String> formData, Map<String, Object> hints) {
-		LogFormatUtils.traceDebug(logger, traceOn -> Hints.getLogPrefix(hints) + "Read " +
-				(isEnableLoggingRequestDetails() ?
-						LogFormatUtils.formatValue(formData, !traceOn) :
-						"form fields " + formData.keySet() + " (content masked)"));
 	}
 
 	private Charset getMediaTypeCharset(@Nullable MediaType mediaType) {

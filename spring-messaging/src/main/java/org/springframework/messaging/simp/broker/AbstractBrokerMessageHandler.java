@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
@@ -30,7 +31,6 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.SubscribableChannel;
-import org.springframework.messaging.simp.SimpLogging;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -48,7 +48,7 @@ import org.springframework.util.CollectionUtils;
 public abstract class AbstractBrokerMessageHandler
 		implements MessageHandler, ApplicationEventPublisherAware, SmartLifecycle {
 
-	protected final Log logger = SimpLogging.forLogName(getClass());
+	protected final Log logger = LogFactory.getLog(getClass());
 
 	private final SubscribableChannel clientInboundChannel;
 
@@ -58,12 +58,10 @@ public abstract class AbstractBrokerMessageHandler
 
 	private final Collection<String> destinationPrefixes;
 
-	private boolean preservePublishOrder = false;
-
 	@Nullable
 	private ApplicationEventPublisher eventPublisher;
 
-	private AtomicBoolean brokerAvailable = new AtomicBoolean();
+	private AtomicBoolean brokerAvailable = new AtomicBoolean(false);
 
 	private final BrokerAvailabilityEvent availableEvent = new BrokerAvailabilityEvent(true, this);
 
@@ -71,7 +69,7 @@ public abstract class AbstractBrokerMessageHandler
 
 	private boolean autoStartup = true;
 
-	private volatile boolean running;
+	private volatile boolean running = false;
 
 	private final Object lifecycleMonitor = new Object();
 
@@ -125,39 +123,8 @@ public abstract class AbstractBrokerMessageHandler
 		return this.brokerChannel;
 	}
 
-	/**
-	 * Return destination prefixes prefixes to use to filter messages to forward
-	 * to the broker. Messages that have a destination and where the destination
-	 * doesn't match are ignored.
-	 * <p>By default this is not set.
-	 */
 	public Collection<String> getDestinationPrefixes() {
 		return this.destinationPrefixes;
-	}
-
-	/**
-	 * Whether the client must receive messages in the order of publication.
-	 * <p>By default messages sent to the {@code "clientOutboundChannel"} may
-	 * not be processed in the same order because the channel is backed by a
-	 * ThreadPoolExecutor that in turn does not guarantee processing in order.
-	 * <p>When this flag is set to {@code true} messages within the same session
-	 * will be sent to the {@code "clientOutboundChannel"} one at a time in
-	 * order to preserve the order of publication. Enable this only if needed
-	 * since there is some performance overhead to keep messages in order.
-	 * @param preservePublishOrder whether to publish in order
-	 * @since 5.1
-	 */
-	public void setPreservePublishOrder(boolean preservePublishOrder) {
-		OrderedMessageChannelDecorator.configureInterceptor(this.clientOutboundChannel, preservePublishOrder);
-		this.preservePublishOrder = preservePublishOrder;
-	}
-
-	/**
-	 * Whether to ensure messages are received in the order of publication.
-	 * @since 5.1
-	 */
-	public boolean isPreservePublishOrder() {
-		return this.preservePublishOrder;
 	}
 
 	@Override
@@ -177,6 +144,11 @@ public abstract class AbstractBrokerMessageHandler
 	@Override
 	public boolean isAutoStartup() {
 		return this.autoStartup;
+	}
+
+	@Override
+	public int getPhase() {
+		return Integer.MAX_VALUE;
 	}
 
 
@@ -295,16 +267,6 @@ public abstract class AbstractBrokerMessageHandler
 			}
 			this.eventPublisher.publishEvent(this.notAvailableEvent);
 		}
-	}
-
-	/**
-	 * Get the MessageChannel to use for sending messages to clients, possibly
-	 * a per-session wrapper when {@code preservePublishOrder=true}.
-	 * @since 5.1
-	 */
-	protected MessageChannel getClientOutboundChannelForSession(String sessionId) {
-		return this.preservePublishOrder ?
-				new OrderedMessageChannelDecorator(getClientOutboundChannel(), logger) : getClientOutboundChannel();
 	}
 
 

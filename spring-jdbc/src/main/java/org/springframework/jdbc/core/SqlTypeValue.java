@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ public interface SqlTypeValue {
 	/**
 	 * Constant that indicates an unknown (or unspecified) SQL type.
 	 * Passed into {@code setTypeValue} if the original operation method
-	 * does not specify an SQL type.
+	 * does not specify a SQL type.
 	 * @see java.sql.Types
 	 * @see JdbcOperations#update(String, Object[])
 	 */
@@ -57,9 +57,9 @@ public interface SqlTypeValue {
 	 * Set the type value on the given PreparedStatement.
 	 * @param ps the PreparedStatement to work on
 	 * @param paramIndex the index of the parameter for which we need to set the value
-	 * @param sqlType the SQL type of the parameter we are setting
+	 * @param sqlType SQL type of the parameter we are setting
 	 * @param typeName the type name of the parameter (optional)
-	 * @throws SQLException if an SQLException is encountered while setting parameter values
+	 * @throws SQLException if a SQLException is encountered while setting parameter values
 	 * @see java.sql.Types
 	 * @see java.sql.PreparedStatement#setObject
 	 */

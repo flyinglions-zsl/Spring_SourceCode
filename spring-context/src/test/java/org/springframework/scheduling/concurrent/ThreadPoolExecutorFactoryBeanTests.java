@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,43 +16,52 @@
 
 package org.springframework.scheduling.concurrent;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.FutureTask;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Juergen Hoeller
  */
-class ThreadPoolExecutorFactoryBeanTests {
+public class ThreadPoolExecutorFactoryBeanTests {
 
 	@Test
-	void defaultExecutor() throws Exception {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(ExecutorConfig.class);
-		ExecutorService executor = context.getBean(ExecutorService.class);
+	public void defaultExecutor() throws Exception {
+		ApplicationContext context = new AnnotationConfigApplicationContext(ExecutorConfig.class);
+		ExecutorService executor = context.getBean("executor", ExecutorService.class);
 
-		FutureTask<String> task = new FutureTask<>(() -> "foo");
+		FutureTask<String> task = new FutureTask<>(new Callable<String>() {
+			@Override
+			public String call() throws Exception {
+				return "foo";
+			}
+		});
 		executor.execute(task);
-		assertThat(task.get()).isEqualTo("foo");
-		context.close();
+		assertEquals("foo", task.get());
 	}
 
 
 	@Configuration
-	static class ExecutorConfig {
+	public static class ExecutorConfig {
 
 		@Bean
-		ThreadPoolExecutorFactoryBean executor() {
+		public ThreadPoolExecutorFactoryBean executorFactory() {
 			return new ThreadPoolExecutorFactoryBean();
 		}
 
+		@Bean
+		public ExecutorService executor() {
+			return executorFactory().getObject();
+		}
 	}
 
 }

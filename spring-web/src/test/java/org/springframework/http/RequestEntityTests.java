@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,23 +24,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriTemplate;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link org.springframework.http.RequestEntity}.
  *
  * @author Arjen Poutsma
- * @author Parviz Rozikov
  */
-class RequestEntityTests {
+public class RequestEntityTests {
 
 	@Test
-	void normal() throws URISyntaxException {
+	public void normal() throws URISyntaxException {
 		String headerName = "My-Custom-Header";
 		String headerValue = "HeaderValue";
 		URI url = new URI("https://example.com");
@@ -50,16 +49,16 @@ class RequestEntityTests {
 				RequestEntity.method(HttpMethod.GET, url)
 						.header(headerName, headerValue).body(entity);
 
-		assertThat(requestEntity).isNotNull();
-		assertThat(requestEntity.getMethod()).isEqualTo(HttpMethod.GET);
-		assertThat(requestEntity.getHeaders().containsKey(headerName)).isTrue();
-		assertThat(requestEntity.getHeaders().getFirst(headerName)).isEqualTo(headerValue);
-		assertThat(requestEntity.getBody()).isEqualTo(entity);
+		assertNotNull(requestEntity);
+		assertEquals(HttpMethod.GET, requestEntity.getMethod());
+		assertTrue(requestEntity.getHeaders().containsKey(headerName));
+		assertEquals(headerValue, requestEntity.getHeaders().getFirst(headerName));
+		assertEquals(entity, requestEntity.getBody());
 	}
 
 	@Test
-	void uriVariablesExpansion() throws URISyntaxException {
-		URI uri = UriComponentsBuilder.fromUriString("https://example.com/{foo}").buildAndExpand("bar").toUri();
+	public void uriVariablesExpansion() throws URISyntaxException {
+		URI uri = new UriTemplate("https://example.com/{foo}").expand("bar");
 		RequestEntity.get(uri).accept(MediaType.TEXT_PLAIN).build();
 
 		String url = "https://www.{host}.com/{path}";
@@ -67,46 +66,33 @@ class RequestEntityTests {
 		String path = "foo/bar";
 		URI expected = new URI("https://www.example.com/foo/bar");
 
-		uri = UriComponentsBuilder.fromUriString(url).buildAndExpand(host, path).toUri();
+		uri = new UriTemplate(url).expand(host, path);
 		RequestEntity<?> entity = RequestEntity.get(uri).build();
-		assertThat(entity.getUrl()).isEqualTo(expected);
+		assertEquals(expected, entity.getUrl());
 
 		Map<String, String> uriVariables = new HashMap<>(2);
 		uriVariables.put("host", host);
 		uriVariables.put("path", path);
 
-		uri = UriComponentsBuilder.fromUriString(url).buildAndExpand(uriVariables).toUri();
+		uri = new UriTemplate(url).expand(uriVariables);
 		entity = RequestEntity.get(uri).build();
-		assertThat(entity.getUrl()).isEqualTo(expected);
+		assertEquals(expected, entity.getUrl());
 	}
 
 	@Test
-	void uriExpansion() {
-		RequestEntity<Void> entity =
-				RequestEntity.get("https://www.{host}.com/{path}", "example", "foo/bar").build();
-
-		assertThat(entity).isInstanceOf(RequestEntity.UriTemplateRequestEntity.class);
-		RequestEntity.UriTemplateRequestEntity<Void> ext = (RequestEntity.UriTemplateRequestEntity<Void>) entity;
-
-		assertThat(ext.getUriTemplate()).isEqualTo("https://www.{host}.com/{path}");
-		assertThat(ext.getVars()).containsExactly("example", "foo/bar");
-	}
-
-
-	@Test
-	void get() {
+	public void get() {
 		RequestEntity<Void> requestEntity = RequestEntity.get(URI.create("https://example.com")).accept(
 				MediaType.IMAGE_GIF, MediaType.IMAGE_JPEG, MediaType.IMAGE_PNG).build();
 
-		assertThat(requestEntity).isNotNull();
-		assertThat(requestEntity.getMethod()).isEqualTo(HttpMethod.GET);
-		assertThat(requestEntity.getHeaders().containsKey(HttpHeaders.ACCEPT)).isTrue();
-		assertThat(requestEntity.getHeaders().getFirst(HttpHeaders.ACCEPT)).isEqualTo("image/gif, image/jpeg, image/png");
-		assertThat(requestEntity.getBody()).isNull();
+		assertNotNull(requestEntity);
+		assertEquals(HttpMethod.GET, requestEntity.getMethod());
+		assertTrue(requestEntity.getHeaders().containsKey("Accept"));
+		assertEquals("image/gif, image/jpeg, image/png", requestEntity.getHeaders().getFirst("Accept"));
+		assertNull(requestEntity.getBody());
 	}
 
 	@Test
-	void headers() throws URISyntaxException {
+	public void headers() throws URISyntaxException {
 		MediaType accept = MediaType.TEXT_PLAIN;
 		long ifModifiedSince = 12345L;
 		String ifNoneMatch = "\"foo\"";
@@ -120,59 +106,58 @@ class RequestEntityTests {
 				ifNoneMatch(ifNoneMatch).
 				contentLength(contentLength).
 				contentType(contentType).
-				headers(headers -> assertThat(headers).hasSize(6)).
 				build();
 
-		assertThat(responseEntity).isNotNull();
-		assertThat(responseEntity.getMethod()).isEqualTo(HttpMethod.POST);
-		assertThat(responseEntity.getUrl()).isEqualTo(new URI("https://example.com"));
+		assertNotNull(responseEntity);
+		assertEquals(HttpMethod.POST, responseEntity.getMethod());
+		assertEquals(new URI("https://example.com"), responseEntity.getUrl());
 		HttpHeaders responseHeaders = responseEntity.getHeaders();
 
-		assertThat(responseHeaders.getFirst(HttpHeaders.ACCEPT)).isEqualTo(MediaType.TEXT_PLAIN_VALUE);
-		assertThat(responseHeaders.getFirst(HttpHeaders.ACCEPT_CHARSET)).isEqualTo("utf-8");
-		assertThat(responseHeaders.getFirst(HttpHeaders.IF_MODIFIED_SINCE)).isEqualTo("Thu, 01 Jan 1970 00:00:12 GMT");
-		assertThat(responseHeaders.getFirst(HttpHeaders.IF_NONE_MATCH)).isEqualTo(ifNoneMatch);
-		assertThat(responseHeaders.getFirst(HttpHeaders.CONTENT_LENGTH)).isEqualTo(String.valueOf(contentLength));
-		assertThat(responseHeaders.getFirst(HttpHeaders.CONTENT_TYPE)).isEqualTo(contentType.toString());
+		assertEquals("text/plain", responseHeaders.getFirst("Accept"));
+		assertEquals("utf-8", responseHeaders.getFirst("Accept-Charset"));
+		assertEquals("Thu, 01 Jan 1970 00:00:12 GMT", responseHeaders.getFirst("If-Modified-Since"));
+		assertEquals(ifNoneMatch, responseHeaders.getFirst("If-None-Match"));
+		assertEquals(String.valueOf(contentLength), responseHeaders.getFirst("Content-Length"));
+		assertEquals(contentType.toString(), responseHeaders.getFirst("Content-Type"));
 
-		assertThat(responseEntity.getBody()).isNull();
+		assertNull(responseEntity.getBody());
 	}
 
 	@Test
-	void methods() throws URISyntaxException {
+	public void methods() throws URISyntaxException {
 		URI url = new URI("https://example.com");
 
 		RequestEntity<?> entity = RequestEntity.get(url).build();
-		assertThat(entity.getMethod()).isEqualTo(HttpMethod.GET);
+		assertEquals(HttpMethod.GET, entity.getMethod());
 
 		entity = RequestEntity.post(url).build();
-		assertThat(entity.getMethod()).isEqualTo(HttpMethod.POST);
+		assertEquals(HttpMethod.POST, entity.getMethod());
 
 		entity = RequestEntity.head(url).build();
-		assertThat(entity.getMethod()).isEqualTo(HttpMethod.HEAD);
+		assertEquals(HttpMethod.HEAD, entity.getMethod());
 
 		entity = RequestEntity.options(url).build();
-		assertThat(entity.getMethod()).isEqualTo(HttpMethod.OPTIONS);
+		assertEquals(HttpMethod.OPTIONS, entity.getMethod());
 
 		entity = RequestEntity.put(url).build();
-		assertThat(entity.getMethod()).isEqualTo(HttpMethod.PUT);
+		assertEquals(HttpMethod.PUT, entity.getMethod());
 
 		entity = RequestEntity.patch(url).build();
-		assertThat(entity.getMethod()).isEqualTo(HttpMethod.PATCH);
+		assertEquals(HttpMethod.PATCH, entity.getMethod());
 
 		entity = RequestEntity.delete(url).build();
-		assertThat(entity.getMethod()).isEqualTo(HttpMethod.DELETE);
+		assertEquals(HttpMethod.DELETE, entity.getMethod());
 
 	}
 
 	@Test  // SPR-13154
-	void types() throws URISyntaxException {
+	public void types() throws URISyntaxException {
 		URI url = new URI("https://example.com");
 		List<String> body = Arrays.asList("foo", "bar");
 		ParameterizedTypeReference<?> typeReference = new ParameterizedTypeReference<List<String>>() {};
 
 		RequestEntity<?> entity = RequestEntity.post(url).body(body, typeReference.getType());
-		assertThat(entity.getType()).isEqualTo(typeReference.getType());
+		assertEquals(typeReference.getType(), entity.getType());
 	}
 
 }

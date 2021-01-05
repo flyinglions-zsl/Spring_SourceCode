@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.springframework.util.Assert;
  * @author Rossen Stoyanchev
  * @since 5.0
  */
-public final class ReactiveTypeDescriptor {
+public class ReactiveTypeDescriptor {
 
 	private final Class<?> reactiveType;
 
@@ -39,24 +39,18 @@ public final class ReactiveTypeDescriptor {
 	@Nullable
 	private final Supplier<?> emptyValueSupplier;
 
-	private final boolean deferred;
 
-
+	/**
+	 * Private constructor. See static factory methods.
+	 */
 	private ReactiveTypeDescriptor(Class<?> reactiveType, boolean multiValue, boolean noValue,
 			@Nullable Supplier<?> emptySupplier) {
-
-		this(reactiveType, multiValue, noValue, emptySupplier, true);
-	}
-
-	private ReactiveTypeDescriptor(Class<?> reactiveType, boolean multiValue, boolean noValue,
-			@Nullable Supplier<?> emptySupplier, boolean deferred) {
 
 		Assert.notNull(reactiveType, "'reactiveType' must not be null");
 		this.reactiveType = reactiveType;
 		this.multiValue = multiValue;
 		this.noValue = noValue;
 		this.emptyValueSupplier = emptySupplier;
-		this.deferred = deferred;
 	}
 
 
@@ -99,16 +93,6 @@ public final class ReactiveTypeDescriptor {
 	public Object getEmptyValue() {
 		Assert.state(this.emptyValueSupplier != null, "Empty values not supported");
 		return this.emptyValueSupplier.get();
-	}
-
-	/**
-	 * Whether the underlying operation is deferred and needs to be started
-	 * explicitly, e.g. via subscribing (or similar), or whether it is triggered
-	 * without the consumer having any control.
-	 * @since 5.2.7
-	 */
-	public boolean isDeferred() {
-		return this.deferred;
 	}
 
 
@@ -162,17 +146,6 @@ public final class ReactiveTypeDescriptor {
 	 */
 	public static ReactiveTypeDescriptor noValue(Class<?> type, Supplier<?> emptySupplier) {
 		return new ReactiveTypeDescriptor(type, false, true, emptySupplier);
-	}
-
-	/**
-	 * The same as {@link #singleOptionalValue(Class, Supplier)} but for a
-	 * non-deferred, async type such as {@link java.util.concurrent.CompletableFuture}.
-	 * @param type the reactive type
-	 * @param emptySupplier a supplier of an empty-value instance of the reactive type
-	 * @since 5.2.7
-	 */
-	public static ReactiveTypeDescriptor nonDeferredAsyncValue(Class<?> type, Supplier<?> emptySupplier) {
-		return new ReactiveTypeDescriptor(type, false, false, emptySupplier, false);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,7 +122,7 @@ public class GenericGroovyApplicationContext extends GenericApplicationContext i
 
 	private final BeanWrapper contextWrapper = new BeanWrapperImpl(this);
 
-	private MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass());
+    private MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass());
 
 
 	/**
@@ -225,22 +225,18 @@ public class GenericGroovyApplicationContext extends GenericApplicationContext i
 
 	// Implementation of the GroovyObject interface
 
-	@Override
 	public void setMetaClass(MetaClass metaClass) {
 		this.metaClass = metaClass;
 	}
 
-	@Override
-	public MetaClass getMetaClass() {
+    public MetaClass getMetaClass() {
 		return this.metaClass;
 	}
 
-	@Override
 	public Object invokeMethod(String name, Object args) {
 		return this.metaClass.invokeMethod(this, name, args);
 	}
 
-	@Override
 	public void setProperty(String property, Object newValue) {
 		if (newValue instanceof BeanDefinition) {
 			registerBeanDefinition(property, (BeanDefinition) newValue);
@@ -250,9 +246,8 @@ public class GenericGroovyApplicationContext extends GenericApplicationContext i
 		}
 	}
 
-	@Override
 	@Nullable
-	public Object getProperty(String property) {
+    public Object getProperty(String property) {
 		if (containsBean(property)) {
 			return getBean(property);
 		}

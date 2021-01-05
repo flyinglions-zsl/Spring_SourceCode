@@ -16,7 +16,7 @@
 
 package org.springframework.transaction.config;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.w3c.dom.Element;
@@ -116,13 +116,18 @@ class TxAdviceBeanDefinitionParser extends AbstractSingleBeanDefinitionParser {
 				attribute.setIsolationLevelName(RuleBasedTransactionAttribute.PREFIX_ISOLATION + isolation);
 			}
 			if (StringUtils.hasText(timeout)) {
-				attribute.setTimeoutString(timeout);
+				try {
+					attribute.setTimeout(Integer.parseInt(timeout));
+				}
+				catch (NumberFormatException ex) {
+					parserContext.getReaderContext().error("Timeout must be an integer value: [" + timeout + "]", methodEle);
+				}
 			}
 			if (StringUtils.hasText(readOnly)) {
 				attribute.setReadOnly(Boolean.parseBoolean(methodEle.getAttribute(READ_ONLY_ATTRIBUTE)));
 			}
 
-			List<RollbackRuleAttribute> rollbackRules = new ArrayList<>(1);
+			List<RollbackRuleAttribute> rollbackRules = new LinkedList<>();
 			if (methodEle.hasAttribute(ROLLBACK_FOR_ATTRIBUTE)) {
 				String rollbackForValue = methodEle.getAttribute(ROLLBACK_FOR_ATTRIBUTE);
 				addRollbackRuleAttributesTo(rollbackRules, rollbackForValue);

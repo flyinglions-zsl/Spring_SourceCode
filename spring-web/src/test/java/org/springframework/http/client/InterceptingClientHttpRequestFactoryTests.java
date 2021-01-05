@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -34,7 +34,7 @@ import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.support.HttpRequestWrapper;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Arjen Poutsma
@@ -62,11 +62,11 @@ public class InterceptingClientHttpRequestFactoryTests {
 		ClientHttpRequest request = requestFactory.createRequest(new URI("https://example.com"), HttpMethod.GET);
 		ClientHttpResponse response = request.execute();
 
-		assertThat(((NoOpInterceptor) interceptors.get(0)).invoked).isTrue();
-		assertThat(((NoOpInterceptor) interceptors.get(1)).invoked).isTrue();
-		assertThat(((NoOpInterceptor) interceptors.get(2)).invoked).isTrue();
-		assertThat(requestMock.executed).isTrue();
-		assertThat(response).isSameAs(responseMock);
+		assertTrue(((NoOpInterceptor) interceptors.get(0)).invoked);
+		assertTrue(((NoOpInterceptor) interceptors.get(1)).invoked);
+		assertTrue(((NoOpInterceptor) interceptors.get(2)).invoked);
+		assertTrue(requestMock.executed);
+		assertSame(responseMock, response);
 	}
 
 	@Test
@@ -86,9 +86,9 @@ public class InterceptingClientHttpRequestFactoryTests {
 		ClientHttpRequest request = requestFactory.createRequest(new URI("https://example.com"), HttpMethod.GET);
 		ClientHttpResponse response = request.execute();
 
-		assertThat(((NoOpInterceptor) interceptors.get(1)).invoked).isFalse();
-		assertThat(requestMock.executed).isFalse();
-		assertThat(response).isSameAs(responseMock);
+		assertFalse(((NoOpInterceptor) interceptors.get(1)).invoked);
+		assertFalse(requestMock.executed);
+		assertSame(responseMock, response);
 	}
 
 	@Test
@@ -111,9 +111,9 @@ public class InterceptingClientHttpRequestFactoryTests {
 			@Override
 			public ClientHttpResponse execute() throws IOException {
 				List<String> headerValues = getHeaders().get(headerName);
-				assertThat(headerValues.size()).isEqualTo(2);
-				assertThat(headerValues.get(0)).isEqualTo(headerValue);
-				assertThat(headerValues.get(1)).isEqualTo(otherValue);
+				assertEquals(2, headerValues.size());
+				assertEquals(headerValue, headerValues.get(0));
+				assertEquals(otherValue, headerValues.get(1));
 				return super.execute();
 			}
 		};
@@ -147,7 +147,7 @@ public class InterceptingClientHttpRequestFactoryTests {
 		requestFactoryMock = new RequestFactoryMock() {
 			@Override
 			public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) throws IOException {
-				assertThat(uri).isEqualTo(changedUri);
+				assertEquals(changedUri, uri);
 				return super.createRequest(uri, httpMethod);
 			}
 		};
@@ -180,7 +180,7 @@ public class InterceptingClientHttpRequestFactoryTests {
 		requestFactoryMock = new RequestFactoryMock() {
 			@Override
 			public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) throws IOException {
-				assertThat(httpMethod).isEqualTo(changedMethod);
+				assertEquals(changedMethod, httpMethod);
 				return super.createRequest(uri, httpMethod);
 			}
 		};
@@ -209,7 +209,7 @@ public class InterceptingClientHttpRequestFactoryTests {
 
 		ClientHttpRequest request = requestFactory.createRequest(new URI("https://example.com"), HttpMethod.GET);
 		request.execute();
-		assertThat(Arrays.equals(changedBody, requestMock.body.toByteArray())).isTrue();
+		assertTrue(Arrays.equals(changedBody, requestMock.body.toByteArray()));
 	}
 
 

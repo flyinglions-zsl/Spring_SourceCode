@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
-import org.springframework.core.ResolvableType;
 import org.springframework.core.io.DescriptiveResource;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
@@ -146,8 +145,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	private boolean abstractFlag = false;
 
-	@Nullable
-	private Boolean lazyInit;
+	private boolean lazyInit = false;
 
 	private int autowireMode = AUTOWIRE_NO;
 
@@ -230,6 +228,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		setBeanClassName(original.getBeanClassName());
 		setScope(original.getScope());
 		setAbstract(original.isAbstract());
+		setLazyInit(original.isLazyInit());
 		setFactoryBeanName(original.getFactoryBeanName());
 		setFactoryMethodName(original.getFactoryMethodName());
 		setRole(original.getRole());
@@ -250,10 +249,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 			if (originalAbd.hasMethodOverrides()) {
 				setMethodOverrides(new MethodOverrides(originalAbd.getMethodOverrides()));
 			}
-			Boolean lazyInit = originalAbd.getLazyInit();
-			if (lazyInit != null) {
-				setLazyInit(lazyInit);
-			}
 			setAutowireMode(originalAbd.getAutowireMode());
 			setDependencyCheck(originalAbd.getDependencyCheck());
 			setDependsOn(originalAbd.getDependsOn());
@@ -273,7 +268,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		else {
 			setConstructorArgumentValues(new ConstructorArgumentValues(original.getConstructorArgumentValues()));
 			setPropertyValues(new MutablePropertyValues(original.getPropertyValues()));
-			setLazyInit(original.isLazyInit());
 			setResourceDescription(original.getResourceDescription());
 		}
 	}
@@ -303,6 +297,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 			setScope(other.getScope());
 		}
 		setAbstract(other.isAbstract());
+		setLazyInit(other.isLazyInit());
 		if (StringUtils.hasLength(other.getFactoryBeanName())) {
 			setFactoryBeanName(other.getFactoryBeanName());
 		}
@@ -327,10 +322,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 			if (otherAbd.hasMethodOverrides()) {
 				getMethodOverrides().addOverrides(otherAbd.getMethodOverrides());
 			}
-			Boolean lazyInit = otherAbd.getLazyInit();
-			if (lazyInit != null) {
-				setLazyInit(lazyInit);
-			}
 			setAutowireMode(otherAbd.getAutowireMode());
 			setDependencyCheck(otherAbd.getDependencyCheck());
 			setDependsOn(otherAbd.getDependsOn());
@@ -354,7 +345,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		else {
 			getConstructorArgumentValues().addArgumentValues(other.getConstructorArgumentValues());
 			getPropertyValues().addPropertyValues(other.getPropertyValues());
-			setLazyInit(other.isLazyInit());
 			setResourceDescription(other.getResourceDescription());
 		}
 	}
@@ -365,10 +355,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * @since 2.5
 	 */
 	public void applyDefaults(BeanDefinitionDefaults defaults) {
-		Boolean lazyInit = defaults.getLazyInit();
-		if (lazyInit != null) {
-			setLazyInit(lazyInit);
-		}
+		setLazyInit(defaults.isLazyInit());
 		setAutowireMode(defaults.getAutowireMode());
 		setDependencyCheck(defaults.getDependencyCheck());
 		setInitMethodName(defaults.getInitMethodName());
@@ -403,29 +390,16 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	/**
 	 * Specify the class for this bean.
-	 * @see #setBeanClassName(String)
 	 */
 	public void setBeanClass(@Nullable Class<?> beanClass) {
 		this.beanClass = beanClass;
 	}
 
 	/**
-	 * Return the specified class of the bean definition (assuming it is resolved already).
-	 * <p><b>NOTE:</b> This is an initial class reference as declared in the bean metadata
-	 * definition, potentially combined with a declared factory method or a
-	 * {@link org.springframework.beans.factory.FactoryBean} which may lead to a different
-	 * runtime type of the bean, or not being set at all in case of an instance-level
-	 * factory method (which is resolved via {@link #getFactoryBeanName()} instead).
-	 * <b>Do not use this for runtime type introspection of arbitrary bean definitions.</b>
-	 * The recommended way to find out about the actual runtime type of a particular bean
-	 * is a {@link org.springframework.beans.factory.BeanFactory#getType} call for the
-	 * specified bean name; this takes all of the above cases into account and returns the
-	 * type of object that a {@link org.springframework.beans.factory.BeanFactory#getBean}
-	 * call is going to return for the same bean name.
-	 * @return the resolved bean class (never {@code null})
+	 * Return the class of the wrapped bean (assuming it is resolved already).
+	 * @return the bean class (never {@code null})
 	 * @throws IllegalStateException if the bean definition does not define a bean class,
 	 * or a specified bean class name has not been resolved into an actual Class yet
-	 * @see #getBeanClassName()
 	 * @see #hasBeanClass()
 	 * @see #setBeanClass(Class)
 	 * @see #resolveBeanClass(ClassLoader)
@@ -469,16 +443,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		Class<?> resolvedClass = ClassUtils.forName(className, classLoader);
 		this.beanClass = resolvedClass;
 		return resolvedClass;
-	}
-
-	/**
-	 * Return a resolvable type for this bean definition.
-	 * <p>This implementation delegates to {@link #getBeanClass()}.
-	 * @since 5.2
-	 */
-	@Override
-	public ResolvableType getResolvableType() {
-		return (hasBeanClass() ? ResolvableType.forClass(getBeanClass()) : ResolvableType.NONE);
 	}
 
 	/**
@@ -561,17 +525,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 */
 	@Override
 	public boolean isLazyInit() {
-		return (this.lazyInit != null && this.lazyInit.booleanValue());
-	}
-
-	/**
-	 * Return whether this bean should be lazily initialized, i.e. not
-	 * eagerly instantiated on startup. Only applicable to a singleton bean.
-	 * @return the lazy-init flag if explicitly set, or {@code null} otherwise
-	 * @since 5.2
-	 */
-	@Nullable
-	public Boolean getLazyInit() {
 		return this.lazyInit;
 	}
 
@@ -930,7 +883,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * Set the name of the initializer method.
 	 * <p>The default is {@code null} in which case there is no initializer method.
 	 */
-	@Override
 	public void setInitMethodName(@Nullable String initMethodName) {
 		this.initMethodName = initMethodName;
 	}
@@ -938,7 +890,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	/**
 	 * Return the name of the initializer method.
 	 */
-	@Override
 	@Nullable
 	public String getInitMethodName() {
 		return this.initMethodName;
@@ -969,7 +920,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * Set the name of the destroy method.
 	 * <p>The default is {@code null} in which case there is no destroy method.
 	 */
-	@Override
 	public void setDestroyMethodName(@Nullable String destroyMethodName) {
 		this.destroyMethodName = destroyMethodName;
 	}
@@ -977,7 +927,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	/**
 	 * Return the name of the destroy method.
 	 */
-	@Override
 	@Nullable
 	public String getDestroyMethodName() {
 		return this.destroyMethodName;
@@ -1024,7 +973,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	/**
 	 * Set the role hint for this {@code BeanDefinition}.
 	 */
-	@Override
 	public void setRole(int role) {
 		this.role = role;
 	}
@@ -1040,7 +988,6 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	/**
 	 * Set a human-readable description of this bean definition.
 	 */
-	@Override
 	public void setDescription(@Nullable String description) {
 		this.description = description;
 	}
@@ -1174,38 +1121,45 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	public abstract AbstractBeanDefinition cloneBeanDefinition();
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
 		if (!(other instanceof AbstractBeanDefinition)) {
 			return false;
 		}
+
 		AbstractBeanDefinition that = (AbstractBeanDefinition) other;
-		return (ObjectUtils.nullSafeEquals(getBeanClassName(), that.getBeanClassName()) &&
-				ObjectUtils.nullSafeEquals(this.scope, that.scope) &&
-				this.abstractFlag == that.abstractFlag &&
-				this.lazyInit == that.lazyInit &&
-				this.autowireMode == that.autowireMode &&
-				this.dependencyCheck == that.dependencyCheck &&
-				Arrays.equals(this.dependsOn, that.dependsOn) &&
-				this.autowireCandidate == that.autowireCandidate &&
-				ObjectUtils.nullSafeEquals(this.qualifiers, that.qualifiers) &&
-				this.primary == that.primary &&
-				this.nonPublicAccessAllowed == that.nonPublicAccessAllowed &&
-				this.lenientConstructorResolution == that.lenientConstructorResolution &&
-				ObjectUtils.nullSafeEquals(this.constructorArgumentValues, that.constructorArgumentValues) &&
-				ObjectUtils.nullSafeEquals(this.propertyValues, that.propertyValues) &&
-				ObjectUtils.nullSafeEquals(this.methodOverrides, that.methodOverrides) &&
-				ObjectUtils.nullSafeEquals(this.factoryBeanName, that.factoryBeanName) &&
-				ObjectUtils.nullSafeEquals(this.factoryMethodName, that.factoryMethodName) &&
-				ObjectUtils.nullSafeEquals(this.initMethodName, that.initMethodName) &&
-				this.enforceInitMethod == that.enforceInitMethod &&
-				ObjectUtils.nullSafeEquals(this.destroyMethodName, that.destroyMethodName) &&
-				this.enforceDestroyMethod == that.enforceDestroyMethod &&
-				this.synthetic == that.synthetic &&
-				this.role == that.role &&
-				super.equals(other));
+
+		if (!ObjectUtils.nullSafeEquals(getBeanClassName(), that.getBeanClassName())) return false;
+		if (!ObjectUtils.nullSafeEquals(this.scope, that.scope)) return false;
+		if (this.abstractFlag != that.abstractFlag) return false;
+		if (this.lazyInit != that.lazyInit) return false;
+
+		if (this.autowireMode != that.autowireMode) return false;
+		if (this.dependencyCheck != that.dependencyCheck) return false;
+		if (!Arrays.equals(this.dependsOn, that.dependsOn)) return false;
+		if (this.autowireCandidate != that.autowireCandidate) return false;
+		if (!ObjectUtils.nullSafeEquals(this.qualifiers, that.qualifiers)) return false;
+		if (this.primary != that.primary) return false;
+
+		if (this.nonPublicAccessAllowed != that.nonPublicAccessAllowed) return false;
+		if (this.lenientConstructorResolution != that.lenientConstructorResolution) return false;
+		if (!ObjectUtils.nullSafeEquals(this.constructorArgumentValues, that.constructorArgumentValues)) return false;
+		if (!ObjectUtils.nullSafeEquals(this.propertyValues, that.propertyValues)) return false;
+		if (!ObjectUtils.nullSafeEquals(this.methodOverrides, that.methodOverrides)) return false;
+
+		if (!ObjectUtils.nullSafeEquals(this.factoryBeanName, that.factoryBeanName)) return false;
+		if (!ObjectUtils.nullSafeEquals(this.factoryMethodName, that.factoryMethodName)) return false;
+		if (!ObjectUtils.nullSafeEquals(this.initMethodName, that.initMethodName)) return false;
+		if (this.enforceInitMethod != that.enforceInitMethod) return false;
+		if (!ObjectUtils.nullSafeEquals(this.destroyMethodName, that.destroyMethodName)) return false;
+		if (this.enforceDestroyMethod != that.enforceDestroyMethod) return false;
+
+		if (this.synthetic != that.synthetic) return false;
+		if (this.role != that.role) return false;
+
+		return super.equals(other);
 	}
 
 	@Override

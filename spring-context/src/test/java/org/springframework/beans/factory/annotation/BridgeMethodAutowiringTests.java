@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ package org.springframework.beans.factory.annotation;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 public class BridgeMethodAutowiringTests {
 
@@ -33,7 +33,7 @@ public class BridgeMethodAutowiringTests {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(UserServiceImpl.class, Foo.class);
 		ctx.refresh();
-		assertThat(ctx.getBean(UserServiceImpl.class).object).isNotNull();
+		assertNotNull(ctx.getBean(UserServiceImpl.class).object);
 	}
 
 

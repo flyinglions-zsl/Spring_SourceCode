@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,37 +18,32 @@ package org.springframework.web.servlet.mvc.method.annotation;
 
 import java.io.InputStream;
 import java.io.Reader;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.security.Principal;
 import java.time.ZoneId;
 import java.util.Locale;
 import java.util.TimeZone;
-
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.PushBuilder;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockHttpSession;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.multipart.MultipartRequest;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.i18n.FixedLocaleResolver;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockHttpSession;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Arjen Poutsma
@@ -69,7 +64,7 @@ public class ServletRequestMethodArgumentResolverTests {
 	private Method method;
 
 
-	@BeforeEach
+	@Before
 	public void setup() throws Exception {
 		resolver = new ServletRequestMethodArgumentResolver();
 		mavContainer = new ModelAndViewContainer();
@@ -85,11 +80,11 @@ public class ServletRequestMethodArgumentResolverTests {
 	@Test
 	public void servletRequest() throws Exception {
 		MethodParameter servletRequestParameter = new MethodParameter(method, 0);
-		assertThat(resolver.supportsParameter(servletRequestParameter)).as("ServletRequest not supported").isTrue();
+		assertTrue("ServletRequest not supported", resolver.supportsParameter(servletRequestParameter));
 
 		Object result = resolver.resolveArgument(servletRequestParameter, mavContainer, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(servletRequest);
-		assertThat(mavContainer.isRequestHandled()).as("The requestHandled flag shouldn't change").isFalse();
+		assertSame("Invalid result", servletRequest, result);
+		assertFalse("The requestHandled flag shouldn't change", mavContainer.isRequestHandled());
 	}
 
 	@Test
@@ -98,11 +93,11 @@ public class ServletRequestMethodArgumentResolverTests {
 		servletRequest.setSession(session);
 
 		MethodParameter sessionParameter = new MethodParameter(method, 2);
-		assertThat(resolver.supportsParameter(sessionParameter)).as("Session not supported").isTrue();
+		assertTrue("Session not supported", resolver.supportsParameter(sessionParameter));
 
 		Object result = resolver.resolveArgument(sessionParameter, mavContainer, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(session);
-		assertThat(mavContainer.isRequestHandled()).as("The requestHandled flag shouldn't change").isFalse();
+		assertSame("Invalid result", session, result);
+		assertFalse("The requestHandled flag shouldn't change", mavContainer.isRequestHandled());
 	}
 
 	@Test
@@ -111,29 +106,19 @@ public class ServletRequestMethodArgumentResolverTests {
 		servletRequest.setUserPrincipal(principal);
 
 		MethodParameter principalParameter = new MethodParameter(method, 3);
-		assertThat(resolver.supportsParameter(principalParameter)).as("Principal not supported").isTrue();
+		assertTrue("Principal not supported", resolver.supportsParameter(principalParameter));
 
 		Object result = resolver.resolveArgument(principalParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(principal);
+		assertSame("Invalid result", principal, result);
 	}
 
 	@Test
 	public void principalAsNull() throws Exception {
 		MethodParameter principalParameter = new MethodParameter(method, 3);
-		assertThat(resolver.supportsParameter(principalParameter)).as("Principal not supported").isTrue();
+		assertTrue("Principal not supported", resolver.supportsParameter(principalParameter));
 
 		Object result = resolver.resolveArgument(principalParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isNull();
-	}
-
-	@Test // gh-25780
-	public void annotatedPrincipal() throws Exception {
-		Principal principal = () -> "Foo";
-		servletRequest.setUserPrincipal(principal);
-		Method principalMethod = getClass().getMethod("supportedParamsWithAnnotatedPrincipal", Principal.class);
-
-		MethodParameter principalParameter = new MethodParameter(principalMethod, 0);
-		assertThat(resolver.supportsParameter(principalParameter)).as("Principal not supported").isFalse();
+		assertNull("Invalid result", result);
 	}
 
 	@Test
@@ -142,10 +127,10 @@ public class ServletRequestMethodArgumentResolverTests {
 		servletRequest.addPreferredLocale(locale);
 
 		MethodParameter localeParameter = new MethodParameter(method, 4);
-		assertThat(resolver.supportsParameter(localeParameter)).as("Locale not supported").isTrue();
+		assertTrue("Locale not supported", resolver.supportsParameter(localeParameter));
 
 		Object result = resolver.resolveArgument(localeParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(locale);
+		assertSame("Invalid result", locale, result);
 	}
 
 	@Test
@@ -155,19 +140,19 @@ public class ServletRequestMethodArgumentResolverTests {
 				new FixedLocaleResolver(locale));
 
 		MethodParameter localeParameter = new MethodParameter(method, 4);
-		assertThat(resolver.supportsParameter(localeParameter)).as("Locale not supported").isTrue();
+		assertTrue("Locale not supported", resolver.supportsParameter(localeParameter));
 
 		Object result = resolver.resolveArgument(localeParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(locale);
+		assertSame("Invalid result", locale, result);
 	}
 
 	@Test
 	public void timeZone() throws Exception {
 		MethodParameter timeZoneParameter = new MethodParameter(method, 8);
-		assertThat(resolver.supportsParameter(timeZoneParameter)).as("TimeZone not supported").isTrue();
+		assertTrue("TimeZone not supported", resolver.supportsParameter(timeZoneParameter));
 
 		Object result = resolver.resolveArgument(timeZoneParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isEqualTo(TimeZone.getDefault());
+		assertEquals("Invalid result", TimeZone.getDefault(), result);
 	}
 
 	@Test
@@ -177,19 +162,19 @@ public class ServletRequestMethodArgumentResolverTests {
 				new FixedLocaleResolver(Locale.US, timeZone));
 
 		MethodParameter timeZoneParameter = new MethodParameter(method, 8);
-		assertThat(resolver.supportsParameter(timeZoneParameter)).as("TimeZone not supported").isTrue();
+		assertTrue("TimeZone not supported", resolver.supportsParameter(timeZoneParameter));
 
 		Object result = resolver.resolveArgument(timeZoneParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isEqualTo(timeZone);
+		assertEquals("Invalid result", timeZone, result);
 	}
 
 	@Test
 	public void zoneId() throws Exception {
 		MethodParameter zoneIdParameter = new MethodParameter(method, 9);
-		assertThat(resolver.supportsParameter(zoneIdParameter)).as("ZoneId not supported").isTrue();
+		assertTrue("ZoneId not supported", resolver.supportsParameter(zoneIdParameter));
 
 		Object result = resolver.resolveArgument(zoneIdParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isEqualTo(ZoneId.systemDefault());
+		assertEquals("Invalid result", ZoneId.systemDefault(), result);
 	}
 
 	@Test
@@ -199,46 +184,46 @@ public class ServletRequestMethodArgumentResolverTests {
 				new FixedLocaleResolver(Locale.US, timeZone));
 		MethodParameter zoneIdParameter = new MethodParameter(method, 9);
 
-		assertThat(resolver.supportsParameter(zoneIdParameter)).as("ZoneId not supported").isTrue();
+		assertTrue("ZoneId not supported", resolver.supportsParameter(zoneIdParameter));
 
 		Object result = resolver.resolveArgument(zoneIdParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isEqualTo(timeZone.toZoneId());
+		assertEquals("Invalid result", timeZone.toZoneId(), result);
 	}
 
 	@Test
 	public void inputStream() throws Exception {
 		MethodParameter inputStreamParameter = new MethodParameter(method, 5);
-		assertThat(resolver.supportsParameter(inputStreamParameter)).as("InputStream not supported").isTrue();
+		assertTrue("InputStream not supported", resolver.supportsParameter(inputStreamParameter));
 
 		Object result = resolver.resolveArgument(inputStreamParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(webRequest.getRequest().getInputStream());
+		assertSame("Invalid result", webRequest.getRequest().getInputStream(), result);
 	}
 
 	@Test
 	public void reader() throws Exception {
 		MethodParameter readerParameter = new MethodParameter(method, 6);
-		assertThat(resolver.supportsParameter(readerParameter)).as("Reader not supported").isTrue();
+		assertTrue("Reader not supported", resolver.supportsParameter(readerParameter));
 
 		Object result = resolver.resolveArgument(readerParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(webRequest.getRequest().getReader());
+		assertSame("Invalid result", webRequest.getRequest().getReader(), result);
 	}
 
 	@Test
 	public void webRequest() throws Exception {
 		MethodParameter webRequestParameter = new MethodParameter(method, 7);
-		assertThat(resolver.supportsParameter(webRequestParameter)).as("WebRequest not supported").isTrue();
+		assertTrue("WebRequest not supported", resolver.supportsParameter(webRequestParameter));
 
 		Object result = resolver.resolveArgument(webRequestParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(webRequest);
+		assertSame("Invalid result", webRequest, result);
 	}
 
 	@Test
 	public void httpMethod() throws Exception {
 		MethodParameter httpMethodParameter = new MethodParameter(method, 10);
-		assertThat(resolver.supportsParameter(httpMethodParameter)).as("HttpMethod not supported").isTrue();
+		assertTrue("HttpMethod not supported", resolver.supportsParameter(httpMethodParameter));
 
 		Object result = resolver.resolveArgument(httpMethodParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(HttpMethod.valueOf(webRequest.getRequest().getMethod()));
+		assertSame("Invalid result", HttpMethod.valueOf(webRequest.getRequest().getMethod()), result);
 	}
 
 	@Test
@@ -253,10 +238,10 @@ public class ServletRequestMethodArgumentResolverTests {
 		ServletWebRequest webRequest = new ServletWebRequest(servletRequest, new MockHttpServletResponse());
 
 		MethodParameter pushBuilderParameter = new MethodParameter(method, 11);
-		assertThat(resolver.supportsParameter(pushBuilderParameter)).as("PushBuilder not supported").isTrue();
+		assertTrue("PushBuilder not supported", resolver.supportsParameter(pushBuilderParameter));
 
 		Object result = resolver.resolveArgument(pushBuilderParameter, null, webRequest, null);
-		assertThat(result).as("Invalid result").isSameAs(pushBuilder);
+		assertSame("Invalid result", pushBuilder, result);
 	}
 
 
@@ -272,13 +257,7 @@ public class ServletRequestMethodArgumentResolverTests {
 								TimeZone p8,
 								ZoneId p9,
 								HttpMethod p10,
-								PushBuilder p11) {}
-
-	@Target({ ElementType.PARAMETER })
-	@Retention(RetentionPolicy.RUNTIME)
-	public @interface AuthenticationPrincipal {}
-
-	@SuppressWarnings("unused")
-	public void supportedParamsWithAnnotatedPrincipal(@AuthenticationPrincipal Principal p) {}
+								PushBuilder p11) {
+	}
 
 }

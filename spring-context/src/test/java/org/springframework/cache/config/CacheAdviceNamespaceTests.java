@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 
 package org.springframework.cache.config;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import org.springframework.cache.interceptor.CacheInterceptor;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
-import org.springframework.context.testfixture.cache.AbstractCacheAnnotationTests;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Costin Leau
@@ -38,9 +36,9 @@ public class CacheAdviceNamespaceTests extends AbstractCacheAnnotationTests {
 	}
 
 	@Test
-	public void testKeyStrategy() {
+	public void testKeyStrategy() throws Exception {
 		CacheInterceptor bean = this.ctx.getBean("cacheAdviceClass", CacheInterceptor.class);
-		assertThat(bean.getKeyGenerator()).isSameAs(this.ctx.getBean("keyGenerator"));
+		Assert.assertSame(this.ctx.getBean("keyGenerator"), bean.getKeyGenerator());
 	}
 
 }

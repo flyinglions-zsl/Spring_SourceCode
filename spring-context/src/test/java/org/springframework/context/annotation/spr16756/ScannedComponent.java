@@ -42,7 +42,6 @@ public class ScannedComponent {
 	@Scope(proxyMode = ScopedProxyMode.INTERFACES, value = "prototype")
 	public static class StateImpl implements State {
 
-		@Override
 		public String anyMethod() {
 			return "anyMethod called";
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.web.accept;
 
 import java.util.Locale;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.core.io.Resource;
@@ -41,11 +40,7 @@ import org.springframework.web.util.UrlPathHelper;
  *
  * @author Rossen Stoyanchev
  * @since 3.2
- * @deprecated as of 5.2.4. See class-level note in
- * {@link ContentNegotiationManagerFactoryBean} on the deprecation of path
- * extension config options.
  */
-@Deprecated
 public class PathExtensionContentNegotiationStrategy extends AbstractMappingContentNegotiationStrategy {
 
 	private UrlPathHelper urlPathHelper = new UrlPathHelper();
@@ -80,8 +75,6 @@ public class PathExtensionContentNegotiationStrategy extends AbstractMappingCont
 	}
 
 	/**
-	 * Indicate whether to use the Java Activation Framework as a fallback option
-	 * to map from file extensions to media types.
 	 * @deprecated as of 5.0, in favor of {@link #setUseRegisteredExtensionsOnly(boolean)}.
 	 */
 	@Deprecated
@@ -94,9 +87,9 @@ public class PathExtensionContentNegotiationStrategy extends AbstractMappingCont
 	protected String getMediaTypeKey(NativeWebRequest webRequest) {
 		HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
 		if (request == null) {
+			logger.warn("An HttpServletRequest is required to determine the media type key");
 			return null;
 		}
-		// Ignore LOOKUP_PATH attribute, use our own "fixed" UrlPathHelper with decoding off
 		String path = this.urlPathHelper.getLookupPathForRequest(request);
 		String extension = UriUtils.extractFileExtension(path);
 		return (StringUtils.hasText(extension) ? extension.toLowerCase(Locale.ENGLISH) : null);

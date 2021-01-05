@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.beans.factory.support;
 
 import java.util.function.Supplier;
 
-import org.springframework.beans.factory.config.AutowiredPropertyMarker;
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.lang.Nullable;
@@ -35,7 +34,7 @@ import org.springframework.util.ObjectUtils;
  * @author Juergen Hoeller
  * @since 2.0
  */
-public final class BeanDefinitionBuilder {
+public class BeanDefinitionBuilder {
 
 	/**
 	 * Create a new {@code BeanDefinitionBuilder} used to construct a {@link GenericBeanDefinition}.
@@ -230,17 +229,6 @@ public final class BeanDefinitionBuilder {
 	}
 
 	/**
-	 * Add an autowired marker for the specified property on the specified bean.
-	 * @param name the name of the property to mark as autowired
-	 * @since 5.2
-	 * @see AutowiredPropertyMarker
-	 */
-	public BeanDefinitionBuilder addAutowiredProperty(String name) {
-		this.beanDefinition.getPropertyValues().add(name, AutowiredPropertyMarker.INSTANCE);
-		return this;
-	}
-
-	/**
 	 * Set the init method for this definition.
 	 */
 	public BeanDefinitionBuilder setInitMethodName(@Nullable String methodName) {
@@ -311,15 +299,6 @@ public final class BeanDefinitionBuilder {
 			String[] added = ObjectUtils.addObjectToArray(this.beanDefinition.getDependsOn(), beanName);
 			this.beanDefinition.setDependsOn(added);
 		}
-		return this;
-	}
-
-	/**
-	 * Set whether this bean is a primary autowire candidate.
-	 * @since 5.1.11
-	 */
-	public BeanDefinitionBuilder setPrimary(boolean primary) {
-		this.beanDefinition.setPrimary(primary);
 		return this;
 	}
 

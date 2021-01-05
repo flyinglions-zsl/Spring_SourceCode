@@ -21,7 +21,6 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Properties;
-
 import javax.naming.NamingException;
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -498,8 +497,8 @@ public class JtaTransactionManager extends AbstractPlatformTransactionManager
 	protected void checkUserTransactionAndTransactionManager() throws IllegalStateException {
 		// We at least need the JTA UserTransaction.
 		if (this.userTransaction != null) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Using JTA UserTransaction: " + this.userTransaction);
+			if (logger.isInfoEnabled()) {
+				logger.info("Using JTA UserTransaction: " + this.userTransaction);
 			}
 		}
 		else {
@@ -509,8 +508,8 @@ public class JtaTransactionManager extends AbstractPlatformTransactionManager
 
 		// For transaction suspension, the JTA TransactionManager is necessary too.
 		if (this.transactionManager != null) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Using JTA TransactionManager: " + this.transactionManager);
+			if (logger.isInfoEnabled()) {
+				logger.info("Using JTA TransactionManager: " + this.transactionManager);
 			}
 		}
 		else {
@@ -543,8 +542,8 @@ public class JtaTransactionManager extends AbstractPlatformTransactionManager
 		}
 
 		if (this.transactionSynchronizationRegistry != null) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Using JTA TransactionSynchronizationRegistry: " + this.transactionSynchronizationRegistry);
+			if (logger.isInfoEnabled()) {
+				logger.info("Using JTA TransactionSynchronizationRegistry: " + this.transactionSynchronizationRegistry);
 			}
 		}
 	}
@@ -914,7 +913,7 @@ public class JtaTransactionManager extends AbstractPlatformTransactionManager
 	 * Apply the given transaction timeout. The default implementation will call
 	 * {@code UserTransaction.setTransactionTimeout} for a non-default timeout value.
 	 * @param txObject the JtaTransactionObject containing the UserTransaction
-	 * @param timeout the timeout value taken from transaction definition
+	 * @param timeout timeout value taken from transaction definition
 	 * @throws SystemException if thrown by the JTA implementation
 	 * @see #doJtaBegin
 	 * @see JtaTransactionObject#getUserTransaction()

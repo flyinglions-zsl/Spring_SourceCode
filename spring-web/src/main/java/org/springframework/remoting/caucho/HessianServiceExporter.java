@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.remoting.caucho;
 
 import java.io.IOException;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,6 +28,9 @@ import org.springframework.web.util.NestedServletException;
 /**
  * Servlet-API-based HTTP request handler that exports the specified service bean
  * as Hessian service endpoint, accessible via a Hessian proxy.
+ *
+ * <p><b>Note:</b> Spring also provides an alternative version of this exporter,
+ * for Sun's JRE 1.6 HTTP server: {@link SimpleHessianServiceExporter}.
  *
  * <p>Hessian is a slim, binary RPC protocol.
  * For information on Hessian, see the
@@ -44,9 +46,7 @@ import org.springframework.web.util.NestedServletException;
  * @see HessianProxyFactoryBean
  * @see org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter
  * @see org.springframework.remoting.rmi.RmiServiceExporter
- * @deprecated as of 5.3 (phasing out serialization-based remoting)
  */
-@Deprecated
 public class HessianServiceExporter extends HessianExporter implements HttpRequestHandler {
 
 	/**

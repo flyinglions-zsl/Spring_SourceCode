@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.expression.spel.ast;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.StringJoiner;
 
 import org.springframework.asm.MethodVisitor;
 import org.springframework.core.MethodParameter;
@@ -58,8 +57,8 @@ public class FunctionReference extends SpelNodeImpl {
 	private volatile Method method;
 
 
-	public FunctionReference(String functionName, int startPos, int endPos, SpelNodeImpl... arguments) {
-		super(startPos, endPos, arguments);
+	public FunctionReference(String functionName, int pos, SpelNodeImpl... arguments) {
+		super(pos, arguments);
 		this.name = functionName;
 	}
 
@@ -140,11 +139,16 @@ public class FunctionReference extends SpelNodeImpl {
 
 	@Override
 	public String toStringAST() {
-		StringJoiner sj = new StringJoiner(",", "(", ")");
+		StringBuilder sb = new StringBuilder("#").append(this.name);
+		sb.append("(");
 		for (int i = 0; i < getChildCount(); i++) {
-			sj.add(getChild(i).toStringAST());
+			if (i > 0) {
+				sb.append(",");
+			}
+			sb.append(getChild(i).toStringAST());
 		}
-		return '#' + this.name + sj.toString();
+		sb.append(")");
+		return sb.toString();
 	}
 
 	/**
@@ -159,7 +163,7 @@ public class FunctionReference extends SpelNodeImpl {
 		}
 		return arguments;
 	}
-
+	
 	@Override
 	public boolean isCompilable() {
 		Method method = this.method;
@@ -178,8 +182,8 @@ public class FunctionReference extends SpelNodeImpl {
 		}
 		return true;
 	}
-
-	@Override
+	
+	@Override 
 	public void generateCode(MethodVisitor mv, CodeFlow cf) {
 		Method method = this.method;
 		Assert.state(method != null, "No method handle");

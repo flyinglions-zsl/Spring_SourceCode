@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,9 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.util.Collections;
+import org.junit.Test;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Arjen Poutsma
@@ -31,44 +26,41 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class RequestPredicateTests {
 
 	@Test
-	public void and() {
+	public void and() throws Exception {
 		RequestPredicate predicate1 = request -> true;
 		RequestPredicate predicate2 = request -> true;
 		RequestPredicate predicate3 = request -> false;
 
-		MockServerHttpRequest mockRequest = MockServerHttpRequest.get("https://example.com").build();
-		ServerRequest request = new DefaultServerRequest(MockServerWebExchange.from(mockRequest), Collections.emptyList());
-		assertThat(predicate1.and(predicate2).test(request)).isTrue();
-		assertThat(predicate2.and(predicate1).test(request)).isTrue();
-		assertThat(predicate1.and(predicate3).test(request)).isFalse();
+		MockServerRequest request = MockServerRequest.builder().build();
+		assertTrue(predicate1.and(predicate2).test(request));
+		assertTrue(predicate2.and(predicate1).test(request));
+		assertFalse(predicate1.and(predicate3).test(request));
 	}
 
 	@Test
-	public void negate() {
+	public void negate() throws Exception {
 		RequestPredicate predicate = request -> false;
 		RequestPredicate negated = predicate.negate();
 
-		MockServerHttpRequest mockRequest = MockServerHttpRequest.get("https://example.com").build();
-		ServerRequest request = new DefaultServerRequest(MockServerWebExchange.from(mockRequest), Collections.emptyList());
-		assertThat(negated.test(request)).isTrue();
+		MockServerRequest mockRequest = MockServerRequest.builder().build();
+		assertTrue(negated.test(mockRequest));
 
-		predicate = r -> true;
+		predicate = request -> true;
 		negated = predicate.negate();
 
-		assertThat(negated.test(request)).isFalse();
+		assertFalse(negated.test(mockRequest));
 	}
 
 	@Test
-	public void or() {
+	public void or() throws Exception {
 		RequestPredicate predicate1 = request -> true;
 		RequestPredicate predicate2 = request -> false;
 		RequestPredicate predicate3 = request -> false;
 
-		MockServerHttpRequest mockRequest = MockServerHttpRequest.get("https://example.com").build();
-		ServerRequest request = new DefaultServerRequest(MockServerWebExchange.from(mockRequest), Collections.emptyList());
-		assertThat(predicate1.or(predicate2).test(request)).isTrue();
-		assertThat(predicate2.or(predicate1).test(request)).isTrue();
-		assertThat(predicate2.or(predicate3).test(request)).isFalse();
+		MockServerRequest request = MockServerRequest.builder().build();
+		assertTrue(predicate1.or(predicate2).test(request));
+		assertTrue(predicate2.or(predicate1).test(request));
+		assertFalse(predicate2.or(predicate3).test(request));
 	}
 
 }

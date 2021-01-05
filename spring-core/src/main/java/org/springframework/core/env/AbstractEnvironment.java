@@ -107,7 +107,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 
 	private final Set<String> defaultProfiles = new LinkedHashSet<>(getReservedDefaultProfiles());
 
-	private final MutablePropertySources propertySources = new MutablePropertySources();
+	private final MutablePropertySources propertySources = new MutablePropertySources(this.logger);
 
 	private final ConfigurablePropertyResolver propertyResolver =
 			new PropertySourcesPropertyResolver(this.propertySources);
@@ -122,6 +122,9 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	 */
 	public AbstractEnvironment() {
 		customizePropertySources(this.propertySources);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Initialized " + getClass().getSimpleName() + " with PropertySources " + this.propertySources);
+		}
 	}
 
 
@@ -324,7 +327,6 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	}
 
 	@Override
-	@Deprecated
 	public boolean acceptsProfiles(String... profiles) {
 		Assert.notEmpty(profiles, "Must specify at least one profile");
 		for (String profile : profiles) {
@@ -338,12 +340,6 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 			}
 		}
 		return false;
-	}
-
-	@Override
-	public boolean acceptsProfiles(Profiles profiles) {
-		Assert.notNull(profiles, "Profiles must not be null");
-		return profiles.matches(this::isProfileActive);
 	}
 
 	/**
@@ -462,14 +458,18 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		String[] parentActiveProfiles = parent.getActiveProfiles();
 		if (!ObjectUtils.isEmpty(parentActiveProfiles)) {
 			synchronized (this.activeProfiles) {
-				Collections.addAll(this.activeProfiles, parentActiveProfiles);
+				for (String profile : parentActiveProfiles) {
+					this.activeProfiles.add(profile);
+				}
 			}
 		}
 		String[] parentDefaultProfiles = parent.getDefaultProfiles();
 		if (!ObjectUtils.isEmpty(parentDefaultProfiles)) {
 			synchronized (this.defaultProfiles) {
 				this.defaultProfiles.remove(RESERVED_DEFAULT_PROFILE_NAME);
-				Collections.addAll(this.defaultProfiles, parentDefaultProfiles);
+				for (String profile : parentDefaultProfiles) {
+					this.defaultProfiles.add(profile);
+				}
 			}
 		}
 	}

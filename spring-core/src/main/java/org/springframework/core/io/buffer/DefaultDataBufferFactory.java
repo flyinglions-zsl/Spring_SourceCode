@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,12 +38,6 @@ public class DefaultDataBufferFactory implements DataBufferFactory {
 	 */
 	public static final int DEFAULT_INITIAL_CAPACITY = 256;
 
-	/**
-	 * Shared instance based on the default constructor.
-	 * @since 5.3
-	 */
-	public static final DefaultDataBufferFactory sharedInstance = new DefaultDataBufferFactory();
-
 
 	private final boolean preferDirect;
 
@@ -52,7 +46,6 @@ public class DefaultDataBufferFactory implements DataBufferFactory {
 
 	/**
 	 * Creates a new {@code DefaultDataBufferFactory} with default settings.
-	 * @see #sharedInstance
 	 */
 	public DefaultDataBufferFactory() {
 		this(false);
@@ -103,7 +96,7 @@ public class DefaultDataBufferFactory implements DataBufferFactory {
 	}
 
 	@Override
-	public DefaultDataBuffer wrap(byte[] bytes) {
+	public DataBuffer wrap(byte[] bytes) {
 		return DefaultDataBuffer.fromFilledByteBuffer(this, ByteBuffer.wrap(bytes));
 	}
 
@@ -113,11 +106,13 @@ public class DefaultDataBufferFactory implements DataBufferFactory {
 	 * to contain the data in {@code dataBuffers}.
 	 */
 	@Override
-	public DefaultDataBuffer join(List<? extends DataBuffer> dataBuffers) {
+	public DataBuffer join(List<? extends DataBuffer> dataBuffers) {
 		Assert.notEmpty(dataBuffers, "DataBuffer List must not be empty");
 		int capacity = dataBuffers.stream().mapToInt(DataBuffer::readableByteCount).sum();
-		DefaultDataBuffer result = allocateBuffer(capacity);
-		dataBuffers.forEach(result::write);
+		DefaultDataBuffer dataBuffer = allocateBuffer(capacity);
+		DataBuffer result = dataBuffers.stream()
+				.map(o -> (DataBuffer) o)
+				.reduce(dataBuffer, DataBuffer::write);
 		dataBuffers.forEach(DataBufferUtils::release);
 		return result;
 	}

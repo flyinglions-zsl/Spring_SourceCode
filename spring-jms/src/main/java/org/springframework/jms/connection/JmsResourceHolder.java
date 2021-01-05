@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,9 @@
 package org.springframework.jms.connection;
 
 import java.lang.reflect.Method;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
-
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.JMSException;
@@ -59,11 +57,11 @@ public class JmsResourceHolder extends ResourceHolderSupport {
 
 	private boolean frozen = false;
 
-	private final Deque<Connection> connections = new ArrayDeque<>();
+	private final LinkedList<Connection> connections = new LinkedList<>();
 
-	private final Deque<Session> sessions = new ArrayDeque<>();
+	private final LinkedList<Session> sessions = new LinkedList<>();
 
-	private final Map<Connection, Deque<Session>> sessionsPerConnection = new HashMap<>();
+	private final Map<Connection, LinkedList<Session>> sessionsPerConnection = new HashMap<>();
 
 
 	/**
@@ -156,8 +154,8 @@ public class JmsResourceHolder extends ResourceHolderSupport {
 		if (!this.sessions.contains(session)) {
 			this.sessions.add(session);
 			if (connection != null) {
-				Deque<Session> sessions =
-						this.sessionsPerConnection.computeIfAbsent(connection, k -> new ArrayDeque<>());
+				LinkedList<Session> sessions =
+						this.sessionsPerConnection.computeIfAbsent(connection, k -> new LinkedList<>());
 				sessions.add(session);
 			}
 		}
@@ -191,16 +189,6 @@ public class JmsResourceHolder extends ResourceHolderSupport {
 	}
 
 	/**
-	 * Return an existing original Session, if any.
-	 * <p>In contrast to {@link #getSession()}, this must not lazily initialize
-	 * a new Session, not even in {@link JmsResourceHolder} subclasses.
-	 */
-	@Nullable
-	Session getOriginalSession() {
-		return this.sessions.peek();
-	}
-
-	/**
 	 * Return this resource holder's default Session,
 	 * or {@code null} if none.
 	 */
@@ -224,7 +212,7 @@ public class JmsResourceHolder extends ResourceHolderSupport {
 	 */
 	@Nullable
 	public <S extends Session> S getSession(Class<S> sessionType, @Nullable Connection connection) {
-		Deque<Session> sessions =
+		LinkedList<Session> sessions =
 				(connection != null ? this.sessionsPerConnection.get(connection) : this.sessions);
 		return CollectionUtils.findValueOfType(sessions, sessionType);
 	}

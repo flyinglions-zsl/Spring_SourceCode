@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,25 @@
 
 package org.springframework.http.codec;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.ResolvableType;
-import org.springframework.core.codec.AbstractEncoder;
 import org.springframework.core.codec.Encoder;
-import org.springframework.core.codec.Hints;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.PooledDataBuffer;
-import org.springframework.http.HttpLogging;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 /**
  * {@code HttpMessageWriter} that wraps and delegates to an {@link Encoder}.
@@ -51,14 +47,9 @@ import org.springframework.util.StringUtils;
  * @author Sebastien Deleuze
  * @author Rossen Stoyanchev
  * @author Brian Clozel
- * @author Sam Brannen
  * @since 5.0
- * @param <T> the type of objects in the input stream
  */
 public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
-
-	private static final Log logger = HttpLogging.forLogName(EncoderHttpMessageWriter.class);
-
 
 	private final Encoder<T> encoder;
 
@@ -73,18 +64,9 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 	 */
 	public EncoderHttpMessageWriter(Encoder<T> encoder) {
 		Assert.notNull(encoder, "Encoder is required");
-		initLogger(encoder);
 		this.encoder = encoder;
 		this.mediaTypes = MediaType.asMediaTypes(encoder.getEncodableMimeTypes());
 		this.defaultMediaType = initDefaultMediaType(this.mediaTypes);
-	}
-
-	private static void initLogger(Encoder<?> encoder) {
-		if (encoder instanceof AbstractEncoder &&
-				encoder.getClass().getName().startsWith("org.springframework.core.codec")) {
-			Log logger = HttpLogging.forLog(((AbstractEncoder<?>) encoder).getLogger());
-			((AbstractEncoder<?>) encoder).setLogger(logger);
-		}
 	}
 
 	@Nullable
@@ -111,6 +93,7 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 		return this.encoder.canEncode(elementType, mediaType);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Mono<Void> write(Publisher<? extends T> inputStream, ResolvableType elementType,
 			@Nullable MediaType mediaType, ReactiveHttpOutputMessage message, Map<String, Object> hints) {
@@ -121,32 +104,17 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 				inputStream, message.bufferFactory(), elementType, contentType, hints);
 
 		if (inputStream instanceof Mono) {
-			return body
-					.singleOrEmpty()
-					.switchIfEmpty(Mono.defer(() -> {
-						message.getHeaders().setContentLength(0);
-						return message.setComplete().then(Mono.empty());
-					}))
+			HttpHeaders headers = message.getHeaders();
+			return Mono.from(body)
+					.defaultIfEmpty(message.bufferFactory().wrap(new byte[0]))
 					.flatMap(buffer -> {
-						Hints.touchDataBuffer(buffer, hints, logger);
-						message.getHeaders().setContentLength(buffer.readableByteCount());
-						return message.writeWith(Mono.just(buffer)
-								.doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release));
-					})
-					.doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release);
+						headers.setContentLength(buffer.readableByteCount());
+						return message.writeWith(Mono.just(buffer));
+					});
 		}
 
-		if (isStreamingMediaType(contentType)) {
-			return message.writeAndFlushWith(body.map(buffer -> {
-				Hints.touchDataBuffer(buffer, hints, logger);
-				return Mono.just(buffer).doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release);
-			}));
-		}
-
-		if (logger.isDebugEnabled()) {
-			body = body.doOnNext(buffer -> Hints.touchDataBuffer(buffer, hints, logger));
-		}
-		return message.writeWith(body);
+		return (isStreamingMediaType(contentType) ?
+				message.writeAndFlushWith(body.map(Flux::just)) : message.writeWith(body));
 	}
 
 	@Nullable
@@ -176,30 +144,10 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 		return main;
 	}
 
-	private static void touch(DataBuffer buffer, Map<String, Object> hints) {
-	}
-
-	private boolean isStreamingMediaType(@Nullable MediaType mediaType) {
-		if (mediaType == null || !(this.encoder instanceof HttpMessageEncoder)) {
-			return false;
-		}
-		for (MediaType streamingMediaType : ((HttpMessageEncoder<?>) this.encoder).getStreamingMediaTypes()) {
-			if (mediaType.isCompatibleWith(streamingMediaType) && matchParameters(mediaType, streamingMediaType)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private boolean matchParameters(MediaType streamingMediaType, MediaType mediaType) {
-		for (String name : streamingMediaType.getParameters().keySet()) {
-			String s1 = streamingMediaType.getParameter(name);
-			String s2 = mediaType.getParameter(name);
-			if (StringUtils.hasText(s1) && StringUtils.hasText(s2) && !s1.equalsIgnoreCase(s2)) {
-				return false;
-			}
-		}
-		return true;
+	private boolean isStreamingMediaType(@Nullable MediaType contentType) {
+		return (contentType != null && this.encoder instanceof HttpMessageEncoder &&
+				((HttpMessageEncoder<?>) this.encoder).getStreamingMediaTypes().stream()
+						.anyMatch(contentType::isCompatibleWith));
 	}
 
 
@@ -210,8 +158,9 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 			ResolvableType elementType, @Nullable MediaType mediaType, ServerHttpRequest request,
 			ServerHttpResponse response, Map<String, Object> hints) {
 
-		Map<String, Object> allHints = Hints.merge(hints,
-				getWriteHints(actualType, elementType, mediaType, request, response));
+		Map<String, Object> allHints = new HashMap<>();
+		allHints.putAll(getWriteHints(actualType, elementType, mediaType, request, response));
+		allHints.putAll(hints);
 
 		return write(inputStream, elementType, mediaType, response, allHints);
 	}
@@ -225,10 +174,10 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 			@Nullable MediaType mediaType, ServerHttpRequest request, ServerHttpResponse response) {
 
 		if (this.encoder instanceof HttpMessageEncoder) {
-			HttpMessageEncoder<?> encoder = (HttpMessageEncoder<?>) this.encoder;
-			return encoder.getEncodeHints(streamType, elementType, mediaType, request, response);
+			HttpMessageEncoder<?> httpEncoder = (HttpMessageEncoder<?>) this.encoder;
+			return httpEncoder.getEncodeHints(streamType, elementType, mediaType, request, response);
 		}
-		return Hints.none();
+		return Collections.emptyMap();
 	}
 
 }

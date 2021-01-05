@@ -16,7 +16,7 @@
 
 package org.springframework.web.util.pattern;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +35,7 @@ import org.springframework.web.util.pattern.PathPattern.MatchingContext;
  */
 class RegexPathElement extends PathElement {
 
-	private static final Pattern GLOB_PATTERN = Pattern.compile("\\?|\\*|\\{((?:\\{[^/]+?}|[^/{}]|\\\\[{}])+?)}");
+	private static final Pattern GLOB_PATTERN = Pattern.compile("\\?|\\*|\\{((?:\\{[^/]+?\\}|[^/{}]|\\\\[{}])+?)\\}");
 
 	private static final String DEFAULT_VARIABLE_PATTERN = "(.*)";
 
@@ -48,7 +48,7 @@ class RegexPathElement extends PathElement {
 
 	private int wildcardCount;
 
-	private final List<String> variableNames = new ArrayList<>();
+	private final List<String> variableNames = new LinkedList<>();
 
 
 	RegexPathElement(int pos, char[] regex, boolean caseSensitive, char[] completePattern, char separator) {
@@ -143,13 +143,12 @@ class RegexPathElement extends PathElement {
 				else {
 					// No more pattern, is there more data?
 					// If pattern is capturing variables there must be some actual data to bind to them
-					matches = (pathIndex + 1) >= matchingContext.pathLength
-							&& (this.variableNames.isEmpty() || textToMatch.length() > 0);
+					matches = (pathIndex + 1) >= matchingContext.pathLength &&
+							  (this.variableNames.isEmpty() || textToMatch.length() > 0);
 					if (!matches && matchingContext.isMatchOptionalTrailingSeparator()) {
-						matches = (this.variableNames.isEmpty()
-								|| textToMatch.length() > 0)
-								&& (pathIndex + 2) >= matchingContext.pathLength
-								&& matchingContext.isSeparator(pathIndex + 1);
+						matches = (this.variableNames.isEmpty() || textToMatch.length() > 0) &&
+							      (pathIndex + 2) >= matchingContext.pathLength &&
+							      matchingContext.isSeparator(pathIndex + 1);
 					}
 				}
 			}

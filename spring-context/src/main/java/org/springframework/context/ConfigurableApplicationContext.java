@@ -24,7 +24,6 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ProtocolResolver;
-import org.springframework.core.metrics.ApplicationStartup;
 import org.springframework.lang.Nullable;
 
 /**
@@ -39,7 +38,6 @@ import org.springframework.lang.Nullable;
  *
  * @author Juergen Hoeller
  * @author Chris Beams
- * @author Sam Brannen
  * @since 03.11.2003
  */
 public interface ConfigurableApplicationContext extends ApplicationContext, Lifecycle, Closeable {
@@ -88,20 +86,6 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	 */
 	String SYSTEM_ENVIRONMENT_BEAN_NAME = "systemEnvironment";
 
-	/**
-	 * Name of the {@link ApplicationStartup} bean in the factory.
-	 * @since 5.3
-	 */
-	String APPLICATION_STARTUP_BEAN_NAME = "applicationStartup";
-
-	/**
-	 * {@link Thread#getName() Name} of the {@linkplain #registerShutdownHook()
-	 * shutdown hook} thread: {@value}.
-	 * @since 5.2
-	 * @see #registerShutdownHook()
-	 */
-	String SHUTDOWN_HOOK_THREAD_NAME = "SpringContextShutdownHook";
-
 
 	/**
 	 * Set the unique id of this application context.
@@ -135,21 +119,6 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	ConfigurableEnvironment getEnvironment();
 
 	/**
-	 * Set the {@link ApplicationStartup} for this application context.
-	 * <p>This allows the application context to record metrics
-	 * during startup.
-	 * @param applicationStartup the new context event factory
-	 * @since 5.3
-	 */
-	void setApplicationStartup(ApplicationStartup applicationStartup);
-
-	/**
-	 * Return the {@link ApplicationStartup} for this application context.
-	 * @since 5.3
-	 */
-	ApplicationStartup getApplicationStartup();
-
-	/**
 	 * Add a new BeanFactoryPostProcessor that will get applied to the internal
 	 * bean factory of this application context on refresh, before any of the
 	 * bean definitions get evaluated. To be invoked during context configuration.
@@ -168,15 +137,6 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	 * @see org.springframework.context.event.ContextClosedEvent
 	 */
 	void addApplicationListener(ApplicationListener<?> listener);
-
-	/**
-	 * Specify the ClassLoader to load class path resources and bean classes with.
-	 * <p>This context class loader will be passed to the internal bean factory.
-	 * @since 5.2.7
-	 * @see org.springframework.core.io.DefaultResourceLoader#DefaultResourceLoader(ClassLoader)
-	 * @see org.springframework.beans.factory.config.ConfigurableBeanFactory#setBeanClassLoader
-	 */
-	void setClassLoader(ClassLoader classLoader);
 
 	/**
 	 * Register the given protocol resolver with this application context,
@@ -205,8 +165,6 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	 * on JVM shutdown unless it has already been closed at that time.
 	 * <p>This method can be called multiple times. Only one shutdown hook
 	 * (at max) will be registered for each context instance.
-	 * <p>As of Spring Framework 5.2, the {@linkplain Thread#getName() name} of
-	 * the shutdown hook thread should be {@link #SHUTDOWN_HOOK_THREAD_NAME}.
 	 * @see java.lang.Runtime#addShutdownHook
 	 * @see #close()
 	 */

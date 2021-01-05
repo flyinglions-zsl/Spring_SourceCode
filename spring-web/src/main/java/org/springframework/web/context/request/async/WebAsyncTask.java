@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import org.springframework.web.context.request.NativeWebRequest;
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
  * @since 3.2
- * @param <V> the value type
  */
 public class WebAsyncTask<V> implements BeanFactoryAware {
 
@@ -73,7 +72,7 @@ public class WebAsyncTask<V> implements BeanFactoryAware {
 
 	/**
 	 * Create a {@code WebAsyncTask} with a timeout value, an executor name, and a {@link Callable}.
-	 * @param timeout the timeout value in milliseconds; ignored if {@code null}
+	 * @param timeout timeout value in milliseconds; ignored if {@code null}
 	 * @param executorName the name of an executor bean to use
 	 * @param callable the callable for concurrent handling
 	 */
@@ -86,7 +85,7 @@ public class WebAsyncTask<V> implements BeanFactoryAware {
 
 	/**
 	 * Create a {@code WebAsyncTask} with a timeout value, an executor instance, and a Callable.
-	 * @param timeout the timeout value in milliseconds; ignored if {@code null}
+	 * @param timeout timeout value in milliseconds; ignored if {@code null}
 	 * @param executor the executor to use
 	 * @param callable the callable for concurrent handling
 	 */
@@ -118,7 +117,6 @@ public class WebAsyncTask<V> implements BeanFactoryAware {
 	 * <p>This factory reference will automatically be set when
 	 * {@code WebAsyncTask} is used within a Spring MVC controller.
 	 */
-	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}

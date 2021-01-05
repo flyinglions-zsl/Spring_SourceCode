@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,7 +142,7 @@ public abstract class AbstractGenericWebContextLoader extends AbstractContextLoa
 	 * @since 4.0.4
 	 */
 	protected void validateMergedContextConfiguration(WebMergedContextConfiguration mergedConfig) {
-		// no-op
+		/* no-op */
 	}
 
 	/**
@@ -170,7 +170,6 @@ public abstract class AbstractGenericWebContextLoader extends AbstractContextLoa
 	 * {@link WebApplicationContext#ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE} key.</li>
 	 * <li>Finally, the {@code MockServletContext} is set in the
 	 * {@code WebApplicationContext}.</li>
-	 * </ul>
 	 * @param context the web application context for which to configure the web resources
 	 * @param webMergedConfig the merged context configuration to use to load the web application context
 	 */
@@ -181,7 +180,7 @@ public abstract class AbstractGenericWebContextLoader extends AbstractContextLoa
 
 		// If the WebApplicationContext has no parent or the parent is not a WebApplicationContext,
 		// set the current context as the root WebApplicationContext:
-		if (!(parent instanceof WebApplicationContext)) {
+		if (parent == null || (!(parent instanceof WebApplicationContext))) {
 			String resourceBasePath = webMergedConfig.getResourceBasePath();
 			ResourceLoader resourceLoader = (resourceBasePath.startsWith(ResourceLoader.CLASSPATH_URL_PREFIX) ?
 					new DefaultResourceLoader() : new FileSystemResourceLoader());

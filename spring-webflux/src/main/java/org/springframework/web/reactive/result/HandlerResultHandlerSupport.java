@@ -17,15 +17,11 @@
 package org.springframework.web.reactive.result;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.springframework.core.Ordered;
 import org.springframework.core.ReactiveAdapter;
@@ -48,11 +44,8 @@ import org.springframework.web.server.ServerWebExchange;
  */
 public abstract class HandlerResultHandlerSupport implements Ordered {
 
-	private static final List<MediaType> ALL_APPLICATION_MEDIA_TYPES =
-			Arrays.asList(MediaType.ALL, new MediaType("application"));
+	private static final MediaType MEDIA_TYPE_APPLICATION_ALL = new MediaType("application");
 
-
-	protected final Log logger = LogFactory.getLog(getClass());
 
 	private final RequestedContentTypeResolver contentTypeResolver;
 
@@ -107,7 +100,8 @@ public abstract class HandlerResultHandlerSupport implements Ordered {
 	 */
 	@Nullable
 	protected ReactiveAdapter getAdapter(HandlerResult result) {
-		return getAdapterRegistry().getAdapter(result.getReturnType().resolve(), result.getReturnValue());
+		Class<?> returnType = result.getReturnType().getRawClass();
+		return getAdapterRegistry().getAdapter(returnType, result.getReturnValue());
 	}
 
 	/**
@@ -122,9 +116,6 @@ public abstract class HandlerResultHandlerSupport implements Ordered {
 
 		MediaType contentType = exchange.getResponse().getHeaders().getContentType();
 		if (contentType != null && contentType.isConcrete()) {
-			if (logger.isDebugEnabled()) {
-				logger.debug(exchange.getLogPrefix() + "Found 'Content-Type:" + contentType + "' in response");
-			}
 			return contentType;
 		}
 
@@ -143,31 +134,16 @@ public abstract class HandlerResultHandlerSupport implements Ordered {
 		List<MediaType> result = new ArrayList<>(compatibleMediaTypes);
 		MediaType.sortBySpecificityAndQuality(result);
 
-		MediaType selected = null;
 		for (MediaType mediaType : result) {
 			if (mediaType.isConcrete()) {
-				selected = mediaType;
-				break;
+				return mediaType;
 			}
-			else if (mediaType.isPresentIn(ALL_APPLICATION_MEDIA_TYPES)) {
-				selected = MediaType.APPLICATION_OCTET_STREAM;
-				break;
+			else if (mediaType.equals(MediaType.ALL) || mediaType.equals(MEDIA_TYPE_APPLICATION_ALL)) {
+				return MediaType.APPLICATION_OCTET_STREAM;
 			}
 		}
 
-		if (selected != null) {
-			selected = selected.removeQualityValue();
-			if (logger.isDebugEnabled()) {
-				logger.debug(exchange.getLogPrefix() + "Using '" + selected + "' given " + acceptableTypes +
-						" and supported " + producibleTypes);
-			}
-		}
-		else if (logger.isDebugEnabled()) {
-			logger.debug(exchange.getLogPrefix() +
-					"No match for " + acceptableTypes + ", supported: " + producibleTypes);
-		}
-
-		return selected;
+		return null;
 	}
 
 	private List<MediaType> getAcceptableTypes(ServerWebExchange exchange) {

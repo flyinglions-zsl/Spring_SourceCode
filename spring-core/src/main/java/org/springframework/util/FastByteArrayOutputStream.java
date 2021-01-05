@@ -20,9 +20,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.MessageDigest;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Iterator;
+import java.util.LinkedList;
 
 import org.springframework.lang.Nullable;
 
@@ -32,7 +31,7 @@ import org.springframework.lang.Nullable;
  * its sibling {@link ResizableByteArrayOutputStream}.
  *
  * <p>Unlike {@link java.io.ByteArrayOutputStream}, this implementation is backed
- * by an {@link java.util.ArrayDeque} of {@code byte[]} instead of 1 constantly
+ * by a {@link java.util.LinkedList} of {@code byte[]} instead of 1 constantly
  * resizing {@code byte[]}. It does not copy buffers when it gets expanded.
  *
  * <p>The initial buffer is only created when the stream is first written.
@@ -51,7 +50,7 @@ public class FastByteArrayOutputStream extends OutputStream {
 
 
 	// The buffers used to store the content bytes
-	private final Deque<byte[]> buffers = new ArrayDeque<>();
+	private final LinkedList<byte[]> buffers = new LinkedList<>();
 
 	// The size, in bytes, to use when allocating the first byte[]
 	private final int initialBlockSize;
@@ -207,7 +206,9 @@ public class FastByteArrayOutputStream extends OutputStream {
 	 */
 	public byte[] toByteArray() {
 		byte[] bytesUnsafe = toByteArrayUnsafe();
-		return bytesUnsafe.clone();
+		byte[] ret = new byte[bytesUnsafe.length];
+		System.arraycopy(bytesUnsafe, 0, ret, 0, bytesUnsafe.length);
+		return ret;
 	}
 
 	/**
@@ -290,7 +291,7 @@ public class FastByteArrayOutputStream extends OutputStream {
 	}
 
 	/**
-	 * Create a new buffer and store it in the ArrayDeque.
+	 * Create a new buffer and store it in the LinkedList.
 	 * <p>Adds a new buffer that can store at least {@code minCapacity} bytes.
 	 */
 	private void addBuffer(int minCapacity) {

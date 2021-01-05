@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.web.filter;
 
 import java.io.IOException;
-
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -156,7 +155,7 @@ public class CharacterEncodingFilter extends OncePerRequestFilter {
 	}
 
 	/**
-	 * Return whether the encoding should be forced on requests.
+	 * Return whether the encoding should be forced on requests
 	 * @since 4.3
 	 */
 	public boolean isForceRequestEncoding() {

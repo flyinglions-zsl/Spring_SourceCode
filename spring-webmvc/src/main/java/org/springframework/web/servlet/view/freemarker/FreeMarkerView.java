@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map;
-
 import javax.servlet.GenericServlet;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
@@ -71,9 +70,8 @@ import org.springframework.web.servlet.view.AbstractTemplateView;
  *
  * <p>Depends on a single {@link FreeMarkerConfig} object such as {@link FreeMarkerConfigurer}
  * being accessible in the current web application context, with any bean name.
- * Alternatively, you can set the FreeMarker {@link Configuration} object as a
- * bean property. See {@link #setConfiguration} for more details on the impacts
- * of this approach.
+ * Alternatively, you can set the FreeMarker {@link Configuration} object as bean property.
+ * See {@link #setConfiguration} for more details on the impacts of this approach.
  *
  * <p>Note: Spring's FreeMarker support requires FreeMarker 2.3 or higher.
  *
@@ -230,14 +228,18 @@ public class FreeMarkerView extends AbstractTemplateView {
 			return true;
 		}
 		catch (FileNotFoundException ex) {
-			// Allow for ViewResolver chaining...
+			if (logger.isDebugEnabled()) {
+				logger.debug("No FreeMarker view found for URL: " + url);
+			}
 			return false;
 		}
 		catch (ParseException ex) {
-			throw new ApplicationContextException("Failed to parse [" + url + "]", ex);
+			throw new ApplicationContextException(
+					"Failed to parse FreeMarker template for URL [" + url + "]", ex);
 		}
 		catch (IOException ex) {
-			throw new ApplicationContextException("Failed to load [" + url + "]", ex);
+			throw new ApplicationContextException(
+					"Could not load FreeMarker template for URL [" + url + "]", ex);
 		}
 	}
 
@@ -260,7 +262,7 @@ public class FreeMarkerView extends AbstractTemplateView {
 	 * different rendering operations can't overwrite each other's formats etc.
 	 * <p>Called by {@code renderMergedTemplateModel}. The default implementation
 	 * is empty. This method can be overridden to add custom helpers to the model.
-	 * @param model the model that will be passed to the template at merge time
+	 * @param model The model that will be passed to the template at merge time
 	 * @param request current HTTP request
 	 * @throws Exception if there's a fatal error while we're adding information to the context
 	 * @see #renderMergedTemplateModel
@@ -299,6 +301,9 @@ public class FreeMarkerView extends AbstractTemplateView {
 		// Expose all standard FreeMarker hash models.
 		SimpleHash fmModel = buildTemplateModel(model, request, response);
 
+		if (logger.isDebugEnabled()) {
+			logger.debug("Rendering FreeMarker template [" + getUrl() + "] in FreeMarkerView '" + getBeanName() + "'");
+		}
 		// Grab the locale-specific version of the template.
 		Locale locale = RequestContextUtils.getLocale(request);
 		processTemplate(getTemplate(locale), fmModel, response);

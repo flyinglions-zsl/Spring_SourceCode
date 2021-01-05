@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.jmx.export.naming;
 
 import java.io.IOException;
 import java.util.Properties;
-
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
@@ -119,8 +118,8 @@ public class KeyNamingStrategy implements ObjectNamingStrategy, InitializingBean
 
 		if (this.mappingLocations != null) {
 			for (Resource location : this.mappingLocations) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Loading JMX object name mappings file from " + location);
+				if (logger.isInfoEnabled()) {
+					logger.info("Loading JMX object name mappings file from " + location);
 				}
 				PropertiesLoaderUtils.fillProperties(this.mergedMappings, location);
 			}

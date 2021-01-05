@@ -21,7 +21,6 @@ import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.util.Hashtable;
 import java.util.List;
-
 import javax.management.DynamicMBean;
 import javax.management.JMX;
 import javax.management.MBeanParameterInfo;
@@ -97,8 +96,8 @@ public abstract class JmxUtils {
 			List<MBeanServer> servers = MBeanServerFactory.findMBeanServer(agentId);
 			if (!CollectionUtils.isEmpty(servers)) {
 				// Check to see if an MBeanServer is registered.
-				if (servers.size() > 1 && logger.isInfoEnabled()) {
-					logger.info("Found more than one MBeanServer instance" +
+				if (servers.size() > 1 && logger.isWarnEnabled()) {
+					logger.warn("Found more than one MBeanServer instance" +
 							(agentId != null ? " with agent id [" + agentId + "]" : "") +
 							". Returning first from list.");
 				}

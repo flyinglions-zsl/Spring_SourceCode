@@ -36,7 +36,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.util.ReflectionUtils;
-import org.springframework.util.StringUtils;
 
 /**
  * A SpelCompiler will take a regular parsed expression and create (and load) a class
@@ -66,7 +65,7 @@ import org.springframework.util.StringUtils;
  * @author Juergen Hoeller
  * @since 4.1
  */
-public final class SpelCompiler implements Opcodes {
+public class SpelCompiler implements Opcodes {
 
 	private static final int CLASSES_DEFINED_LIMIT = 100;
 
@@ -78,14 +77,14 @@ public final class SpelCompiler implements Opcodes {
 
 
 	// The child ClassLoader used to load the compiled expression classes
-	private volatile ChildClassLoader childClassLoader;
+	private ChildClassLoader ccl;
 
 	// Counter suffix for generated classes within this SpelCompiler instance
 	private final AtomicInteger suffixId = new AtomicInteger(1);
 
 
 	private SpelCompiler(@Nullable ClassLoader classloader) {
-		this.childClassLoader = new ChildClassLoader(classloader);
+		this.ccl = new ChildClassLoader(classloader);
 	}
 
 
@@ -137,7 +136,7 @@ public final class SpelCompiler implements Opcodes {
 		// Create class outline 'spel/ExNNN extends org.springframework.expression.spel.CompiledExpression'
 		String className = "spel/Ex" + getNextSuffix();
 		ClassWriter cw = new ExpressionClassWriter();
-		cw.visit(V1_8, ACC_PUBLIC, className, null, "org/springframework/expression/spel/CompiledExpression", null);
+		cw.visit(V1_5, ACC_PUBLIC, className, null, "org/springframework/expression/spel/CompiledExpression", null);
 
 		// Create default constructor
 		MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
@@ -184,7 +183,7 @@ public final class SpelCompiler implements Opcodes {
 		byte[] data = cw.toByteArray();
 		// TODO need to make this conditionally occur based on a debug flag
 		// dump(expressionToCompile.toStringAST(), clazzName, data);
-		return loadClass(StringUtils.replace(className, "/", "."), data);
+		return loadClass(className.replaceAll("/", "."), data);
 	}
 
 	/**
@@ -198,22 +197,10 @@ public final class SpelCompiler implements Opcodes {
 	 */
 	@SuppressWarnings("unchecked")
 	private Class<? extends CompiledExpression> loadClass(String name, byte[] bytes) {
-		ChildClassLoader ccl = this.childClassLoader;
-		if (ccl.getClassesDefinedCount() >= CLASSES_DEFINED_LIMIT) {
-			synchronized (this) {
-				ChildClassLoader currentCcl = this.childClassLoader;
-				if (ccl == currentCcl) {
-					// Still the same ClassLoader that needs to be replaced...
-					ccl = new ChildClassLoader(ccl.getParent());
-					this.childClassLoader = ccl;
-				}
-				else {
-					// Already replaced by some other thread, let's pick it up.
-					ccl = currentCcl;
-				}
-			}
+		if (this.ccl.getClassesDefinedCount() > CLASSES_DEFINED_LIMIT) {
+			this.ccl = new ChildClassLoader(this.ccl.getParent());
 		}
-		return (Class<? extends CompiledExpression>) ccl.defineClass(name, bytes);
+		return (Class<? extends CompiledExpression>) this.ccl.defineClass(name, bytes);
 	}
 
 
@@ -226,19 +213,14 @@ public final class SpelCompiler implements Opcodes {
 	 */
 	public static SpelCompiler getCompiler(@Nullable ClassLoader classLoader) {
 		ClassLoader clToUse = (classLoader != null ? classLoader : ClassUtils.getDefaultClassLoader());
-		// Quick check for existing compiler without lock contention
-		SpelCompiler compiler = compilers.get(clToUse);
-		if (compiler == null) {
-			// Full lock now since we're creating a child ClassLoader
-			synchronized (compilers) {
-				compiler = compilers.get(clToUse);
-				if (compiler == null) {
-					compiler = new SpelCompiler(clToUse);
-					compilers.put(clToUse, compiler);
-				}
+		synchronized (compilers) {
+			SpelCompiler compiler = compilers.get(clToUse);
+			if (compiler == null) {
+				compiler = new SpelCompiler(clToUse);
+				compilers.put(clToUse, compiler);
 			}
+			return compiler;
 		}
-		return compiler;
 	}
 
 	/**
@@ -272,7 +254,7 @@ public final class SpelCompiler implements Opcodes {
 
 		private static final URL[] NO_URLS = new URL[0];
 
-		private final AtomicInteger classesDefinedCount = new AtomicInteger(0);
+		private int classesDefinedCount = 0;
 
 		public ChildClassLoader(@Nullable ClassLoader classLoader) {
 			super(NO_URLS, classLoader);
@@ -280,12 +262,12 @@ public final class SpelCompiler implements Opcodes {
 
 		public Class<?> defineClass(String name, byte[] bytes) {
 			Class<?> clazz = super.defineClass(name, bytes, 0, bytes.length);
-			this.classesDefinedCount.incrementAndGet();
+			this.classesDefinedCount++;
 			return clazz;
 		}
 
 		public int getClassesDefinedCount() {
-			return this.classesDefinedCount.get();
+			return this.classesDefinedCount;
 		}
 	}
 
@@ -301,7 +283,7 @@ public final class SpelCompiler implements Opcodes {
 
 		@Override
 		protected ClassLoader getClassLoader() {
-			return childClassLoader;
+			return ccl;
 		}
 	}
 

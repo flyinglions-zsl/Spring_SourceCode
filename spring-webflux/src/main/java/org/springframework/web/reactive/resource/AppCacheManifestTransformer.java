@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,17 +65,15 @@ import org.springframework.web.server.ServerWebExchange;
  * @author Brian Clozel
  * @since 5.0
  * @see <a href="https://html.spec.whatwg.org/multipage/browsers.html#offline">HTML5 offline applications spec</a>
- * @deprecated as of 5.3 since browser support is going away
  */
-@Deprecated
 public class AppCacheManifestTransformer extends ResourceTransformerSupport {
+
+	private static final Collection<String> MANIFEST_SECTION_HEADERS =
+			Arrays.asList("CACHE MANIFEST", "NETWORK:", "FALLBACK:", "CACHE:");
 
 	private static final String MANIFEST_HEADER = "CACHE MANIFEST";
 
 	private static final String CACHE_HEADER = "CACHE:";
-
-	private static final Collection<String> MANIFEST_SECTION_HEADERS =
-			Arrays.asList(MANIFEST_HEADER, "NETWORK:", "FALLBACK:", CACHE_HEADER);
 
 	private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
@@ -129,10 +127,12 @@ public class AppCacheManifestTransformer extends ResourceTransformerSupport {
 
 		if (!content.startsWith(MANIFEST_HEADER)) {
 			if (logger.isTraceEnabled()) {
-				logger.trace(exchange.getLogPrefix() +
-						"Skipping " + resource + ": Manifest does not start with 'CACHE MANIFEST'");
+				logger.trace("Manifest should start with 'CACHE MANIFEST', skip: " + resource);
 			}
 			return Mono.just(resource);
+		}
+		if (logger.isTraceEnabled()) {
+			logger.trace("Transforming resource: " + resource);
 		}
 		return Flux.generate(new LineInfoGenerator(content))
 				.concatMap(info -> processLine(info, exchange, resource, chain))
@@ -143,6 +143,9 @@ public class AppCacheManifestTransformer extends ResourceTransformerSupport {
 				.map(out -> {
 					String hash = DigestUtils.md5DigestAsHex(out.toByteArray());
 					writeToByteArrayOutputStream(out, "\n" + "# Hash: " + hash);
+					if (logger.isTraceEnabled()) {
+						logger.trace("AppCache file: [" + resource.getFilename()+ "] hash: [" + hash + "]");
+					}
 					return new TransformedResource(resource, out.toByteArray());
 				});
 	}
@@ -165,7 +168,12 @@ public class AppCacheManifestTransformer extends ResourceTransformerSupport {
 		}
 
 		String link = toAbsolutePath(info.getLine(), exchange);
-		return resolveUrlPath(link, exchange, resource, chain);
+		return resolveUrlPath(link, exchange, resource, chain)
+				.doOnNext(path -> {
+					if (logger.isTraceEnabled()) {
+						logger.trace("Link modified: " + path + " (original: " + info.getLine() + ")");
+					}
+				});
 	}
 
 
@@ -214,9 +222,8 @@ public class AppCacheManifestTransformer extends ResourceTransformerSupport {
 
 
 		private static boolean initCacheSectionFlag(String line, @Nullable LineInfo previousLine) {
-			String trimmedLine = line.trim();
-			if (MANIFEST_SECTION_HEADERS.contains(trimmedLine)) {
-				return trimmedLine.equals(CACHE_HEADER);
+			if (MANIFEST_SECTION_HEADERS.contains(line.trim())) {
+				return line.trim().equals(CACHE_HEADER);
 			}
 			else if (previousLine != null) {
 				return previousLine.isCacheSection();

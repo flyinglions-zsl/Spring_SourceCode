@@ -21,7 +21,6 @@ import java.lang.annotation.Annotation;
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -31,7 +30,6 @@ import org.springframework.util.Assert;
  * {@link #forMethodAnnotation method}.
  *
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 2.0
  * @see AnnotationClassFilter
  * @see AnnotationMethodMatcher
@@ -98,7 +96,7 @@ public class AnnotationMatchingPointcut implements Pointcut {
 			this.classFilter = new AnnotationClassFilter(classAnnotationType, checkInherited);
 		}
 		else {
-			this.classFilter = new AnnotationCandidateClassFilter(methodAnnotationType);
+			this.classFilter = ClassFilter.TRUE;
 		}
 
 		if (methodAnnotationType != null) {
@@ -121,7 +119,7 @@ public class AnnotationMatchingPointcut implements Pointcut {
 	}
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -143,6 +141,7 @@ public class AnnotationMatchingPointcut implements Pointcut {
 		return "AnnotationMatchingPointcut: " + this.classFilter + ", " + this.methodMatcher;
 	}
 
+
 	/**
 	 * Factory method for an AnnotationMatchingPointcut that matches
 	 * for the specified annotation at the class level.
@@ -163,49 +162,6 @@ public class AnnotationMatchingPointcut implements Pointcut {
 	public static AnnotationMatchingPointcut forMethodAnnotation(Class<? extends Annotation> annotationType) {
 		Assert.notNull(annotationType, "Annotation type must not be null");
 		return new AnnotationMatchingPointcut(null, annotationType);
-	}
-
-
-	/**
-	 * {@link ClassFilter} that delegates to {@link AnnotationUtils#isCandidateClass}
-	 * for filtering classes whose methods are not worth searching to begin with.
-	 * @since 5.2
-	 */
-	private static class AnnotationCandidateClassFilter implements ClassFilter {
-
-		private final Class<? extends Annotation> annotationType;
-
-		AnnotationCandidateClassFilter(Class<? extends Annotation> annotationType) {
-			this.annotationType = annotationType;
-		}
-
-		@Override
-		public boolean matches(Class<?> clazz) {
-			return AnnotationUtils.isCandidateClass(clazz, this.annotationType);
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj) {
-				return true;
-			}
-			if (!(obj instanceof AnnotationCandidateClassFilter)) {
-				return false;
-			}
-			AnnotationCandidateClassFilter that = (AnnotationCandidateClassFilter) obj;
-			return this.annotationType.equals(that.annotationType);
-		}
-
-		@Override
-		public int hashCode() {
-			return this.annotationType.hashCode();
-		}
-
-		@Override
-		public String toString() {
-			return getClass().getName() + ": " + this.annotationType;
-		}
-
 	}
 
 }

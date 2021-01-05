@@ -130,10 +130,10 @@ public abstract class AbstractRegexpMethodPointcut extends StaticMethodMatcherPo
 	 * plus the name of the method.
 	 */
 	@Override
-	public boolean matches(Method method, Class<?> targetClass) {
-		return (matchesPattern(ClassUtils.getQualifiedMethodName(method, targetClass)) ||
-				(targetClass != method.getDeclaringClass() &&
-						matchesPattern(ClassUtils.getQualifiedMethodName(method, method.getDeclaringClass()))));
+	public boolean matches(Method method, @Nullable Class<?> targetClass) {
+		return ((targetClass != null && targetClass != method.getDeclaringClass() &&
+				matchesPattern(ClassUtils.getQualifiedMethodName(method, targetClass))) ||
+				matchesPattern(ClassUtils.getQualifiedMethodName(method, method.getDeclaringClass())));
 	}
 
 	/**
@@ -196,7 +196,7 @@ public abstract class AbstractRegexpMethodPointcut extends StaticMethodMatcherPo
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

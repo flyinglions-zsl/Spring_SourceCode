@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,7 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.function.Consumer;
-
 import reactor.core.publisher.Mono;
-
-import org.springframework.util.Assert;
 
 /**
  * Represents a function that routes to a {@linkplain HandlerFunction handler function}.
@@ -114,46 +108,11 @@ public interface RouterFunction<T extends ServerResponse> {
 	 * Accept the given visitor. Default implementation calls
 	 * {@link RouterFunctions.Visitor#unknown(RouterFunction)}; composed {@code RouterFunction}
 	 * implementations are expected to call {@code accept} for all components that make up this
-	 * router function.
+	 * router function
 	 * @param visitor the visitor to accept
 	 */
 	default void accept(RouterFunctions.Visitor visitor) {
 		visitor.unknown(this);
 	}
-
-	/**
-	 * Return a new routing function with the given attribute.
-	 * @param name the attribute name
-	 * @param value the attribute value
-     * @return a function that has the specified attributes
-     * @since 5.3
-	 */
-	default RouterFunction<T> withAttribute(String name, Object value) {
-		Assert.hasLength(name, "Name must not be empty");
-		Assert.notNull(value, "Value must not be null");
-
-		Map<String, Object> attributes = new LinkedHashMap<>();
-		attributes.put(name, value);
-		return new RouterFunctions.AttributesRouterFunction<>(this, attributes);
-	}
-
-	/**
-	 * Return a new routing function with attributes manipulated with the given consumer.
-	 * <p>The map provided to the consumer is "live", so that the consumer can be used
-	 * to {@linkplain Map#put(Object, Object) overwrite} existing attributes,
-	 * {@linkplain Map#remove(Object) remove} attributes, or use any of the other
-	 * {@link Map} methods.
-	 * @param attributesConsumer a function that consumes the attributes map
-	 * @return this builder
-	 * @since 5.3
-	 */
-	default RouterFunction<T> withAttributes(Consumer<Map<String, Object>> attributesConsumer) {
-		Assert.notNull(attributesConsumer, "AttributesConsumer must not be null");
-
-		Map<String, Object> attributes = new LinkedHashMap<>();
-		attributesConsumer.accept(attributes);
-		return new RouterFunctions.AttributesRouterFunction<>(this, attributes);
-	}
-
 
 }

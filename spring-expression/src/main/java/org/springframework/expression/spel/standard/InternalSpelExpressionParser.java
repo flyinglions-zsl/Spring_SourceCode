@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,32 +155,32 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		if (t != null) {
 			if (t.kind == TokenKind.ASSIGN) {  // a=b
 				if (expr == null) {
-					expr = new NullLiteral(t.startPos - 1, t.endPos - 1);
+					expr = new NullLiteral(toPos(t.startPos - 1, t.endPos - 1));
 				}
 				nextToken();
 				SpelNodeImpl assignedValue = eatLogicalOrExpression();
-				return new Assign(t.startPos, t.endPos, expr, assignedValue);
+				return new Assign(toPos(t), expr, assignedValue);
 			}
 			if (t.kind == TokenKind.ELVIS) {  // a?:b (a if it isn't null, otherwise b)
 				if (expr == null) {
-					expr = new NullLiteral(t.startPos - 1, t.endPos - 2);
+					expr = new NullLiteral(toPos(t.startPos - 1, t.endPos - 2));
 				}
 				nextToken();  // elvis has left the building
 				SpelNodeImpl valueIfNull = eatExpression();
 				if (valueIfNull == null) {
-					valueIfNull = new NullLiteral(t.startPos + 1, t.endPos + 1);
+					valueIfNull = new NullLiteral(toPos(t.startPos + 1, t.endPos + 1));
 				}
-				return new Elvis(t.startPos, t.endPos, expr, valueIfNull);
+				return new Elvis(toPos(t), expr, valueIfNull);
 			}
 			if (t.kind == TokenKind.QMARK) {  // a?b:c
 				if (expr == null) {
-					expr = new NullLiteral(t.startPos - 1, t.endPos - 1);
+					expr = new NullLiteral(toPos(t.startPos - 1, t.endPos - 1));
 				}
 				nextToken();
 				SpelNodeImpl ifTrueExprValue = eatExpression();
 				eatToken(TokenKind.COLON);
 				SpelNodeImpl ifFalseExprValue = eatExpression();
-				return new Ternary(t.startPos, t.endPos, expr, ifTrueExprValue, ifFalseExprValue);
+				return new Ternary(toPos(t), expr, ifTrueExprValue, ifFalseExprValue);
 			}
 		}
 		return expr;
@@ -194,7 +194,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			Token t = takeToken();  //consume OR
 			SpelNodeImpl rhExpr = eatLogicalAndExpression();
 			checkOperands(t, expr, rhExpr);
-			expr = new OpOr(t.startPos, t.endPos, expr, rhExpr);
+			expr = new OpOr(toPos(t), expr, rhExpr);
 		}
 		return expr;
 	}
@@ -207,7 +207,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			Token t = takeToken();  // consume 'AND'
 			SpelNodeImpl rhExpr = eatRelationalExpression();
 			checkOperands(t, expr, rhExpr);
-			expr = new OpAnd(t.startPos, t.endPos, expr, rhExpr);
+			expr = new OpAnd(toPos(t), expr, rhExpr);
 		}
 		return expr;
 	}
@@ -224,35 +224,36 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			TokenKind tk = relationalOperatorToken.kind;
 
 			if (relationalOperatorToken.isNumericRelationalOperator()) {
+				int pos = toPos(t);
 				if (tk == TokenKind.GT) {
-					return new OpGT(t.startPos, t.endPos, expr, rhExpr);
+					return new OpGT(pos, expr, rhExpr);
 				}
 				if (tk == TokenKind.LT) {
-					return new OpLT(t.startPos, t.endPos, expr, rhExpr);
+					return new OpLT(pos, expr, rhExpr);
 				}
 				if (tk == TokenKind.LE) {
-					return new OpLE(t.startPos, t.endPos, expr, rhExpr);
+					return new OpLE(pos, expr, rhExpr);
 				}
 				if (tk == TokenKind.GE) {
-					return new OpGE(t.startPos, t.endPos, expr, rhExpr);
+					return new OpGE(pos, expr, rhExpr);
 				}
 				if (tk == TokenKind.EQ) {
-					return new OpEQ(t.startPos, t.endPos, expr, rhExpr);
+					return new OpEQ(pos, expr, rhExpr);
 				}
 				Assert.isTrue(tk == TokenKind.NE, "Not-equals token expected");
-				return new OpNE(t.startPos, t.endPos, expr, rhExpr);
+				return new OpNE(pos, expr, rhExpr);
 			}
 
 			if (tk == TokenKind.INSTANCEOF) {
-				return new OperatorInstanceof(t.startPos, t.endPos, expr, rhExpr);
+				return new OperatorInstanceof(toPos(t), expr, rhExpr);
 			}
 
 			if (tk == TokenKind.MATCHES) {
-				return new OperatorMatches(t.startPos, t.endPos, expr, rhExpr);
+				return new OperatorMatches(toPos(t), expr, rhExpr);
 			}
 
 			Assert.isTrue(tk == TokenKind.BETWEEN, "Between token expected");
-			return new OperatorBetween(t.startPos, t.endPos, expr, rhExpr);
+			return new OperatorBetween(toPos(t), expr, rhExpr);
 		}
 		return expr;
 	}
@@ -266,10 +267,10 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			SpelNodeImpl rhExpr = eatProductExpression();
 			checkRightOperand(t, rhExpr);
 			if (t.kind == TokenKind.PLUS) {
-				expr = new OpPlus(t.startPos, t.endPos, expr, rhExpr);
+				expr = new OpPlus(toPos(t), expr, rhExpr);
 			}
 			else if (t.kind == TokenKind.MINUS) {
-				expr = new OpMinus(t.startPos, t.endPos, expr, rhExpr);
+				expr = new OpMinus(toPos(t), expr, rhExpr);
 			}
 		}
 		return expr;
@@ -284,14 +285,14 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			SpelNodeImpl rhExpr = eatPowerIncDecExpression();
 			checkOperands(t, expr, rhExpr);
 			if (t.kind == TokenKind.STAR) {
-				expr = new OpMultiply(t.startPos, t.endPos, expr, rhExpr);
+				expr = new OpMultiply(toPos(t), expr, rhExpr);
 			}
 			else if (t.kind == TokenKind.DIV) {
-				expr = new OpDivide(t.startPos, t.endPos, expr, rhExpr);
+				expr = new OpDivide(toPos(t), expr, rhExpr);
 			}
 			else {
 				Assert.isTrue(t.kind == TokenKind.MOD, "Mod token expected");
-				expr = new OpModulus(t.startPos, t.endPos, expr, rhExpr);
+				expr = new OpModulus(toPos(t), expr, rhExpr);
 			}
 		}
 		return expr;
@@ -305,14 +306,14 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			Token t = takeToken();  //consume POWER
 			SpelNodeImpl rhExpr = eatUnaryExpression();
 			checkRightOperand(t, rhExpr);
-			return new OperatorPower(t.startPos, t.endPos, expr, rhExpr);
+			return new OperatorPower(toPos(t), expr, rhExpr);
 		}
 		if (expr != null && peekToken(TokenKind.INC, TokenKind.DEC)) {
 			Token t = takeToken();  //consume INC/DEC
 			if (t.getKind() == TokenKind.INC) {
-				return new OpInc(t.startPos, t.endPos, true, expr);
+				return new OpInc(toPos(t), true, expr);
 			}
-			return new OpDec(t.startPos, t.endPos, true, expr);
+			return new OpDec(toPos(t), true, expr);
 		}
 		return expr;
 	}
@@ -325,21 +326,21 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			SpelNodeImpl expr = eatUnaryExpression();
 			Assert.state(expr != null, "No node");
 			if (t.kind == TokenKind.NOT) {
-				return new OperatorNot(t.startPos, t.endPos, expr);
+				return new OperatorNot(toPos(t), expr);
 			}
 			if (t.kind == TokenKind.PLUS) {
-				return new OpPlus(t.startPos, t.endPos, expr);
+				return new OpPlus(toPos(t), expr);
 			}
 			Assert.isTrue(t.kind == TokenKind.MINUS, "Minus token expected");
-			return new OpMinus(t.startPos, t.endPos, expr);
+			return new OpMinus(toPos(t), expr);
 		}
 		if (peekToken(TokenKind.INC, TokenKind.DEC)) {
 			Token t = takeToken();
 			SpelNodeImpl expr = eatUnaryExpression();
 			if (t.getKind() == TokenKind.INC) {
-				return new OpInc(t.startPos, t.endPos, false, expr);
+				return new OpInc(toPos(t), false, expr);
 			}
-			return new OpDec(t.startPos, t.endPos, false, expr);
+			return new OpDec(toPos(t), false, expr);
 		}
 		return eatPrimaryExpression();
 	}
@@ -361,7 +362,8 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		if (start == null || nodes == null) {
 			return start;
 		}
-		return new CompoundExpression(start.getStartPosition(), nodes.get(nodes.size() - 1).getEndPosition(),
+		return new CompoundExpression(toPos(start.getStartPosition(),
+				nodes.get(nodes.size() - 1).getEndPosition()),
 				nodes.toArray(new SpelNodeImpl[0]));
 	}
 
@@ -422,12 +424,12 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		SpelNodeImpl[] args = maybeEatMethodArgs();
 		if (args == null) {
 			push(new VariableReference(functionOrVariableName.stringValue(),
-					t.startPos, functionOrVariableName.endPos));
+					toPos(t.startPos, functionOrVariableName.endPos)));
 			return true;
 		}
 
 		push(new FunctionReference(functionOrVariableName.stringValue(),
-				t.startPos, functionOrVariableName.endPos, args));
+				toPos(t.startPos, functionOrVariableName.endPos), args));
 		return true;
 	}
 
@@ -546,10 +548,11 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			BeanReference beanReference;
 			if (beanRefToken.getKind() == TokenKind.FACTORY_BEAN_REF) {
 				String beanNameString = String.valueOf(TokenKind.FACTORY_BEAN_REF.tokenChars) + beanName;
-				beanReference = new BeanReference(beanRefToken.startPos, beanNameToken.endPos, beanNameString);
+				beanReference = new BeanReference(
+						toPos(beanRefToken.startPos, beanNameToken.endPos), beanNameString);
 			}
 			else {
-				beanReference = new BeanReference(beanNameToken.startPos, beanNameToken.endPos, beanName);
+				beanReference = new BeanReference(toPos(beanNameToken), beanName);
 			}
 			this.constructedNodes.push(beanReference);
 			return true;
@@ -568,7 +571,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			Token t = takeToken();
 			if (peekToken(TokenKind.RSQUARE)) {
 				// looks like 'T]' (T is map key)
-				push(new PropertyOrFieldReference(false, t.stringValue(), t.startPos, t.endPos));
+				push(new PropertyOrFieldReference(false, t.stringValue(), toPos(t)));
 				return true;
 			}
 			eatToken(TokenKind.LPAREN);
@@ -581,7 +584,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 				dims++;
 			}
 			eatToken(TokenKind.RPAREN);
-			this.constructedNodes.push(new TypeReference(typeName.startPos, typeName.endPos, node, dims));
+			this.constructedNodes.push(new TypeReference(toPos(typeName), node, dims));
 			return true;
 		}
 		return false;
@@ -595,7 +598,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 				return false;
 			}
 			nextToken();
-			this.constructedNodes.push(new NullLiteral(nullToken.startPos, nullToken.endPos));
+			this.constructedNodes.push(new NullLiteral(toPos(nullToken)));
 			return true;
 		}
 		return false;
@@ -611,7 +614,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		SpelNodeImpl expr = eatExpression();
 		Assert.state(expr != null, "No node");
 		eatToken(TokenKind.RSQUARE);
-		this.constructedNodes.push(new Projection(nullSafeNavigation, t.startPos, t.endPos, expr));
+		this.constructedNodes.push(new Projection(nullSafeNavigation, toPos(t), expr));
 		return true;
 	}
 
@@ -628,12 +631,12 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		if (peekToken(TokenKind.RCURLY, true)) {
 			// empty list '{}'
 			Assert.state(closingCurly != null, "No token");
-			expr = new InlineList(t.startPos, closingCurly.endPos);
+			expr = new InlineList(toPos(t.startPos, closingCurly.endPos));
 		}
 		else if (peekToken(TokenKind.COLON, true)) {
 			closingCurly = eatToken(TokenKind.RCURLY);
 			// empty map '{:}'
-			expr = new InlineMap(t.startPos, closingCurly.endPos);
+			expr = new InlineMap(toPos(t.startPos, closingCurly.endPos));
 		}
 		else {
 			SpelNodeImpl firstExpression = eatExpression();
@@ -645,7 +648,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 				List<SpelNodeImpl> elements = new ArrayList<>();
 				elements.add(firstExpression);
 				closingCurly = eatToken(TokenKind.RCURLY);
-				expr = new InlineList(t.startPos, closingCurly.endPos, elements.toArray(new SpelNodeImpl[0]));
+				expr = new InlineList(toPos(t.startPos, closingCurly.endPos), elements.toArray(new SpelNodeImpl[0]));
 			}
 			else if (peekToken(TokenKind.COMMA, true)) {  // multi-item list
 				List<SpelNodeImpl> elements = new ArrayList<>();
@@ -655,7 +658,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 				}
 				while (peekToken(TokenKind.COMMA, true));
 				closingCurly = eatToken(TokenKind.RCURLY);
-				expr = new InlineList(t.startPos, closingCurly.endPos, elements.toArray(new SpelNodeImpl[0]));
+				expr = new InlineList(toPos(t.startPos, closingCurly.endPos), elements.toArray(new SpelNodeImpl[0]));
 
 			}
 			else if (peekToken(TokenKind.COLON, true)) {  // map!
@@ -668,7 +671,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 					elements.add(eatExpression());
 				}
 				closingCurly = eatToken(TokenKind.RCURLY);
-				expr = new InlineMap(t.startPos, closingCurly.endPos, elements.toArray(new SpelNodeImpl[0]));
+				expr = new InlineMap(toPos(t.startPos, closingCurly.endPos), elements.toArray(new SpelNodeImpl[0]));
 			}
 			else {
 				throw internalException(t.startPos, SpelMessage.OOD);
@@ -687,7 +690,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		SpelNodeImpl expr = eatExpression();
 		Assert.state(expr != null, "No node");
 		eatToken(TokenKind.RSQUARE);
-		this.constructedNodes.push(new Indexer(t.startPos, t.endPos, expr));
+		this.constructedNodes.push(new Indexer(toPos(t), expr));
 		return true;
 	}
 
@@ -700,17 +703,17 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		nextToken();
 		SpelNodeImpl expr = eatExpression();
 		if (expr == null) {
-			throw internalException(t.startPos, SpelMessage.MISSING_SELECTION_EXPRESSION);
+			throw internalException(toPos(t), SpelMessage.MISSING_SELECTION_EXPRESSION);
 		}
 		eatToken(TokenKind.RSQUARE);
 		if (t.kind == TokenKind.SELECT_FIRST) {
-			this.constructedNodes.push(new Selection(nullSafeNavigation, Selection.FIRST, t.startPos, t.endPos, expr));
+			this.constructedNodes.push(new Selection(nullSafeNavigation, Selection.FIRST, toPos(t), expr));
 		}
 		else if (t.kind == TokenKind.SELECT_LAST) {
-			this.constructedNodes.push(new Selection(nullSafeNavigation, Selection.LAST, t.startPos, t.endPos, expr));
+			this.constructedNodes.push(new Selection(nullSafeNavigation, Selection.LAST, toPos(t), expr));
 		}
 		else {
-			this.constructedNodes.push(new Selection(nullSafeNavigation, Selection.ALL, t.startPos, t.endPos, expr));
+			this.constructedNodes.push(new Selection(nullSafeNavigation, Selection.ALL, toPos(t), expr));
 		}
 		return true;
 	}
@@ -725,7 +728,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		while (isValidQualifiedId(node)) {
 			nextToken();
 			if (node.kind != TokenKind.DOT) {
-				qualifiedIdPieces.add(new Identifier(node.stringValue(), node.startPos, node.endPos));
+				qualifiedIdPieces.add(new Identifier(node.stringValue(), toPos(node)));
 			}
 			node = peekToken();
 		}
@@ -736,8 +739,8 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			throw internalException(node.startPos, SpelMessage.NOT_EXPECTED_TOKEN,
 					"qualified ID", node.getKind().toString().toLowerCase());
 		}
-		return new QualifiedIdentifier(qualifiedIdPieces.getFirst().getStartPosition(),
-				qualifiedIdPieces.getLast().getEndPosition(), qualifiedIdPieces.toArray(new SpelNodeImpl[0]));
+		int pos = toPos(qualifiedIdPieces.getFirst().getStartPosition(), qualifiedIdPieces.getLast().getEndPosition());
+		return new QualifiedIdentifier(pos, qualifiedIdPieces.toArray(new SpelNodeImpl[0]));
 	}
 
 	private boolean isValidQualifiedId(@Nullable Token node) {
@@ -761,12 +764,12 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			if (args == null) {
 				// property
 				push(new PropertyOrFieldReference(nullSafeNavigation, methodOrPropertyName.stringValue(),
-						methodOrPropertyName.startPos, methodOrPropertyName.endPos));
+						toPos(methodOrPropertyName)));
 				return true;
 			}
 			// method reference
 			push(new MethodReference(nullSafeNavigation, methodOrPropertyName.stringValue(),
-					methodOrPropertyName.startPos, methodOrPropertyName.endPos, args));
+					toPos(methodOrPropertyName), args));
 			// TODO what is the end position for a method reference? the name or the last arg?
 			return true;
 		}
@@ -781,7 +784,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			// It looks like a constructor reference but is NEW being used as a map key?
 			if (peekToken(TokenKind.RSQUARE)) {
 				// looks like 'NEW]' (so NEW used as map key)
-				push(new PropertyOrFieldReference(false, newToken.stringValue(), newToken.startPos, newToken.endPos));
+				push(new PropertyOrFieldReference(false, newToken.stringValue(), toPos(newToken)));
 				return true;
 			}
 			SpelNodeImpl possiblyQualifiedConstructorName = eatPossiblyQualifiedId();
@@ -802,14 +805,14 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 				if (maybeEatInlineListOrMap()) {
 					nodes.add(pop());
 				}
-				push(new ConstructorReference(newToken.startPos, newToken.endPos,
+				push(new ConstructorReference(toPos(newToken),
 						dimensions.toArray(new SpelNodeImpl[0]), nodes.toArray(new SpelNodeImpl[0])));
 			}
 			else {
 				// regular constructor invocation
 				eatConstructorArgs(nodes);
 				// TODO correct end position?
-				push(new ConstructorReference(newToken.startPos, newToken.endPos, nodes.toArray(new SpelNodeImpl[0])));
+				push(new ConstructorReference(toPos(newToken), nodes.toArray(new SpelNodeImpl[0])));
 			}
 			return true;
 		}
@@ -838,31 +841,31 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			return false;
 		}
 		if (t.kind == TokenKind.LITERAL_INT) {
-			push(Literal.getIntLiteral(t.stringValue(), t.startPos, t.endPos, 10));
+			push(Literal.getIntLiteral(t.stringValue(), toPos(t), 10));
 		}
 		else if (t.kind == TokenKind.LITERAL_LONG) {
-			push(Literal.getLongLiteral(t.stringValue(), t.startPos, t.endPos, 10));
+			push(Literal.getLongLiteral(t.stringValue(), toPos(t), 10));
 		}
 		else if (t.kind == TokenKind.LITERAL_HEXINT) {
-			push(Literal.getIntLiteral(t.stringValue(), t.startPos, t.endPos, 16));
+			push(Literal.getIntLiteral(t.stringValue(), toPos(t), 16));
 		}
 		else if (t.kind == TokenKind.LITERAL_HEXLONG) {
-			push(Literal.getLongLiteral(t.stringValue(), t.startPos, t.endPos, 16));
+			push(Literal.getLongLiteral(t.stringValue(), toPos(t), 16));
 		}
 		else if (t.kind == TokenKind.LITERAL_REAL) {
-			push(Literal.getRealLiteral(t.stringValue(), t.startPos, t.endPos, false));
+			push(Literal.getRealLiteral(t.stringValue(), toPos(t), false));
 		}
 		else if (t.kind == TokenKind.LITERAL_REAL_FLOAT) {
-			push(Literal.getRealLiteral(t.stringValue(), t.startPos, t.endPos, true));
+			push(Literal.getRealLiteral(t.stringValue(), toPos(t), true));
 		}
 		else if (peekIdentifierToken("true")) {
-			push(new BooleanLiteral(t.stringValue(), t.startPos, t.endPos, true));
+			push(new BooleanLiteral(t.stringValue(), toPos(t), true));
 		}
 		else if (peekIdentifierToken("false")) {
-			push(new BooleanLiteral(t.stringValue(), t.startPos, t.endPos, false));
+			push(new BooleanLiteral(t.stringValue(), toPos(t), false));
 		}
 		else if (t.kind == TokenKind.LITERAL_STRING) {
-			push(new StringLiteral(t.stringValue(), t.startPos, t.endPos, t.stringValue()));
+			push(new StringLiteral(t.stringValue(), toPos(t), t.stringValue()));
 		}
 		else {
 			return false;
@@ -1037,8 +1040,17 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		}
 	}
 
-	private InternalParseException internalException(int startPos, SpelMessage message, Object... inserts) {
-		return new InternalParseException(new SpelParseException(this.expressionString, startPos, message, inserts));
+	private InternalParseException internalException(int pos, SpelMessage message, Object... inserts) {
+		return new InternalParseException(new SpelParseException(this.expressionString, pos, message, inserts));
+	}
+
+	private int toPos(Token t) {
+		// Compress the start and end of a token into a single int
+		return (t.startPos << 16) + t.endPos;
+	}
+
+	private int toPos(int start, int end) {
+		return (start << 16) + end;
 	}
 
 }

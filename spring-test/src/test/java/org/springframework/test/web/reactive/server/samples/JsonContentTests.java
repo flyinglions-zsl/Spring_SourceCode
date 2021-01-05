@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.springframework.test.web.reactive.server.samples;
 
 import java.net.URI;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import reactor.core.publisher.Flux;
 
 import org.springframework.http.MediaType;
@@ -30,10 +30,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import static org.hamcrest.Matchers.containsString;
-
-
 
 /**
  * Samples of tests using {@link WebTestClient} with serialized JSON content.
@@ -50,7 +46,7 @@ public class JsonContentTests {
 	@Test
 	public void jsonContent() {
 		this.client.get().uri("/persons")
-				.accept(MediaType.APPLICATION_JSON)
+				.accept(MediaType.APPLICATION_JSON_UTF8)
 				.exchange()
 				.expectStatus().isOk()
 				.expectBody().json("[{\"name\":\"Jane\"},{\"name\":\"Jason\"},{\"name\":\"John\"}]");
@@ -59,7 +55,7 @@ public class JsonContentTests {
 	@Test
 	public void jsonPathIsEqualTo() {
 		this.client.get().uri("/persons")
-				.accept(MediaType.APPLICATION_JSON)
+				.accept(MediaType.APPLICATION_JSON_UTF8)
 				.exchange()
 				.expectStatus().isOk()
 				.expectBody()
@@ -68,21 +64,23 @@ public class JsonContentTests {
 				.jsonPath("$[2].name").isEqualTo("John");
 	}
 
-	@Test
-	public void jsonPathMatches() {
+	@Test // https://stackoverflow.com/questions/49149376/webtestclient-check-that-jsonpath-contains-sub-string
+	public void jsonPathContainsSubstringViaRegex() {
 		this.client.get().uri("/persons/John")
-				.accept(MediaType.APPLICATION_JSON)
+				.accept(MediaType.APPLICATION_JSON_UTF8)
 				.exchange()
 				.expectStatus().isOk()
 				.expectBody()
-				.jsonPath("$.name").value(containsString("oh"));
+				// The following determines if at least one person is returned with a
+				// name containing "oh", and "John" matches that.
+				.jsonPath("$[?(@.name =~ /.*oh.*/)].name").hasJsonPath();
 	}
 
 	@Test
 	public void postJsonContent() {
 		this.client.post().uri("/persons")
-				.contentType(MediaType.APPLICATION_JSON)
-				.bodyValue("{\"name\":\"John\"}")
+				.contentType(MediaType.APPLICATION_JSON_UTF8)
+				.syncBody("{\"name\":\"John\"}")
 				.exchange()
 				.expectStatus().isCreated()
 				.expectBody().isEmpty();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ public class BeanDefinitionParserDelegate {
 
 	/**
 	 * Value of a T/F attribute that represents true.
-	 * Anything else represents false.
+	 * Anything else represents false. Case seNsItive.
 	 */
 	public static final String TRUE_VALUE = "true";
 
@@ -424,8 +424,8 @@ public class BeanDefinitionParserDelegate {
 		String beanName = id;
 		if (!StringUtils.hasText(beanName) && !aliases.isEmpty()) {
 			beanName = aliases.remove(0);
-			if (logger.isTraceEnabled()) {
-				logger.trace("No XML 'id' specified - using '" + beanName +
+			if (logger.isDebugEnabled()) {
+				logger.debug("No XML 'id' specified - using '" + beanName +
 						"' as bean name and " + aliases + " as aliases");
 			}
 		}
@@ -454,8 +454,8 @@ public class BeanDefinitionParserDelegate {
 							aliases.add(beanClassName);
 						}
 					}
-					if (logger.isTraceEnabled()) {
-						logger.trace("Neither XML 'id' nor 'name' specified - " +
+					if (logger.isDebugEnabled()) {
+						logger.debug("Neither XML 'id' nor 'name' specified - " +
 								"using generated bean name [" + beanName + "]");
 					}
 				}
@@ -1452,7 +1452,7 @@ public class BeanDefinitionParserDelegate {
 					return decorated;
 				}
 			}
-			else if (namespaceUri.startsWith("http://www.springframework.org/schema/")) {
+			else if (namespaceUri.startsWith("http://www.springframework.org/")) {
 				error("Unable to locate Spring NamespaceHandler for XML schema namespace [" + namespaceUri + "]", node);
 			}
 			else {
@@ -1475,8 +1475,8 @@ public class BeanDefinitionParserDelegate {
 		}
 		String id = ele.getNodeName() + BeanDefinitionReaderUtils.GENERATED_BEAN_NAME_SEPARATOR +
 				ObjectUtils.getIdentityHexString(innerDefinition);
-		if (logger.isTraceEnabled()) {
-			logger.trace("Using generated bean name [" + id +
+		if (logger.isDebugEnabled()) {
+			logger.debug("Using generated bean name [" + id +
 					"] for nested custom element '" + ele.getNodeName() + "'");
 		}
 		return new BeanDefinitionHolder(innerDefinition, id);
@@ -1523,7 +1523,7 @@ public class BeanDefinitionParserDelegate {
 	 * Determine whether the given URI indicates the default namespace.
 	 */
 	public boolean isDefaultNamespace(@Nullable String namespaceUri) {
-		return !StringUtils.hasLength(namespaceUri) || BEANS_NAMESPACE_URI.equals(namespaceUri);
+		return (!StringUtils.hasLength(namespaceUri) || BEANS_NAMESPACE_URI.equals(namespaceUri));
 	}
 
 	/**
@@ -1534,7 +1534,7 @@ public class BeanDefinitionParserDelegate {
 	}
 
 	private boolean isDefaultValue(String value) {
-		return !StringUtils.hasLength(value) || DEFAULT_VALUE.equals(value);
+		return (DEFAULT_VALUE.equals(value) || "".equals(value));
 	}
 
 	private boolean isCandidateElement(Node node) {

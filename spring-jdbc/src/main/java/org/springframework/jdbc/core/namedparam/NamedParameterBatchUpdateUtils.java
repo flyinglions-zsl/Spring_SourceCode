@@ -20,6 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.BatchUpdateUtils;
 import org.springframework.jdbc.core.JdbcOperations;
 
 /**
@@ -29,10 +30,8 @@ import org.springframework.jdbc.core.JdbcOperations;
  * @author Thomas Risberg
  * @author Juergen Hoeller
  * @since 3.0
- * @deprecated as of 5.1.3, not used by {@link NamedParameterJdbcTemplate} anymore
  */
-@Deprecated
-public abstract class NamedParameterBatchUpdateUtils extends org.springframework.jdbc.core.BatchUpdateUtils {
+public class NamedParameterBatchUpdateUtils extends BatchUpdateUtils {
 
 	public static int[] executeBatchUpdateWithNamedParameters(
 			final ParsedSql parsedSql, final SqlParameterSource[] batchArgs, JdbcOperations jdbcOperations) {

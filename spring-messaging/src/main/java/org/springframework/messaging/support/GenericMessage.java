@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.messaging.support;
 import java.io.Serializable;
 import java.util.Map;
 
-import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.util.Assert;
@@ -31,7 +30,6 @@ import org.springframework.util.ObjectUtils;
  *
  * @author Mark Fisher
  * @since 4.0
- * @param <T> the payload type
  * @see MessageBuilder
  */
 public class GenericMessage<T> implements Message<T>, Serializable {
@@ -77,19 +75,16 @@ public class GenericMessage<T> implements Message<T>, Serializable {
 	}
 
 
-	@Override
 	public T getPayload() {
 		return this.payload;
 	}
 
-	@Override
 	public MessageHeaders getHeaders() {
 		return this.headers;
 	}
 
 
-	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -101,13 +96,11 @@ public class GenericMessage<T> implements Message<T>, Serializable {
 		return (ObjectUtils.nullSafeEquals(this.payload, otherMsg.payload) && this.headers.equals(otherMsg.headers));
 	}
 
-	@Override
 	public int hashCode() {
 		// Using nullSafeHashCode for proper array hashCode handling
 		return (ObjectUtils.nullSafeHashCode(this.payload) * 23 + this.headers.hashCode());
 	}
 
-	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder(getClass().getSimpleName());
 		sb.append(" [payload=");

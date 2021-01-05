@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,13 +70,18 @@ public class CachingResourceTransformer implements ResourceTransformer {
 		Resource cachedResource = this.cache.get(resource, Resource.class);
 		if (cachedResource != null) {
 			if (logger.isTraceEnabled()) {
-				logger.trace(exchange.getLogPrefix() + "Resource resolved from cache");
+				logger.trace("Found match: " + cachedResource);
 			}
 			return Mono.just(cachedResource);
 		}
 
 		return transformerChain.transform(exchange, resource)
-				.doOnNext(transformed -> this.cache.put(resource, transformed));
+				.doOnNext(transformed -> {
+					if (logger.isTraceEnabled()) {
+						logger.trace("Putting transformed resource in cache: " + transformed);
+					}
+					this.cache.put(resource, transformed);
+				});
 	}
 
 }

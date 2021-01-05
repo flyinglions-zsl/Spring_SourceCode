@@ -30,13 +30,12 @@ import org.springframework.scheduling.config.TaskManagementConfigUtils;
  *
  * @author Chris Beams
  * @author Stephane Nicoll
- * @author Juergen Hoeller
  * @since 3.1
  * @see EnableAsync
  * @see org.springframework.scheduling.annotation.AsyncConfigurationSelector
  * @see org.springframework.scheduling.annotation.ProxyAsyncConfiguration
  */
-@Configuration(proxyBeanMethods = false)
+@Configuration
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 public class AspectJAsyncConfiguration extends AbstractAsyncConfiguration {
 
@@ -44,7 +43,12 @@ public class AspectJAsyncConfiguration extends AbstractAsyncConfiguration {
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public AnnotationAsyncExecutionAspect asyncAdvisor() {
 		AnnotationAsyncExecutionAspect asyncAspect = AnnotationAsyncExecutionAspect.aspectOf();
-		asyncAspect.configure(this.executor, this.exceptionHandler);
+		if (this.executor != null) {
+			asyncAspect.setExecutor(this.executor);
+		}
+		if (this.exceptionHandler != null) {
+			asyncAspect.setExceptionHandler(this.exceptionHandler);
+		}
 		return asyncAspect;
 	}
 

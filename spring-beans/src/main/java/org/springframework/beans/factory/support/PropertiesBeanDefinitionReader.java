@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,12 @@ import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyAccessor;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.CannotLoadBeanClassException;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.EncodedResource;
-import org.springframework.core.io.support.ResourcePropertiesPersister;
 import org.springframework.lang.Nullable;
+import org.springframework.util.DefaultPropertiesPersister;
 import org.springframework.util.PropertiesPersister;
 import org.springframework.util.StringUtils;
 
@@ -74,10 +73,7 @@ import org.springframework.util.StringUtils;
  * @author Rob Harrop
  * @since 26.11.2003
  * @see DefaultListableBeanFactory
- * @deprecated as of 5.3, in favor of Spring's common bean definition formats
- * and/or custom reader implementations
  */
-@Deprecated
 public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 	/**
@@ -148,7 +144,7 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 	@Nullable
 	private String defaultParentBean;
 
-	private PropertiesPersister propertiesPersister = ResourcePropertiesPersister.INSTANCE;
+	private PropertiesPersister propertiesPersister = new DefaultPropertiesPersister();
 
 
 	/**
@@ -187,12 +183,12 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 
 	/**
 	 * Set the PropertiesPersister to use for parsing properties files.
-	 * The default is ResourcePropertiesPersister.
-	 * @see ResourcePropertiesPersister#INSTANCE
+	 * The default is DefaultPropertiesPersister.
+	 * @see org.springframework.util.DefaultPropertiesPersister
 	 */
 	public void setPropertiesPersister(@Nullable PropertiesPersister propertiesPersister) {
 		this.propertiesPersister =
-				(propertiesPersister != null ? propertiesPersister : ResourcePropertiesPersister.INSTANCE);
+				(propertiesPersister != null ? propertiesPersister : new DefaultPropertiesPersister());
 	}
 
 	/**
@@ -251,10 +247,6 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 	public int loadBeanDefinitions(EncodedResource encodedResource, @Nullable String prefix)
 			throws BeanDefinitionStoreException {
 
-		if (logger.isTraceEnabled()) {
-			logger.trace("Loading properties bean definitions from " + encodedResource);
-		}
-
 		Properties props = new Properties();
 		try {
 			try (InputStream is = encodedResource.getResource().getInputStream()) {
@@ -265,12 +257,7 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 					getPropertiesPersister().load(props, is);
 				}
 			}
-
-			int count = registerBeanDefinitions(props, prefix, encodedResource.getResource().getDescription());
-			if (logger.isDebugEnabled()) {
-				logger.debug("Loaded " + count + " bean definitions from " + encodedResource);
-			}
-			return count;
+			return registerBeanDefinitions(props, prefix, encodedResource.getResource().getDescription());
 		}
 		catch (IOException ex) {
 			throw new BeanDefinitionStoreException("Could not parse properties from " + encodedResource.getResource(), ex);
@@ -371,7 +358,7 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 				// Key is of form: prefix<name>.property
 				String nameAndProperty = keyString.substring(prefix.length());
 				// Find dot before property name, ignoring dots in property keys.
-				int sepIdx ;
+				int sepIdx = -1;
 				int propKeyIdx = nameAndProperty.indexOf(PropertyAccessor.PROPERTY_KEY_PREFIX);
 				if (propKeyIdx != -1) {
 					sepIdx = nameAndProperty.lastIndexOf(SEPARATOR, propKeyIdx);
@@ -381,8 +368,8 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 				}
 				if (sepIdx != -1) {
 					String beanName = nameAndProperty.substring(0, sepIdx);
-					if (logger.isTraceEnabled()) {
-						logger.trace("Found bean name '" + beanName + "'");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Found bean name '" + beanName + "'");
 					}
 					if (!getRegistry().containsBeanDefinition(beanName)) {
 						// If we haven't already registered it...
@@ -418,20 +405,17 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 
 		String className = null;
 		String parent = null;
-		String scope = BeanDefinition.SCOPE_SINGLETON;
+		String scope = GenericBeanDefinition.SCOPE_SINGLETON;
 		boolean isAbstract = false;
 		boolean lazyInit = false;
 
 		ConstructorArgumentValues cas = new ConstructorArgumentValues();
 		MutablePropertyValues pvs = new MutablePropertyValues();
 
-		String prefixWithSep = prefix + SEPARATOR;
-		int beginIndex = prefixWithSep.length();
-
 		for (Map.Entry<?, ?> entry : map.entrySet()) {
 			String key = StringUtils.trimWhitespace((String) entry.getKey());
-			if (key.startsWith(prefixWithSep)) {
-				String property = key.substring(beginIndex);
+			if (key.startsWith(prefix + SEPARATOR)) {
+				String property = key.substring(prefix.length() + SEPARATOR.length());
 				if (CLASS_KEY.equals(property)) {
 					className = StringUtils.trimWhitespace((String) entry.getValue());
 				}
@@ -449,8 +433,8 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 				else if (SINGLETON_KEY.equals(property)) {
 					// Spring 1.2 style
 					String val = StringUtils.trimWhitespace((String) entry.getValue());
-					scope = (!StringUtils.hasLength(val) || TRUE_VALUE.equals(val) ?
-							BeanDefinition.SCOPE_SINGLETON : BeanDefinition.SCOPE_PROTOTYPE);
+					scope = ("".equals(val) || TRUE_VALUE.equals(val) ? GenericBeanDefinition.SCOPE_SINGLETON :
+							GenericBeanDefinition.SCOPE_PROTOTYPE);
 				}
 				else if (LAZY_INIT_KEY.equals(property)) {
 					String val = StringUtils.trimWhitespace((String) entry.getValue());
@@ -484,8 +468,8 @@ public class PropertiesBeanDefinitionReader extends AbstractBeanDefinitionReader
 			}
 		}
 
-		if (logger.isTraceEnabled()) {
-			logger.trace("Registering bean definition for bean name '" + beanName + "' with " + pvs);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Registering bean definition for bean name '" + beanName + "' with " + pvs);
 		}
 
 		// Just use default parent if we're not dealing with the parent itself,

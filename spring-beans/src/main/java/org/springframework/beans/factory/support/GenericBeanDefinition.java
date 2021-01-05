@@ -84,7 +84,7 @@ public class GenericBeanDefinition extends AbstractBeanDefinition {
 	}
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -97,10 +97,12 @@ public class GenericBeanDefinition extends AbstractBeanDefinition {
 
 	@Override
 	public String toString() {
+		StringBuilder sb = new StringBuilder("Generic bean");
 		if (this.parentName != null) {
-			return "Generic bean with parent '" + this.parentName + "': " + super.toString();
+			sb.append(" with parent '").append(this.parentName).append("'");
 		}
-		return "Generic bean: " + super.toString();
+		sb.append(": ").append(super.toString());
+		return sb.toString();
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 package org.springframework.scheduling.commonj;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
-
 import javax.naming.NamingException;
 
 import commonj.timers.Timer;
@@ -52,18 +51,14 @@ import org.springframework.lang.Nullable;
  * @see ScheduledTimerListener
  * @see commonj.timers.TimerManager
  * @see commonj.timers.TimerListener
- * @deprecated as of 5.1, in favor of EE 7's
- * {@link org.springframework.scheduling.concurrent.DefaultManagedTaskScheduler}
  */
-@Deprecated
 public class TimerManagerFactoryBean extends TimerManagerAccessor
 		implements FactoryBean<TimerManager>, InitializingBean, DisposableBean, Lifecycle {
 
 	@Nullable
 	private ScheduledTimerListener[] scheduledTimerListeners;
 
-	@Nullable
-	private List<Timer> timers;
+	private final List<Timer> timers = new LinkedList<>();
 
 
 	/**
@@ -88,7 +83,6 @@ public class TimerManagerFactoryBean extends TimerManagerAccessor
 		super.afterPropertiesSet();
 
 		if (this.scheduledTimerListeners != null) {
-			this.timers = new ArrayList<>(this.scheduledTimerListeners.length);
 			TimerManager timerManager = obtainTimerManager();
 			for (ScheduledTimerListener scheduledTask : this.scheduledTimerListeners) {
 				Timer timer;
@@ -146,17 +140,15 @@ public class TimerManagerFactoryBean extends TimerManagerAccessor
 	@Override
 	public void destroy() {
 		// Cancel all registered timers.
-		if (this.timers != null) {
-			for (Timer timer : this.timers) {
-				try {
-					timer.cancel();
-				}
-				catch (Throwable ex) {
-					logger.debug("Could not cancel CommonJ Timer", ex);
-				}
+		for (Timer timer : this.timers) {
+			try {
+				timer.cancel();
 			}
-			this.timers.clear();
+			catch (Throwable ex) {
+				logger.warn("Could not cancel CommonJ Timer", ex);
+			}
 		}
+		this.timers.clear();
 
 		// Stop the TimerManager itself.
 		super.destroy();

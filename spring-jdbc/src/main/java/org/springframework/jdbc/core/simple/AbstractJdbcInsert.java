@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
@@ -61,31 +60,31 @@ import org.springframework.util.Assert;
  */
 public abstract class AbstractJdbcInsert {
 
-	/** Logger available to subclasses. */
+	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	/** Lower-level class used to execute SQL. */
+	/** Lower-level class used to execute SQL */
 	private final JdbcTemplate jdbcTemplate;
 
-	/** Context used to retrieve and manage database meta-data. */
+	/** Context used to retrieve and manage database meta-data */
 	private final TableMetaDataContext tableMetaDataContext = new TableMetaDataContext();
 
-	/** List of columns objects to be used in insert statement. */
+	/** List of columns objects to be used in insert statement */
 	private final List<String> declaredColumns = new ArrayList<>();
 
-	/** The names of the columns holding the generated key. */
+	/** The names of the columns holding the generated key */
 	private String[] generatedKeyNames = new String[0];
 
 	/**
 	 * Has this operation been compiled? Compilation means at least checking
 	 * that a DataSource or JdbcTemplate has been provided.
 	 */
-	private volatile boolean compiled;
+	private volatile boolean compiled = false;
 
-	/** The generated string used for insert statement. */
+	/** The generated string used for insert statement */
 	private String insertString = "";
 
-	/** The SQL type information for the insert columns. */
+	/** The SQL type information for the insert columns */
 	private int[] insertTypes = new int[0];
 
 
@@ -465,7 +464,7 @@ public abstract class AbstractJdbcInsert {
 
 			if (keyQuery.toUpperCase().startsWith("RETURNING")) {
 				Long key = getJdbcTemplate().queryForObject(
-						getInsertString() + " " + keyQuery, Long.class, values.toArray());
+						getInsertString() + " " + keyQuery, values.toArray(), Long.class);
 				Map<String, Object> keys = new HashMap<>(2);
 				keys.put(getGeneratedKeyNames()[0], key);
 				keyHolder.getKeyList().add(keys);
@@ -485,12 +484,12 @@ public abstract class AbstractJdbcInsert {
 					//Get the key
 					Statement keyStmt = null;
 					ResultSet rs = null;
+					Map<String, Object> keys = new HashMap<>(2);
 					try {
 						keyStmt = con.createStatement();
 						rs = keyStmt.executeQuery(keyQuery);
 						if (rs.next()) {
 							long key = rs.getLong(1);
-							Map<String, Object> keys = new HashMap<>(2);
 							keys.put(getGeneratedKeyNames()[0], key);
 							keyHolder.getKeyList().add(keys);
 						}
@@ -549,7 +548,7 @@ public abstract class AbstractJdbcInsert {
 	}
 
 	/**
-	 * Delegate method that executes a batch insert using the passed-in {@link SqlParameterSource SqlParameterSources}.
+	 * Delegate method that executes a batch insert using the passed-in {@link SqlParameterSource}s.
 	 * @param batch array of SqlParameterSource with parameter names and values to be used in insert
 	 * @return array of number of rows affected
 	 */

@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
-
 import javax.naming.NamingException;
 
 import commonj.work.Work;
@@ -64,10 +63,7 @@ import org.springframework.util.concurrent.ListenableFutureTask;
  *
  * @author Juergen Hoeller
  * @since 2.0
- * @deprecated as of 5.1, in favor of the EE 7/8 based
- * {@link org.springframework.scheduling.concurrent.DefaultManagedTaskExecutor}
  */
-@Deprecated
 public class WorkManagerTaskExecutor extends JndiLocatorSupport
 		implements AsyncListenableTaskExecutor, SchedulingTaskExecutor, WorkManager, InitializingBean {
 
@@ -202,6 +198,14 @@ public class WorkManagerTaskExecutor extends JndiLocatorSupport
 		ListenableFutureTask<T> future = new ListenableFutureTask<>(task);
 		execute(future);
 		return future;
+	}
+
+	/**
+	 * This task executor prefers short-lived work units.
+	 */
+	@Override
+	public boolean prefersShortLivedTasks() {
+		return true;
 	}
 
 

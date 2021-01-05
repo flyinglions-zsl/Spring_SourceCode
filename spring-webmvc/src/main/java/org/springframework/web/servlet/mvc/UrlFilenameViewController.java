@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,11 @@ package org.springframework.web.servlet.mvc;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.util.ServletRequestPathUtils;
 
 /**
  * Simple {@code Controller} implementation that transforms the virtual
@@ -55,7 +53,7 @@ public class UrlFilenameViewController extends AbstractUrlViewController {
 
 	private String suffix = "";
 
-	/** Request URL path String to view name String. */
+	/** Request URL path String --> view name String */
 	private final Map<String, String> viewNameCache = new ConcurrentHashMap<>(256);
 
 
@@ -112,7 +110,7 @@ public class UrlFilenameViewController extends AbstractUrlViewController {
 	protected String extractOperableUrl(HttpServletRequest request) {
 		String urlPath = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
 		if (!StringUtils.hasText(urlPath)) {
-			urlPath = ServletRequestPathUtils.getCachedPathValue(request);
+			urlPath = getUrlPathHelper().getLookupPathForRequest(request);
 		}
 		return urlPath;
 	}
@@ -126,7 +124,13 @@ public class UrlFilenameViewController extends AbstractUrlViewController {
 	 * @see #postProcessViewName
 	 */
 	protected String getViewNameForUrlPath(String uri) {
-		return this.viewNameCache.computeIfAbsent(uri, u -> postProcessViewName(extractViewNameFromUrlPath(u)));
+		String viewName = this.viewNameCache.get(uri);
+		if (viewName == null) {
+			viewName = extractViewNameFromUrlPath(uri);
+			viewName = postProcessViewName(viewName);
+			this.viewNameCache.put(uri, viewName);
+		}
+		return viewName;
 	}
 
 	/**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@ import java.net.URLDecoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.RequestPath;
@@ -29,7 +32,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -42,6 +44,8 @@ public abstract class AbstractServerHttpRequest implements ServerHttpRequest {
 
 	private static final Pattern QUERY_PATTERN = Pattern.compile("([^&=]+)(=?)([^&]+)?");
 
+
+	private static final Log logger = LogFactory.getLog(ServerHttpRequest.class);
 
 	private final URI uri;
 
@@ -58,31 +62,12 @@ public abstract class AbstractServerHttpRequest implements ServerHttpRequest {
 	@Nullable
 	private SslInfo sslInfo;
 
-	@Nullable
-	private String id;
-
-	@Nullable
-	private String logPrefix;
-
 
 	/**
 	 * Constructor with the URI and headers for the request.
 	 * @param uri the URI for the request
 	 * @param contextPath the context path for the request
-	 * @param headers the headers for the request (as {@link MultiValueMap})
-	 * @since 5.3
-	 */
-	public AbstractServerHttpRequest(URI uri, @Nullable String contextPath, MultiValueMap<String, String> headers) {
-		this.uri = uri;
-		this.path = RequestPath.parse(uri, contextPath);
-		this.headers = HttpHeaders.readOnlyHttpHeaders(headers);
-	}
-
-	/**
-	 * Constructor with the URI and headers for the request.
-	 * @param uri the URI for the request
-	 * @param contextPath the context path for the request
-	 * @param headers the headers for the request (as {@link HttpHeaders})
+	 * @param headers the headers for the request
 	 */
 	public AbstractServerHttpRequest(URI uri, @Nullable String contextPath, HttpHeaders headers) {
 		this.uri = uri;
@@ -90,27 +75,6 @@ public abstract class AbstractServerHttpRequest implements ServerHttpRequest {
 		this.headers = HttpHeaders.readOnlyHttpHeaders(headers);
 	}
 
-
-	@Override
-	public String getId() {
-		if (this.id == null) {
-			this.id = initId();
-			if (this.id == null) {
-				this.id = ObjectUtils.getIdentityHexString(this);
-			}
-		}
-		return this.id;
-	}
-
-	/**
-	 * Obtain the request id to use, or {@code null} in which case the Object
-	 * identity of this request instance is used.
-	 * @since 5.1
-	 */
-	@Nullable
-	protected String initId() {
-		return null;
-	}
 
 	@Override
 	public URI getURI() {
@@ -164,7 +128,10 @@ public abstract class AbstractServerHttpRequest implements ServerHttpRequest {
 			return URLDecoder.decode(value, "UTF-8");
 		}
 		catch (UnsupportedEncodingException ex) {
-			// Should never happen but we got a platform default fallback anyway.
+			if (logger.isWarnEnabled()) {
+				logger.warn("Could not decode query param [" + value + "] as 'UTF-8'. " +
+						"Falling back on default encoding; exception message: " + ex.getMessage());
+			}
 			return URLDecoder.decode(value);
 		}
 	}
@@ -211,16 +178,5 @@ public abstract class AbstractServerHttpRequest implements ServerHttpRequest {
 	 * use such as WebSocket upgrades in the spring-webflux module.
 	 */
 	public abstract <T> T getNativeRequest();
-
-	/**
-	 * For internal use in logging at the HTTP adapter layer.
-	 * @since 5.1
-	 */
-	String getLogPrefix() {
-		if (this.logPrefix == null) {
-			this.logPrefix = "[" + getId() + "] ";
-		}
-		return this.logPrefix;
-	}
 
 }

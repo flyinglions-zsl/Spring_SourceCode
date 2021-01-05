@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,9 +42,9 @@ public abstract class ConnectionManagerSupport implements SmartLifecycle {
 
 	private boolean autoStartup = false;
 
-	private int phase = DEFAULT_PHASE;
+	private int phase = Integer.MAX_VALUE;
 
-	private volatile boolean running;
+	private volatile boolean running = false;
 
 	private final Object lifecycleMonitor = new Object();
 

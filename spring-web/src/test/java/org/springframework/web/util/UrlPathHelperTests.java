@@ -16,12 +16,14 @@
 
 package org.springframework.web.util;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import java.io.UnsupportedEncodingException;
 
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+import org.junit.Ignore;
+import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link UrlPathHelper}.
@@ -44,7 +46,7 @@ public class UrlPathHelperTests {
 		request.setContextPath("/petclinic");
 		request.setRequestURI("/petclinic/welcome.html");
 
-		assertThat(helper.getPathWithinApplication(request)).isEqualTo("/welcome.html");
+		assertEquals("Incorrect path returned", "/welcome.html", helper.getPathWithinApplication(request));
 	}
 
 	@Test
@@ -52,7 +54,7 @@ public class UrlPathHelperTests {
 		request.setContextPath("/petclinic");
 		request.setRequestURI("/petclinic");
 
-		assertThat(helper.getPathWithinApplication(request)).as("Incorrect root path returned").isEqualTo("/");
+		assertEquals("Incorrect root path returned", "/", helper.getPathWithinApplication(request));
 	}
 
 	@Test
@@ -60,7 +62,7 @@ public class UrlPathHelperTests {
 		request.setContextPath("/");
 		request.setRequestURI("/welcome.html");
 
-		assertThat(helper.getPathWithinApplication(request)).isEqualTo("/welcome.html");
+		assertEquals("Incorrect path returned", "/welcome.html", helper.getPathWithinApplication(request));
 	}
 
 	@Test
@@ -69,7 +71,7 @@ public class UrlPathHelperTests {
 		request.setServletPath("/main");
 		request.setRequestURI("/petclinic/main/welcome.html");
 
-		assertThat(helper.getPathWithinServletMapping(request)).isEqualTo("/welcome.html");
+		assertEquals("Incorrect path returned", "/welcome.html", helper.getPathWithinServletMapping(request));
 	}
 
 	@Test
@@ -79,10 +81,12 @@ public class UrlPathHelperTests {
 		request.setServletPath("/main");
 		request.setRequestURI("/petclinic/main/welcome.html");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/main/welcome.html");
+		assertEquals("Incorrect path returned", "/main/welcome.html", helper.getLookupPathForRequest(request));
 	}
 
-	@Test // SPR-11101
+	// SPR-11101
+
+	@Test
 	public void getPathWithinServletWithoutUrlDecoding() {
 		request.setContextPath("/SPR-11101");
 		request.setServletPath("/test_url_decoding/a/b");
@@ -91,37 +95,34 @@ public class UrlPathHelperTests {
 		helper.setUrlDecode(false);
 		String actual = helper.getPathWithinServletMapping(request);
 
-		assertThat(actual).isEqualTo("/test_url_decoding/a%2Fb");
+		assertEquals("/test_url_decoding/a%2Fb", actual);
 	}
 
 	@Test
 	public void getRequestUri() {
 		request.setRequestURI("/welcome.html");
-		assertThat(helper.getRequestUri(request)).isEqualTo("/welcome.html");
+		assertEquals("Incorrect path returned", "/welcome.html", helper.getRequestUri(request));
 
 		request.setRequestURI("/foo%20bar");
-		assertThat(helper.getRequestUri(request)).isEqualTo("/foo bar");
+		assertEquals("Incorrect path returned", "/foo bar", helper.getRequestUri(request));
 
 		request.setRequestURI("/foo+bar");
-		assertThat(helper.getRequestUri(request)).isEqualTo("/foo+bar");
-
-		request.setRequestURI("/home/" + "/path");
-		assertThat(helper.getRequestUri(request)).isEqualTo("/home/path");
+		assertEquals("Incorrect path returned", "/foo+bar", helper.getRequestUri(request));
 	}
 
 	@Test
-	public void getRequestRemoveSemicolonContent() {
+	public void getRequestRemoveSemicolonContent() throws UnsupportedEncodingException {
 		helper.setRemoveSemicolonContent(true);
-		request.setRequestURI("/foo;f=F;o=O;o=O/bar;b=B;a=A;r=R");
-		assertThat(helper.getRequestUri(request)).isEqualTo("/foo/bar");
 
-		request.setRequestURI("/foo;f=F;o=O;o=O/bar;b=B;a=A;r=R/baz;test");
-		assertThat(helper.getRequestUri(request)).isEqualTo("/foo/bar/baz");
+		request.setRequestURI("/foo;f=F;o=O;o=O/bar;b=B;a=A;r=R");
+		assertEquals("/foo/bar", helper.getRequestUri(request));
 
 		// SPR-13455
-		request.setRequestURI("/foo/;test/1");
+
 		request.setServletPath("/foo/1");
-		assertThat(helper.getRequestUri(request)).isEqualTo("/foo/1");
+		request.setRequestURI("/foo/;test/1");
+
+		assertEquals("/foo/1", helper.getRequestUri(request));
 	}
 
 	@Test
@@ -140,7 +141,7 @@ public class UrlPathHelperTests {
 
 	private void testKeepSemicolonContent(String requestUri, String expectedPath) {
 		request.setRequestURI(requestUri);
-		assertThat(helper.getRequestUri(request)).isEqualTo(expectedPath);
+		assertEquals(expectedPath, helper.getRequestUri(request));
 	}
 
 	@Test
@@ -151,7 +152,7 @@ public class UrlPathHelperTests {
 		request.setServletPath("/main");
 		request.setRequestURI("/petclinic;a=b/main;b=c/welcome.html;c=d");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/welcome.html;c=d");
+		assertEquals("/welcome.html;c=d", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
@@ -162,7 +163,7 @@ public class UrlPathHelperTests {
 		request.setServletPath("/welcome.html");
 		request.setRequestURI("/petclinic;a=b/welcome.html;c=d");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/welcome.html;c=d");
+		assertEquals("/welcome.html;c=d", helper.getLookupPathForRequest(request));
 	}
 
 
@@ -177,102 +178,103 @@ public class UrlPathHelperTests {
 	//
 
 	@Test
-	public void tomcatDefaultServletRoot() {
+	public void tomcatDefaultServletRoot() throws Exception {
 		request.setContextPath("/test");
-		request.setServletPath("/");
 		request.setPathInfo(null);
+		request.setServletPath("/");
 		request.setRequestURI("/test/");
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/");
+		assertEquals("/", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void tomcatDefaultServletFile() {
+	public void tomcatDefaultServletFile() throws Exception {
 		request.setContextPath("/test");
-		request.setServletPath("/foo");
 		request.setPathInfo(null);
+		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo");
+		assertEquals("/foo", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void tomcatDefaultServletFolder() {
+	public void tomcatDefaultServletFolder() throws Exception {
 		request.setContextPath("/test");
-		request.setServletPath("/foo/");
 		request.setPathInfo(null);
+		request.setServletPath("/foo/");
 		request.setRequestURI("/test/foo/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo/");
+		assertEquals("/foo/", helper.getLookupPathForRequest(request));
 	}
 
-	@Test //SPR-12372, SPR-13455
-	public void removeDuplicateSlashesInPath() {
+	//SPR-12372 & SPR-13455
+	@Test
+	public void removeDuplicateSlashesInPath() throws Exception {
 		request.setContextPath("/SPR-12372");
 		request.setPathInfo(null);
 		request.setServletPath("/foo/bar/");
 		request.setRequestURI("/SPR-12372/foo//bar/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo/bar/");
+		assertEquals("/foo/bar/", helper.getLookupPathForRequest(request));
 
 		request.setServletPath("/foo/bar/");
 		request.setRequestURI("/SPR-12372/foo/bar//");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo/bar/");
+		assertEquals("/foo/bar/", helper.getLookupPathForRequest(request));
 
 		// "normal" case
 		request.setServletPath("/foo/bar//");
 		request.setRequestURI("/SPR-12372/foo/bar//");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo/bar//");
+		assertEquals("/foo/bar//", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasDefaultServletRoot() {
+	public void wasDefaultServletRoot() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/");
 		request.setServletPath("");
 		request.setRequestURI("/test/");
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/");
+		assertEquals("/", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasDefaultServletRootWithCompliantSetting() {
+	public void wasDefaultServletRootWithCompliantSetting() throws Exception {
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/");
 		tomcatDefaultServletRoot();
 	}
 
 	@Test
-	public void wasDefaultServletFile() {
+	public void wasDefaultServletFile() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/foo");
 		request.setServletPath("");
 		request.setRequestURI("/test/foo");
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo");
+		assertEquals("/foo", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasDefaultServletFileWithCompliantSetting() {
+	public void wasDefaultServletFileWithCompliantSetting() throws Exception {
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo");
 		tomcatDefaultServletFile();
 	}
 
 	@Test
-	public void wasDefaultServletFolder() {
+	public void wasDefaultServletFolder() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/foo/");
 		request.setServletPath("");
 		request.setRequestURI("/test/foo/");
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo/");
+		assertEquals("/foo/", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasDefaultServletFolderWithCompliantSetting() {
+	public void wasDefaultServletFolderWithCompliantSetting() throws Exception {
 		UrlPathHelper.websphereComplianceFlag = true;
 		try {
 			request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/");
@@ -289,114 +291,113 @@ public class UrlPathHelperTests {
 	//
 
 	@Test
-	public void tomcatCasualServletRoot() {
+	public void tomcatCasualServletRoot() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/");
 		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/");
+		assertEquals("/", helper.getLookupPathForRequest(request));
 	}
 
-	@Disabled
 	// test the root mapping for /foo/* w/o a trailing slash - <host>/<context>/foo
-	@Test
-	public void tomcatCasualServletRootWithMissingSlash() {
+	@Test @Ignore
+	public void tomcatCasualServletRootWithMissingSlash() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo(null);
 		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/");
+		assertEquals("/", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void tomcatCasualServletFile() {
+	public void tomcatCasualServletFile() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/foo");
 		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo/foo");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo");
+		assertEquals("/foo", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void tomcatCasualServletFolder() {
+	public void tomcatCasualServletFolder() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/foo/");
 		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo/foo/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo/");
+		assertEquals("/foo/", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasCasualServletRoot() {
+	public void wasCasualServletRoot() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo(null);
 		request.setServletPath("/foo/");
 		request.setRequestURI("/test/foo/");
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/");
+		assertEquals("/", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasCasualServletRootWithCompliantSetting() {
+	public void wasCasualServletRootWithCompliantSetting() throws Exception {
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/");
 		tomcatCasualServletRoot();
 	}
 
-	@Disabled
 	// test the root mapping for /foo/* w/o a trailing slash - <host>/<context>/foo
+	@Ignore
 	@Test
-	public void wasCasualServletRootWithMissingSlash() {
+	public void wasCasualServletRootWithMissingSlash() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo(null);
 		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo");
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/");
+		assertEquals("/", helper.getLookupPathForRequest(request));
 	}
 
-	@Disabled
+	@Ignore
 	@Test
-	public void wasCasualServletRootWithMissingSlashWithCompliantSetting() {
+	public void wasCasualServletRootWithMissingSlashWithCompliantSetting() throws Exception {
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo");
 		tomcatCasualServletRootWithMissingSlash();
 	}
 
 	@Test
-	public void wasCasualServletFile() {
+	public void wasCasualServletFile() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/foo");
 		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo/foo");
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/foo");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo");
+		assertEquals("/foo", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasCasualServletFileWithCompliantSetting() {
+	public void wasCasualServletFileWithCompliantSetting() throws Exception {
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/foo");
 		tomcatCasualServletFile();
 	}
 
 	@Test
-	public void wasCasualServletFolder() {
+	public void wasCasualServletFolder() throws Exception {
 		request.setContextPath("/test");
 		request.setPathInfo("/foo/");
 		request.setServletPath("/foo");
 		request.setRequestURI("/test/foo/foo/");
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/foo/");
 
-		assertThat(helper.getLookupPathForRequest(request)).isEqualTo("/foo/");
+		assertEquals("/foo/", helper.getLookupPathForRequest(request));
 	}
 
 	@Test
-	public void wasCasualServletFolderWithCompliantSetting() {
+	public void wasCasualServletFolderWithCompliantSetting() throws Exception {
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/test/foo/foo/");
 		tomcatCasualServletFolder();
 	}
@@ -405,20 +406,20 @@ public class UrlPathHelperTests {
 	public void getOriginatingRequestUri() {
 		request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/path");
 		request.setRequestURI("/forwarded");
-		assertThat(helper.getOriginatingRequestUri(request)).isEqualTo("/path");
+		assertEquals("/path", helper.getOriginatingRequestUri(request));
 	}
 
 	@Test
 	public void getOriginatingRequestUriWebsphere() {
 		request.setAttribute(WEBSPHERE_URI_ATTRIBUTE, "/path");
 		request.setRequestURI("/forwarded");
-		assertThat(helper.getOriginatingRequestUri(request)).isEqualTo("/path");
+		assertEquals("/path", helper.getOriginatingRequestUri(request));
 	}
 
 	@Test
 	public void getOriginatingRequestUriDefault() {
 		request.setRequestURI("/forwarded");
-		assertThat(helper.getOriginatingRequestUri(request)).isEqualTo("/forwarded");
+		assertEquals("/forwarded", helper.getOriginatingRequestUri(request));
 	}
 
 	@Test
@@ -426,20 +427,20 @@ public class UrlPathHelperTests {
 		request.setQueryString("forward=on");
 		request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/path");
 		request.setAttribute(WebUtils.FORWARD_QUERY_STRING_ATTRIBUTE, "original=on");
-		assertThat(this.helper.getOriginatingQueryString(request)).isEqualTo("original=on");
+		assertEquals("original=on", this.helper.getOriginatingQueryString(request));
 	}
 
 	@Test
 	public void getOriginatingQueryStringNotPresent() {
 		request.setQueryString("forward=true");
-		assertThat(this.helper.getOriginatingQueryString(request)).isEqualTo("forward=true");
+		assertEquals("forward=true", this.helper.getOriginatingQueryString(request));
 	}
 
 	@Test
 	public void getOriginatingQueryStringIsNull() {
 		request.setQueryString("forward=true");
 		request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/path");
-		assertThat(this.helper.getOriginatingQueryString(request)).isNull();
+		assertNull(this.helper.getOriginatingQueryString(request));
 	}
 
 }

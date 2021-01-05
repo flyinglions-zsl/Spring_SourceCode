@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.http.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
-import java.util.function.BiFunction;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
@@ -67,13 +66,10 @@ public class HttpComponentsClientHttpRequestFactory implements ClientHttpRequest
 
 	private boolean bufferRequestBody = true;
 
-	@Nullable
-	private BiFunction<HttpMethod, URI, HttpContext> httpContextFactory;
-
 
 	/**
 	 * Create a new instance of the {@code HttpComponentsClientHttpRequestFactory}
-	 * with a default {@link HttpClient} based on system properties.
+	 * with a default {@link HttpClient}.
 	 */
 	public HttpComponentsClientHttpRequestFactory() {
 		this.httpClient = HttpClients.createSystem();
@@ -107,17 +103,12 @@ public class HttpComponentsClientHttpRequestFactory implements ClientHttpRequest
 	}
 
 	/**
-	 * Set the connection timeout for the underlying {@link RequestConfig}.
+	 * Set the connection timeout for the underlying HttpClient.
 	 * A timeout value of 0 specifies an infinite timeout.
 	 * <p>Additional properties can be configured by specifying a
 	 * {@link RequestConfig} instance on a custom {@link HttpClient}.
-	 * <p>This options does not affect connection timeouts for SSL
-	 * handshakes or CONNECT requests; for that, it is required to
-	 * use the {@link org.apache.http.config.SocketConfig} on the
-	 * {@link HttpClient} itself.
 	 * @param timeout the timeout value in milliseconds
 	 * @see RequestConfig#getConnectTimeout()
-	 * @see org.apache.http.config.SocketConfig#getSoTimeout
 	 */
 	public void setConnectTimeout(int timeout) {
 		Assert.isTrue(timeout >= 0, "Timeout must be a non-negative value");
@@ -125,8 +116,8 @@ public class HttpComponentsClientHttpRequestFactory implements ClientHttpRequest
 	}
 
 	/**
-	 * Set the timeout in milliseconds used when requesting a connection
-	 * from the connection manager using the underlying {@link RequestConfig}.
+	 * Set the timeout in milliseconds used when requesting a connection from the connection
+	 * manager using the underlying HttpClient.
 	 * A timeout value of 0 specifies an infinite timeout.
 	 * <p>Additional properties can be configured by specifying a
 	 * {@link RequestConfig} instance on a custom {@link HttpClient}.
@@ -134,12 +125,11 @@ public class HttpComponentsClientHttpRequestFactory implements ClientHttpRequest
 	 * @see RequestConfig#getConnectionRequestTimeout()
 	 */
 	public void setConnectionRequestTimeout(int connectionRequestTimeout) {
-		this.requestConfig = requestConfigBuilder()
-				.setConnectionRequestTimeout(connectionRequestTimeout).build();
+		this.requestConfig = requestConfigBuilder().setConnectionRequestTimeout(connectionRequestTimeout).build();
 	}
 
 	/**
-	 * Set the socket read timeout for the underlying {@link RequestConfig}.
+	 * Set the socket read timeout for the underlying HttpClient.
 	 * A timeout value of 0 specifies an infinite timeout.
 	 * <p>Additional properties can be configured by specifying a
 	 * {@link RequestConfig} instance on a custom {@link HttpClient}.
@@ -161,19 +151,6 @@ public class HttpComponentsClientHttpRequestFactory implements ClientHttpRequest
 		this.bufferRequestBody = bufferRequestBody;
 	}
 
-	/**
-	 * Configure a factory to pre-create the {@link HttpContext} for each request.
-	 * <p>This may be useful for example in mutual TLS authentication where a
-	 * different {@code RestTemplate} for each client certificate such that
-	 * all calls made through a given {@code RestTemplate} instance as associated
-	 * for the same client identity. {@link HttpClientContext#setUserToken(Object)}
-	 * can be used to specify a fixed user token for all requests.
-	 * @param httpContextFactory the context factory to use
-	 * @since 5.2.7
-	 */
-	public void setHttpContextFactory(BiFunction<HttpMethod, URI, HttpContext> httpContextFactory) {
-		this.httpContextFactory = httpContextFactory;
-	}
 
 	@Override
 	public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) throws IOException {
@@ -313,7 +290,7 @@ public class HttpComponentsClientHttpRequestFactory implements ClientHttpRequest
 	 */
 	@Nullable
 	protected HttpContext createHttpContext(HttpMethod httpMethod, URI uri) {
-		return (this.httpContextFactory != null ? this.httpContextFactory.apply(httpMethod, uri) : null);
+		return null;
 	}
 
 

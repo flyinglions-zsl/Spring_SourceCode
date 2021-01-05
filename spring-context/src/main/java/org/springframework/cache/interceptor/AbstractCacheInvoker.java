@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,27 @@ package org.springframework.cache.interceptor;
 
 import org.springframework.cache.Cache;
 import org.springframework.lang.Nullable;
-import org.springframework.util.function.SingletonSupplier;
+import org.springframework.util.Assert;
 
 /**
  * A base component for invoking {@link Cache} operations and using a
  * configurable {@link CacheErrorHandler} when an exception occurs.
  *
  * @author Stephane Nicoll
- * @author Juergen Hoeller
  * @since 4.1
  * @see org.springframework.cache.interceptor.CacheErrorHandler
  */
 public abstract class AbstractCacheInvoker {
 
-	protected SingletonSupplier<CacheErrorHandler> errorHandler;
+	private CacheErrorHandler errorHandler;
 
 
 	protected AbstractCacheInvoker() {
-		this.errorHandler = SingletonSupplier.of(SimpleCacheErrorHandler::new);
+		this.errorHandler = new SimpleCacheErrorHandler();
 	}
 
 	protected AbstractCacheInvoker(CacheErrorHandler errorHandler) {
-		this.errorHandler = SingletonSupplier.of(errorHandler);
+		this.errorHandler = errorHandler;
 	}
 
 
@@ -49,14 +48,15 @@ public abstract class AbstractCacheInvoker {
 	 * is used who throws any exception as is.
 	 */
 	public void setErrorHandler(CacheErrorHandler errorHandler) {
-		this.errorHandler = SingletonSupplier.of(errorHandler);
+		Assert.notNull(errorHandler, "CacheErrorHandler must not be null");
+		this.errorHandler = errorHandler;
 	}
 
 	/**
 	 * Return the {@link CacheErrorHandler} to use.
 	 */
 	public CacheErrorHandler getErrorHandler() {
-		return this.errorHandler.obtain();
+		return this.errorHandler;
 	}
 
 
@@ -92,17 +92,12 @@ public abstract class AbstractCacheInvoker {
 	}
 
 	/**
-	 * Execute {@link Cache#evict(Object)}/{@link Cache#evictIfPresent(Object)} on the
-	 * specified {@link Cache} and invoke the error handler if an exception occurs.
+	 * Execute {@link Cache#evict(Object)} on the specified {@link Cache} and
+	 * invoke the error handler if an exception occurs.
 	 */
-	protected void doEvict(Cache cache, Object key, boolean immediate) {
+	protected void doEvict(Cache cache, Object key) {
 		try {
-			if (immediate) {
-				cache.evictIfPresent(key);
-			}
-			else {
-				cache.evict(key);
-			}
+			cache.evict(key);
 		}
 		catch (RuntimeException ex) {
 			getErrorHandler().handleCacheEvictError(ex, cache, key);
@@ -113,14 +108,9 @@ public abstract class AbstractCacheInvoker {
 	 * Execute {@link Cache#clear()} on the specified {@link Cache} and
 	 * invoke the error handler if an exception occurs.
 	 */
-	protected void doClear(Cache cache, boolean immediate) {
+	protected void doClear(Cache cache) {
 		try {
-			if (immediate) {
-				cache.invalidate();
-			}
-			else {
-				cache.clear();
-			}
+			cache.clear();
 		}
 		catch (RuntimeException ex) {
 			getErrorHandler().handleCacheClearError(ex, cache);

@@ -18,12 +18,14 @@ package org.springframework.beans.factory.support;
 
 import java.util.Arrays;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Rod Johnson
@@ -42,36 +44,36 @@ public class BeanDefinitionBuilderTests {
 		}
 
 		RootBeanDefinition rbd = (RootBeanDefinition) bdb.getBeanDefinition();
-		assertThat(rbd.isSingleton()).isFalse();
-		assertThat(rbd.getBeanClass()).isEqualTo(TestBean.class);
-		assertThat(Arrays.equals(dependsOn, rbd.getDependsOn())).as("Depends on was added").isTrue();
-		assertThat(rbd.getPropertyValues().contains("age")).isTrue();
+		assertFalse(rbd.isSingleton());
+		assertEquals(TestBean.class, rbd.getBeanClass());
+		assertTrue("Depends on was added", Arrays.equals(dependsOn, rbd.getDependsOn()));
+		assertTrue(rbd.getPropertyValues().contains("age"));
 	}
 
 	@Test
 	public void beanClassWithFactoryMethod() {
 		BeanDefinitionBuilder bdb = BeanDefinitionBuilder.rootBeanDefinition(TestBean.class, "create");
 		RootBeanDefinition rbd = (RootBeanDefinition) bdb.getBeanDefinition();
-		assertThat(rbd.hasBeanClass()).isTrue();
-		assertThat(rbd.getBeanClass()).isEqualTo(TestBean.class);
-		assertThat(rbd.getFactoryMethodName()).isEqualTo("create");
+		assertTrue(rbd.hasBeanClass());
+		assertEquals(TestBean.class, rbd.getBeanClass());
+		assertEquals("create", rbd.getFactoryMethodName());
 	}
 
 	@Test
 	public void beanClassName() {
 		BeanDefinitionBuilder bdb = BeanDefinitionBuilder.rootBeanDefinition(TestBean.class.getName());
 		RootBeanDefinition rbd = (RootBeanDefinition) bdb.getBeanDefinition();
-		assertThat(rbd.hasBeanClass()).isFalse();
-		assertThat(rbd.getBeanClassName()).isEqualTo(TestBean.class.getName());
+		assertFalse(rbd.hasBeanClass());
+		assertEquals(TestBean.class.getName(), rbd.getBeanClassName());
 	}
 
 	@Test
 	public void beanClassNameWithFactoryMethod() {
 		BeanDefinitionBuilder bdb = BeanDefinitionBuilder.rootBeanDefinition(TestBean.class.getName(), "create");
 		RootBeanDefinition rbd = (RootBeanDefinition) bdb.getBeanDefinition();
-		assertThat(rbd.hasBeanClass()).isFalse();
-		assertThat(rbd.getBeanClassName()).isEqualTo(TestBean.class.getName());
-		assertThat(rbd.getFactoryMethodName()).isEqualTo("create");
+		assertFalse(rbd.hasBeanClass());
+		assertEquals(TestBean.class.getName(), rbd.getBeanClassName());
+		assertEquals("create", rbd.getFactoryMethodName());
 	}
 
 }

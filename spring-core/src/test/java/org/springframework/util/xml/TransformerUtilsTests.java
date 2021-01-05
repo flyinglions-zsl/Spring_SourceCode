@@ -17,7 +17,6 @@
 package org.springframework.util.xml;
 
 import java.util.Properties;
-
 import javax.xml.transform.ErrorListener;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Result;
@@ -26,10 +25,9 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.URIResolver;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link TransformerUtils}.
@@ -37,62 +35,59 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Rick Evans
  * @author Arjen Poutsma
  */
-class TransformerUtilsTests {
+public class TransformerUtilsTests {
 
 	@Test
-	void enableIndentingSunnyDay() throws Exception {
+	public void enableIndentingSunnyDay() throws Exception {
 		Transformer transformer = new StubTransformer();
 		TransformerUtils.enableIndenting(transformer);
 		String indent = transformer.getOutputProperty(OutputKeys.INDENT);
-		assertThat(indent).isNotNull();
-		assertThat(indent).isEqualTo("yes");
+		assertNotNull(indent);
+		assertEquals("yes", indent);
 		String indentAmount = transformer.getOutputProperty("{http://xml.apache.org/xalan}indent-amount");
-		assertThat(indentAmount).isNotNull();
-		assertThat(indentAmount).isEqualTo(String.valueOf(TransformerUtils.DEFAULT_INDENT_AMOUNT));
+		assertNotNull(indentAmount);
+		assertEquals(String.valueOf(TransformerUtils.DEFAULT_INDENT_AMOUNT), indentAmount);
 	}
 
 	@Test
-	void enableIndentingSunnyDayWithCustomKosherIndentAmount() throws Exception {
+	public void enableIndentingSunnyDayWithCustomKosherIndentAmount() throws Exception {
 		final String indentAmountProperty = "10";
 		Transformer transformer = new StubTransformer();
-		TransformerUtils.enableIndenting(transformer, Integer.parseInt(indentAmountProperty));
+		TransformerUtils.enableIndenting(transformer, Integer.valueOf(indentAmountProperty));
 		String indent = transformer.getOutputProperty(OutputKeys.INDENT);
-		assertThat(indent).isNotNull();
-		assertThat(indent).isEqualTo("yes");
+		assertNotNull(indent);
+		assertEquals("yes", indent);
 		String indentAmount = transformer.getOutputProperty("{http://xml.apache.org/xalan}indent-amount");
-		assertThat(indentAmount).isNotNull();
-		assertThat(indentAmount).isEqualTo(indentAmountProperty);
+		assertNotNull(indentAmount);
+		assertEquals(indentAmountProperty, indentAmount);
 	}
 
 	@Test
-	void disableIndentingSunnyDay() throws Exception {
+	public void disableIndentingSunnyDay() throws Exception {
 		Transformer transformer = new StubTransformer();
 		TransformerUtils.disableIndenting(transformer);
 		String indent = transformer.getOutputProperty(OutputKeys.INDENT);
-		assertThat(indent).isNotNull();
-		assertThat(indent).isEqualTo("no");
+		assertNotNull(indent);
+		assertEquals("no", indent);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void enableIndentingWithNullTransformer() throws Exception {
+		TransformerUtils.enableIndenting(null);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void disableIndentingWithNullTransformer() throws Exception {
+		TransformerUtils.disableIndenting(null);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void enableIndentingWithNegativeIndentAmount() throws Exception {
+		TransformerUtils.enableIndenting(new StubTransformer(), -21938);
 	}
 
 	@Test
-	void enableIndentingWithNullTransformer() throws Exception {
-		assertThatIllegalArgumentException().isThrownBy(() ->
-				TransformerUtils.enableIndenting(null));
-	}
-
-	@Test
-	void disableIndentingWithNullTransformer() throws Exception {
-		assertThatIllegalArgumentException().isThrownBy(() ->
-				TransformerUtils.disableIndenting(null));
-	}
-
-	@Test
-	void enableIndentingWithNegativeIndentAmount() throws Exception {
-		assertThatIllegalArgumentException().isThrownBy(() ->
-				TransformerUtils.enableIndenting(new StubTransformer(), -21938));
-	}
-
-	@Test
-	void enableIndentingWithZeroIndentAmount() throws Exception {
+	public void enableIndentingWithZeroIndentAmount() throws Exception {
 		TransformerUtils.enableIndenting(new StubTransformer(), 0);
 	}
 

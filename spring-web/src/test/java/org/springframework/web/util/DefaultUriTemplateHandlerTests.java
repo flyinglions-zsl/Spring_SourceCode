@@ -20,9 +20,9 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link DefaultUriTemplateHandler}.
@@ -40,7 +40,7 @@ public class DefaultUriTemplateHandlerTests {
 		this.handler.setBaseUrl("http://localhost:8080");
 		URI actual = this.handler.expand("/myapiresource");
 
-		assertThat(actual.toString()).isEqualTo("http://localhost:8080/myapiresource");
+		assertEquals("http://localhost:8080/myapiresource", actual.toString());
 	}
 
 	@Test
@@ -48,7 +48,7 @@ public class DefaultUriTemplateHandlerTests {
 		this.handler.setBaseUrl("http://localhost:8080/context");
 		URI actual = this.handler.expand("/myapiresource");
 
-		assertThat(actual.toString()).isEqualTo("http://localhost:8080/context/myapiresource");
+		assertEquals("http://localhost:8080/context/myapiresource", actual.toString());
 	}
 
 	@Test	// SPR-14147
@@ -64,7 +64,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://{host}:{port}/v42/customers/{id}";
 		URI actual = this.handler.expand(template, vars);
 
-		assertThat(actual.toString()).isEqualTo("https://api.example.com:443/v42/customers/123");
+		assertEquals("https://api.example.com:443/v42/customers/123", actual.toString());
 	}
 
 	@Test
@@ -76,7 +76,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://example.com/hotels/{hotel}/pic/{publicpath}";
 		URI actual = this.handler.expand(template, vars);
 
-		assertThat(actual.toString()).isEqualTo("https://example.com/hotels/1/pic/pics/logo.png");
+		assertEquals("https://example.com/hotels/1/pic/pics/logo.png", actual.toString());
 	}
 
 	@Test
@@ -89,7 +89,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://example.com/hotels/{hotel}/pic/{publicpath}/size/{scale}";
 		URI actual = this.handler.expand(template, vars);
 
-		assertThat(actual.toString()).isEqualTo("https://example.com/hotels/1/pic/pics%2Flogo.png/size/150x150");
+		assertEquals("https://example.com/hotels/1/pic/pics%2Flogo.png/size/150x150", actual.toString());
 	}
 
 	@Test
@@ -100,7 +100,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://www.example.com/user/{userId}/dashboard";
 		URI actual = this.handler.expand(template, vars);
 
-		assertThat(actual.toString()).isEqualTo("https://www.example.com/user/john;doe/dashboard");
+		assertEquals("https://www.example.com/user/john;doe/dashboard", actual.toString());
 	}
 
 	@Test
@@ -109,7 +109,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://www.example.com/user/{userId}/dashboard";
 		URI actual = this.handler.expand(template, "john;doe");
 
-		assertThat(actual.toString()).isEqualTo("https://www.example.com/user/john;doe/dashboard");
+		assertEquals("https://www.example.com/user/john;doe/dashboard", actual.toString());
 	}
 
 	@Test
@@ -120,7 +120,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://www.example.com/user/{userId}/dashboard";
 		URI actual = this.handler.expand(template, vars);
 
-		assertThat(actual.toString()).isEqualTo("https://www.example.com/user/john%3Bdoe/dashboard");
+		assertEquals("https://www.example.com/user/john%3Bdoe/dashboard", actual.toString());
 	}
 
 	@Test
@@ -129,7 +129,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://www.example.com/user/{userId}/dashboard";
 		URI actual = this.handler.expand(template, "john;doe");
 
-		assertThat(actual.toString()).isEqualTo("https://www.example.com/user/john%3Bdoe/dashboard");
+		assertEquals("https://www.example.com/user/john%3Bdoe/dashboard", actual.toString());
 	}
 
 	@Test	// SPR-14147
@@ -145,7 +145,7 @@ public class DefaultUriTemplateHandlerTests {
 		String template = "https://{host}/user/{userId}/dashboard";
 		URI actual = this.handler.expand(template, vars);
 
-		assertThat(actual.toString()).isEqualTo("https://www.example.com/user/john%3Bdoe/dashboard");
+		assertEquals("https://www.example.com/user/john%3Bdoe/dashboard", actual.toString());
 	}
 
 }

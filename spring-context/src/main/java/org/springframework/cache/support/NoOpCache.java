@@ -95,17 +95,7 @@ public class NoOpCache implements Cache {
 	}
 
 	@Override
-	public boolean evictIfPresent(Object key) {
-		return false;
-	}
-
-	@Override
 	public void clear() {
-	}
-
-	@Override
-	public boolean invalidate() {
-		return false;
 	}
 
 }

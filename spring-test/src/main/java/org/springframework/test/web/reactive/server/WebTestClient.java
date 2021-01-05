@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,21 +25,17 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.hamcrest.Matcher;
 import org.reactivestreams.Publisher;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ClientHttpRequest;
-import org.springframework.http.codec.ClientCodecConfigurer;
 import org.springframework.http.codec.ServerCodecConfigurer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.MultiValueMap;
 import org.springframework.validation.Validator;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolverBuilder;
@@ -48,7 +44,6 @@ import org.springframework.web.reactive.config.PathMatchConfigurer;
 import org.springframework.web.reactive.config.ViewResolverRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.function.BodyInserter;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -62,30 +57,24 @@ import org.springframework.web.util.UriBuilder;
 import org.springframework.web.util.UriBuilderFactory;
 
 /**
- * Client for testing web servers that uses {@link WebClient} internally to
- * perform requests while also providing a fluent API to verify responses.
- * This client can connect to any server over HTTP, or to a WebFlux application
- * via mock request and response objects.
+ * Non-blocking, reactive client for testing web servers. It uses the reactive
+ * {@link WebClient} internally to perform requests and provides a fluent API
+ * to verify responses.
  *
- * <p>Use one of the bindToXxx methods to create an instance. For example:
- * <ul>
- * <li>{@link #bindToController(Object...)}
- * <li>{@link #bindToRouterFunction(RouterFunction)}
- * <li>{@link #bindToApplicationContext(ApplicationContext)}
- * <li>{@link #bindToServer()}
- * <li>...
- * </ul>
+ * <p>{@code WebTestClient} can connect to any server over an HTTP connection.
+ * It can also bind directly to WebFlux applications using mock request and
+ * response objects, without the need for an HTTP server.
  *
- * <p><strong>Warning</strong>: {@code WebTestClient} is not usable yet in
- * Kotlin due to a <a href="https://youtrack.jetbrains.com/issue/KT-5464">type inference issue</a>
- * which is expected to be fixed as of Kotlin 1.3. You can watch
- * <a href="https://github.com/spring-projects/spring-framework/issues/20606">gh-20606</a>
- * for up-to-date information. Meanwhile, the proposed alternative is to use
- * directly {@link WebClient} with its Reactor and Spring Kotlin extensions to
- * perform integration tests on an embedded WebFlux server.
+ * <p>See the static {@code bindToXxx} entry points for creating an instance.
+ *
+ * <p><strong>Warning</strong>: {@code WebTestClient} is not usable yet in Kotlin due to a
+ * <a href="https://youtrack.jetbrains.com/issue/KT-5464">type inference issue</a> which is
+ * expected to be fixed as of Kotlin 1.3. You can watch
+ * <a href="https://jira.spring.io/browse/SPR-16057">SPR-16057</a> for up-to-date information.
+ * Meanwhile, the proposed alternative is to use directly {@link WebClient} with its Reactor
+ * and Spring Kotlin extensions to perform integration tests on an embedded WebFlux server.
  *
  * @author Rossen Stoyanchev
- * @author Brian Clozel
  * @since 5.0
  * @see StatusAssertions
  * @see HeaderAssertions
@@ -172,7 +161,7 @@ public interface WebTestClient {
 	// Static factory methods
 
 	/**
-	 * Use this server setup to test one {@code @Controller} at a time.
+	 * Use this server setup to test one `@Controller` at a time.
 	 * This option loads the default configuration of
 	 * {@link org.springframework.web.reactive.config.EnableWebFlux @EnableWebFlux}.
 	 * There are builder methods to customize the Java config. The resulting
@@ -229,8 +218,8 @@ public interface WebTestClient {
 	}
 
 	/**
-	 * This server setup option allows you to connect to a live server through
-	 * a Reactor Netty client connector.
+	 * This server setup option allows you to connect to a running server via
+	 * Reactor Netty.
 	 * <p><pre class="code">
 	 * WebTestClient client = WebTestClient.bindToServer()
 	 *         .baseUrl("http://localhost:8080")
@@ -244,6 +233,11 @@ public interface WebTestClient {
 
 	/**
 	 * A variant of {@link #bindToServer()} with a pre-configured connector.
+	 * <p><pre class="code">
+	 * WebTestClient client = WebTestClient.bindToServer()
+	 *         .baseUrl("http://localhost:8080")
+	 *         .build();
+	 * </pre>
 	 * @return chained API to customize client config
 	 * @since 5.0.2
 	 */
@@ -254,8 +248,6 @@ public interface WebTestClient {
 
 	/**
 	 * Base specification for setting up tests without a server.
-	 *
-	 * @param <B> a self reference to the builder type
 	 */
 	interface MockServerSpec<B extends MockServerSpec<B>> {
 
@@ -439,34 +431,11 @@ public interface WebTestClient {
 		Builder filters(Consumer<List<ExchangeFilterFunction>> filtersConsumer);
 
 		/**
-		 * Configure the codecs for the {@code WebClient} in the
-		 * {@link #exchangeStrategies(ExchangeStrategies) underlying}
-		 * {@code ExchangeStrategies}.
-		 * @param configurer the configurer to apply
-		 * @since 5.1.13
-		 */
-		Builder codecs(Consumer<ClientCodecConfigurer> configurer);
-
-		/**
 		 * Configure the {@link ExchangeStrategies} to use.
-		 * <p>For most cases, prefer using {@link #codecs(Consumer)} which allows
-		 * customizing the codecs in the {@code ExchangeStrategies} rather than
-		 * replace them. That ensures multiple parties can contribute to codecs
-		 * configuration.
-		 * <p>By default this is set to {@link ExchangeStrategies#withDefaults()}.
+		 * <p>By default {@link ExchangeStrategies#withDefaults()} is used.
 		 * @param strategies the strategies to use
 		 */
 		Builder exchangeStrategies(ExchangeStrategies strategies);
-
-		/**
-		 * Customize the strategies configured via
-		 * {@link #exchangeStrategies(ExchangeStrategies)}. This method is
-		 * designed for use in scenarios where multiple parties wish to update
-		 * the {@code ExchangeStrategies}.
-		 * @deprecated as of 5.1.13 in favor of {@link #codecs(Consumer)}
-		 */
-		@Deprecated
-		Builder exchangeStrategies(Consumer<ExchangeStrategies.Builder> configurer);
 
 		/**
 		 * Max amount of time to wait for responses.
@@ -491,8 +460,6 @@ public interface WebTestClient {
 
 	/**
 	 * Specification for providing the URI of a request.
-	 *
-	 * @param <S> a self reference to the spec type
 	 */
 	interface UriSpec<S extends RequestHeadersSpec<?>> {
 
@@ -529,8 +496,6 @@ public interface WebTestClient {
 
 	/**
 	 * Specification for adding request headers and performing an exchange.
-	 *
-	 * @param <S> a self reference to the spec type
 	 */
 	interface RequestHeadersSpec<S extends RequestHeadersSpec<S>> {
 
@@ -652,92 +617,46 @@ public interface WebTestClient {
 		RequestBodySpec contentType(MediaType contentType);
 
 		/**
-		 * Set the body to the given {@code Object} value. This method invokes the
-		 * {@link org.springframework.web.reactive.function.client.WebClient.RequestBodySpec#bodyValue(Object)
-		 * bodyValue} method on the underlying {@code WebClient}.
-		 * @param body the value to write to the request body
-		 * @return spec for further declaration of the request
-		 * @since 5.2
-		 */
-		RequestHeadersSpec<?> bodyValue(Object body);
-
-		/**
-		 * Set the body from the given {@code Publisher}. Shortcut for
-		 * {@link #body(BodyInserter)} with a
-		 * {@linkplain BodyInserters#fromPublisher Publisher inserter}.
-		 * @param publisher the request body data
-		 * @param elementClass the class of elements contained in the publisher
-		 * @param <T> the type of the elements contained in the publisher
-		 * @param <S> the type of the {@code Publisher}
-		 * @return spec for further declaration of the request
-		 */
-		<T, S extends Publisher<T>> RequestHeadersSpec<?> body(S publisher, Class<T> elementClass);
-
-		/**
-		 * Variant of {@link #body(Publisher, Class)} that allows providing
-		 * element type information with generics.
-		 * @param publisher the request body data
-		 * @param elementTypeRef the type reference of elements contained in the publisher
-		 * @param <T> the type of the elements contained in the publisher
-		 * @param <S> the type of the {@code Publisher}
-		 * @return spec for further declaration of the request
-		 * @since 5.2
-		 */
-		<T, S extends Publisher<T>> RequestHeadersSpec<?> body(
-				S publisher, ParameterizedTypeReference<T> elementTypeRef);
-
-		/**
-		 * Set the body from the given producer. This method invokes the
-		 * {@link org.springframework.web.reactive.function.client.WebClient.RequestBodySpec#body(Object, Class)
-		 * body(Object, Class)} method on the underlying {@code WebClient}.
-		 * @param producer the producer to write to the request. This must be a
-		 * {@link Publisher} or another producer adaptable to a
-		 * {@code Publisher} via {@link ReactiveAdapterRegistry}
-		 * @param elementClass the class of elements contained in the producer
-		 * @return spec for further declaration of the request
-		 * @since 5.2
-		 */
-		RequestHeadersSpec<?> body(Object producer, Class<?> elementClass);
-
-		/**
-		 * Set the body from the given producer. This method invokes the
-		 * {@link org.springframework.web.reactive.function.client.WebClient.RequestBodySpec#body(Object, ParameterizedTypeReference)
-		 * body(Object, ParameterizedTypeReference)} method on the underlying {@code WebClient}.
-		 * @param producer the producer to write to the request. This must be a
-		 * {@link Publisher} or another producer adaptable to a
-		 * {@code Publisher} via {@link ReactiveAdapterRegistry}
-		 * @param elementTypeRef the type reference of elements contained in the producer
-		 * @return spec for further declaration of the request
-		 * @since 5.2
-		 */
-		RequestHeadersSpec<?> body(Object producer, ParameterizedTypeReference<?> elementTypeRef);
-
-		/**
 		 * Set the body of the request to the given {@code BodyInserter}.
-		 * This method invokes the
-		 * {@link org.springframework.web.reactive.function.client.WebClient.RequestBodySpec#body(BodyInserter)
-		 * body(BodyInserter)} method on the underlying {@code WebClient}.
-		 * @param inserter the body inserter to use
-		 * @return spec for further declaration of the request
+		 * @param inserter the inserter
+		 * @return spec for decoding the response
 		 * @see org.springframework.web.reactive.function.BodyInserters
 		 */
 		RequestHeadersSpec<?> body(BodyInserter<?, ? super ClientHttpRequest> inserter);
 
 		/**
-		 * Shortcut for {@link #body(BodyInserter)} with a
-		 * {@linkplain BodyInserters#fromValue value inserter}.
-		 * As of 5.2 this method delegates to {@link #bodyValue(Object)}.
-		 * @deprecated as of Spring Framework 5.2 in favor of {@link #bodyValue(Object)}
+		 * Set the body of the request to the given asynchronous {@code Publisher}.
+		 * @param publisher the request body data
+		 * @param elementClass the class of elements contained in the publisher
+		 * @param <T> the type of the elements contained in the publisher
+		 * @param <S> the type of the {@code Publisher}
+		 * @return spec for decoding the response
 		 */
-		@Deprecated
+		<T, S extends Publisher<T>> RequestHeadersSpec<?> body(S publisher, Class<T> elementClass);
+
+		/**
+		 * Set the body of the request to the given synchronous {@code Object} and
+		 * perform the request.
+		 * <p>This method is a convenient shortcut for:
+		 * <pre class="code">
+		 * .body(BodyInserters.fromObject(object))
+		 * </pre>
+		 * <p>The body can be a
+		 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create
+		 * a multipart request. The values in the {@code MultiValueMap} can be
+		 * any Object representing the body of the part, or an
+		 * {@link org.springframework.http.HttpEntity HttpEntity} representing a
+		 * part with body and headers. The {@code MultiValueMap} can be built
+		 * conveniently using
+		 * @param body the {@code Object} to write to the request
+		 * @return a {@code Mono} with the response
+		 */
 		RequestHeadersSpec<?> syncBody(Object body);
 	}
 
 
 	/**
 	 * Specification for providing request headers and the URI of a request.
-	 *
-	 * @param <S> a self reference to the spec type
 	 */
 	interface RequestHeadersUriSpec<S extends RequestHeadersSpec<S>> extends UriSpec<S>, RequestHeadersSpec<S> {
 	}
@@ -763,12 +682,6 @@ public interface WebTestClient {
 		 * Assertions on the headers of the response.
 		 */
 		HeaderAssertions expectHeader();
-
-		/**
-		 * Assertions on the cookies of the response.
-		 * @since 5.3
-		 */
-		CookieAssertions expectCookie();
 
 		/**
 		 * Consume and decode the response body to a single object of type
@@ -803,29 +716,31 @@ public interface WebTestClient {
 		BodyContentSpec expectBody();
 
 		/**
-		 * Exit the chained flow in order to consume the response body
-		 * externally, e.g. via {@link reactor.test.StepVerifier}.
+		 * Exit the chained API and consume the response body externally. This
+		 * is useful for testing infinite streams (e.g. SSE) where you need to
+		 * to assert decoded objects as they come and then cancel at some point
+		 * when test objectives are met. Consider using {@code StepVerifier}
+		 * from {@literal "reactor-test"} to assert the {@code Flux<T>} stream
+		 * of decoded objects.
 		 *
-		 * <p>Note that when {@code Void.class} is passed in, the response body
-		 * is consumed and released. If no content is expected, then consider
-		 * using {@code .expectBody().isEmpty()} instead which asserts that
-		 * there is no content.
+		 * <p><strong>Note:</strong> Do not use this option for cases where there
+		 * is no content (e.g. 204, 4xx) or you're not interested in the content.
+		 * For such cases you can use {@code expectBody().isEmpty()} or
+		 * {@code expectBody(Void.class)} which ensures that resources are
+		 * released regardless of whether the response has content or not.
 		 */
-		<T> FluxExchangeResult<T> returnResult(Class<T> elementClass);
+		<T> FluxExchangeResult<T> returnResult(Class<T> elementType);
 
 		/**
 		 * Alternative to {@link #returnResult(Class)} that accepts information
 		 * about a target type with generics.
 		 */
-		<T> FluxExchangeResult<T> returnResult(ParameterizedTypeReference<T> elementTypeRef);
+		<T> FluxExchangeResult<T> returnResult(ParameterizedTypeReference<T> elementType);
 	}
 
 
 	/**
 	 * Spec for expectations on the response body decoded to a single Object.
-	 *
-	 * @param <S> a self reference to the spec type
-	 * @param <B> the body type
 	 */
 	interface BodySpec<B, S extends BodySpec<B, S>> {
 
@@ -833,25 +748,6 @@ public interface WebTestClient {
 		 * Assert the extracted body is equal to the given value.
 		 */
 		<T extends S> T isEqualTo(B expected);
-
-		/**
-		 * Assert the extracted body with a {@link Matcher}.
-		 * @since 5.1
-		 */
-		<T extends S> T value(Matcher<? super B> matcher);
-
-		/**
-		 * Transform the extracted the body with a function, e.g. extracting a
-		 * property, and assert the mapped value with a {@link Matcher}.
-		 * @since 5.1
-		 */
-		<T extends S, R> T value(Function<B, R> bodyMapper, Matcher<? super R> matcher);
-
-		/**
-		 * Assert the extracted body with a {@link Consumer}.
-		 * @since 5.1
-		 */
-		<T extends S> T value(Consumer<B> consumer);
 
 		/**
 		 * Assert the exchange result with the given {@link Consumer}.
@@ -868,8 +764,6 @@ public interface WebTestClient {
 
 	/**
 	 * Spec for expectations on the response body decoded to a List.
-	 *
-	 * @param <E> the body list element type
 	 */
 	interface ListBodySpec<E> extends BodySpec<List<E>, ListBodySpec<E>> {
 
@@ -916,19 +810,6 @@ public interface WebTestClient {
 		BodyContentSpec json(String expectedJson);
 
 		/**
-		 * Parse expected and actual response content as XML and assert that
-		 * the two are "similar", i.e. they contain the same elements and
-		 * attributes regardless of order.
-		 * <p>Use of this method requires the
-		 * <a href="https://github.com/xmlunit/xmlunit">XMLUnit</a> library on
-		 * the classpath.
-		 * @param expectedXml the expected JSON content.
-		 * @since 5.1
-		 * @see org.springframework.test.util.XmlExpectationsHelper#assertXmlEqual(String, String)
-		 */
-		BodyContentSpec xml(String expectedXml);
-
-		/**
 		 * Access to response body assertions using a
 		 * <a href="https://github.com/jayway/JsonPath">JsonPath</a> expression
 		 * to inspect a specific subset of the body.
@@ -938,32 +819,6 @@ public interface WebTestClient {
 		 * @param args arguments to parameterize the expression
 		 */
 		JsonPathAssertions jsonPath(String expression, Object... args);
-
-		/**
-		 * Access to response body assertions using an XPath expression to
-		 * inspect a specific subset of the body.
-		 * <p>The XPath expression can be a parameterized string using
-		 * formatting specifiers as defined in {@link String#format}.
-		 * @param expression the XPath expression
-		 * @param args arguments to parameterize the expression
-		 * @since 5.1
-		 * @see #xpath(String, Map, Object...)
-		 */
-		default XpathAssertions xpath(String expression, Object... args) {
-			return xpath(expression, null, args);
-		}
-
-		/**
-		 * Access to response body assertions with specific namespaces using an
-		 * XPath expression to inspect a specific subset of the body.
-		 * <p>The XPath expression can be a parameterized string using
-		 * formatting specifiers as defined in {@link String#format}.
-		 * @param expression the XPath expression
-		 * @param namespaces the namespaces to use
-		 * @param args arguments to parameterize the expression
-		 * @since 5.1
-		 */
-		XpathAssertions xpath(String expression, @Nullable Map<String, String> namespaces, Object... args);
 
 		/**
 		 * Assert the response body content with the given {@link Consumer}.

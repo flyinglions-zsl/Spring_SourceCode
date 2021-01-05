@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import org.springframework.util.ObjectUtils;
  * methods being handled by a transaction interceptor.
  *
  * @author Colin Sampaleanu
- * @author Juergen Hoeller
  * @since 15.10.2003
  * @see org.springframework.transaction.interceptor.TransactionProxyFactoryBean
  * @see org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator
@@ -45,13 +44,10 @@ public class MatchAlwaysTransactionAttributeSource implements TransactionAttribu
 	/**
 	 * Allows a transaction attribute to be specified, using the String form, for
 	 * example, "PROPAGATION_REQUIRED".
-	 * @param transactionAttribute the String form of the transactionAttribute to use.
+	 * @param transactionAttribute The String form of the transactionAttribute to use.
 	 * @see org.springframework.transaction.interceptor.TransactionAttributeEditor
 	 */
 	public void setTransactionAttribute(TransactionAttribute transactionAttribute) {
-		if (transactionAttribute instanceof DefaultTransactionAttribute) {
-			((DefaultTransactionAttribute) transactionAttribute).resolveAttributeStrings(null);
-		}
 		this.transactionAttribute = transactionAttribute;
 	}
 
@@ -64,7 +60,7 @@ public class MatchAlwaysTransactionAttributeSource implements TransactionAttribu
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

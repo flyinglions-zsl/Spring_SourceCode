@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
 
 import org.springframework.lang.Nullable;
-import org.springframework.orm.jpa.EntityManagerHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
@@ -80,13 +79,13 @@ public class SpringSessionContext implements CurrentSessionContext {
 	 * Retrieve the Spring-managed Session for the current thread, if any.
 	 */
 	@Override
+	@SuppressWarnings("deprecation")
 	public Session currentSession() throws HibernateException {
 		Object value = TransactionSynchronizationManager.getResource(this.sessionFactory);
 		if (value instanceof Session) {
 			return (Session) value;
 		}
 		else if (value instanceof SessionHolder) {
-			// HibernateTransactionManager
 			SessionHolder sessionHolder = (SessionHolder) value;
 			Session session = sessionHolder.getSession();
 			if (!sessionHolder.isSynchronizedWithTransaction() &&
@@ -96,18 +95,14 @@ public class SpringSessionContext implements CurrentSessionContext {
 				sessionHolder.setSynchronizedWithTransaction(true);
 				// Switch to FlushMode.AUTO, as we have to assume a thread-bound Session
 				// with FlushMode.MANUAL, which needs to allow flushing within the transaction.
-				FlushMode flushMode = session.getHibernateFlushMode();
+				FlushMode flushMode = SessionFactoryUtils.getFlushMode(session);
 				if (flushMode.equals(FlushMode.MANUAL) &&
 						!TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
-					session.setHibernateFlushMode(FlushMode.AUTO);
+					session.setFlushMode(FlushMode.AUTO);
 					sessionHolder.setPreviousFlushMode(flushMode);
 				}
 			}
 			return session;
-		}
-		else if (value instanceof EntityManagerHolder) {
-			// JpaTransactionManager
-			return ((EntityManagerHolder) value).getEntityManager().unwrap(Session.class);
 		}
 
 		if (this.transactionManager != null && this.jtaSessionContext != null) {
@@ -129,7 +124,7 @@ public class SpringSessionContext implements CurrentSessionContext {
 		if (TransactionSynchronizationManager.isSynchronizationActive()) {
 			Session session = this.sessionFactory.openSession();
 			if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
-				session.setHibernateFlushMode(FlushMode.MANUAL);
+				session.setFlushMode(FlushMode.MANUAL);
 			}
 			SessionHolder sessionHolder = new SessionHolder(session);
 			TransactionSynchronizationManager.registerSynchronization(

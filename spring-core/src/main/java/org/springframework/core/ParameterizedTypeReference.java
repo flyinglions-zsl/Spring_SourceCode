@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-
 package org.springframework.core;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -39,7 +37,6 @@ import org.springframework.util.Assert;
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  * @since 3.2
- * @param <T> the referenced type
  * @see <a href="https://gafter.blogspot.nl/2006/12/super-type-tokens.html">Neal Gafter on Super Type Tokens</a>
  */
 public abstract class ParameterizedTypeReference<T> {
@@ -67,7 +64,7 @@ public abstract class ParameterizedTypeReference<T> {
 	}
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		return (this == other || (other instanceof ParameterizedTypeReference &&
 				this.type.equals(((ParameterizedTypeReference<?>) other).type)));
 	}

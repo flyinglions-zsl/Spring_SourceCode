@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ package org.springframework.messaging.tcp.reactor;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
@@ -32,18 +33,20 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.MonoProcessor;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
-import reactor.netty.Connection;
-import reactor.netty.FutureMono;
-import reactor.netty.NettyInbound;
-import reactor.netty.NettyOutbound;
-import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.resources.LoopResources;
-import reactor.netty.tcp.TcpClient;
-import reactor.util.retry.Retry;
+import reactor.ipc.netty.FutureMono;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.resources.LoopResources;
+import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.TcpClient;
 
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
@@ -52,9 +55,7 @@ import org.springframework.messaging.tcp.TcpConnection;
 import org.springframework.messaging.tcp.TcpConnectionHandler;
 import org.springframework.messaging.tcp.TcpOperations;
 import org.springframework.util.Assert;
-import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
-import org.springframework.util.concurrent.MonoToListenableFutureAdapter;
 import org.springframework.util.concurrent.SettableListenableFuture;
 
 /**
@@ -63,9 +64,10 @@ import org.springframework.util.concurrent.SettableListenableFuture;
  * @author Rossen Stoyanchev
  * @author Stephane Maldini
  * @since 5.0
- * @param <P> the type of payload for in and outbound messages
  */
 public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
+
+	private static Log logger = LogFactory.getLog(ReactorNettyTcpClient.class);
 
 	private static final int PUBLISH_ON_BUFFER_SIZE = 16;
 
@@ -78,74 +80,80 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 	private final ChannelGroup channelGroup;
 
 	@Nullable
-	private final LoopResources loopResources;
+	private LoopResources loopResources;
 
 	@Nullable
-	private final ConnectionProvider poolResources;
+	private PoolResources poolResources;
 
 	private final Scheduler scheduler = Schedulers.newParallel("tcp-client-scheduler");
 
-	private Log logger = LogFactory.getLog(ReactorNettyTcpClient.class);
-
-	private volatile boolean stopping;
+	private volatile boolean stopping = false;
 
 
 	/**
-	 * Simple constructor with the host and port to use to connect to.
-	 * <p>This constructor manages the lifecycle of the {@link TcpClient} and
-	 * underlying resources such as {@link ConnectionProvider},
-	 * {@link LoopResources}, and {@link ChannelGroup}.
-	 * <p>For full control over the initialization and lifecycle of the
-	 * TcpClient, use {@link #ReactorNettyTcpClient(TcpClient, ReactorNettyCodec)}.
+	 * Simple constructor with a host and a port.
 	 * @param host the host to connect to
 	 * @param port the port to connect to
-	 * @param codec for encoding and decoding the input/output byte streams
+	 * @param codec the code to use
 	 * @see org.springframework.messaging.simp.stomp.StompReactorNettyCodec
 	 */
 	public ReactorNettyTcpClient(String host, int port, ReactorNettyCodec<P> codec) {
-		Assert.notNull(host, "host is required");
-		Assert.notNull(codec, "ReactorNettyCodec is required");
-
-		this.channelGroup = new DefaultChannelGroup(ImmediateEventExecutor.INSTANCE);
-		this.loopResources = LoopResources.create("tcp-client-loop");
-		this.poolResources = ConnectionProvider.create("tcp-client-pool", 10000);
-		this.codec = codec;
-
-		this.tcpClient = TcpClient.create(this.poolResources)
-				.host(host).port(port)
-				.runOn(this.loopResources, false)
-				.doOnConnected(conn -> this.channelGroup.add(conn.channel()));
+		this(builder -> builder.host(host).port(port), codec);
 	}
 
 	/**
-	 * A variant of {@link #ReactorNettyTcpClient(String, int, ReactorNettyCodec)}
-	 * that still manages the lifecycle of the {@link TcpClient} and underlying
-	 * resources, but allows for direct configuration of other properties of the
-	 * client through a {@code Function<TcpClient, TcpClient>}.
-	 * @param clientConfigurer the configurer function
-	 * @param codec for encoding and decoding the input/output byte streams
-	 * @since 5.1.3
+	 * Constructor with a {@code ClientOptions.Builder} that can be used to
+	 * customize Reactor Netty client options.
+	 * <p><strong>Note: </strong> this constructor manages the lifecycle of the
+	 * {@link TcpClient} and its underlying resources. Please do not customize
+	 * any of the following options:
+	 * {@code ClientOptions.Builder#channelGroup(ChannelGroup) ChannelGroup},
+	 * {@code ClientOptions.Builder#loopResources(LoopResources) LoopResources}, and
+	 * {@code ClientOptions.Builder#poolResources(PoolResources) PoolResources}.
+	 * You may set the {@code ClientOptions.Builder#disablePool() disablePool}
+	 * option if you simply want to turn off pooling.
+	 * <p>For full control over the initialization and lifecycle of the TcpClient,
+	 * see {@link #ReactorNettyTcpClient(TcpClient, ReactorNettyCodec)}.
+	 * @param optionsConsumer consumer to customize client options
+	 * @param codec the code to use
 	 * @see org.springframework.messaging.simp.stomp.StompReactorNettyCodec
 	 */
-	public ReactorNettyTcpClient(Function<TcpClient, TcpClient> clientConfigurer, ReactorNettyCodec<P> codec) {
+	public ReactorNettyTcpClient(
+			Consumer<ClientOptions.Builder<?>> optionsConsumer, ReactorNettyCodec<P> codec) {
+
+		Assert.notNull(optionsConsumer, "Consumer<ClientOptions.Builder<?> is required");
 		Assert.notNull(codec, "ReactorNettyCodec is required");
 
 		this.channelGroup = new DefaultChannelGroup(ImmediateEventExecutor.INSTANCE);
-		this.loopResources = LoopResources.create("tcp-client-loop");
-		this.poolResources = ConnectionProvider.create("tcp-client-pool", 10000);
-		this.codec = codec;
 
-		this.tcpClient = clientConfigurer.apply(TcpClient
-				.create(this.poolResources)
-				.runOn(this.loopResources, false)
-				.doOnConnected(conn -> this.channelGroup.add(conn.channel())));
+		Consumer<ClientOptions.Builder<?>> builtInConsumer = builder -> {
+
+			Assert.isTrue(!builder.isLoopAvailable() && !builder.isPoolAvailable(),
+					"The provided ClientOptions.Builder contains LoopResources and/or PoolResources. " +
+							"Please, use the constructor that accepts a TcpClient instance " +
+							"for full control over initialization and lifecycle.");
+
+			builder.channelGroup(this.channelGroup);
+			builder.preferNative(false);
+
+			this.loopResources = LoopResources.create("tcp-client-loop");
+			builder.loopResources(this.loopResources);
+
+			if (!builder.isPoolDisabled()) {
+				this.poolResources = PoolResources.elastic("tcp-client-pool");
+				builder.poolResources(this.poolResources);
+			}
+		};
+
+		this.tcpClient = TcpClient.create(optionsConsumer.andThen(builtInConsumer));
+		this.codec = codec;
 	}
 
 	/**
 	 * Constructor with an externally created {@link TcpClient} instance whose
 	 * lifecycle is expected to be managed externally.
 	 * @param tcpClient the TcpClient instance to use
-	 * @param codec for encoding and decoding the input/output byte streams
+	 * @param codec the code to use
 	 * @see org.springframework.messaging.simp.stomp.StompReactorNettyCodec
 	 */
 	public ReactorNettyTcpClient(TcpClient tcpClient, ReactorNettyCodec<P> codec) {
@@ -160,24 +168,6 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 	}
 
 
-	/**
-	 * Set an alternative logger to use than the one based on the class name.
-	 * @param logger the logger to use
-	 * @since 5.1
-	 */
-	public void setLogger(Log logger) {
-		this.logger = logger;
-	}
-
-	/**
-	 * Return the currently configured Logger.
-	 * @since 5.1
-	 */
-	public Log getLogger() {
-		return logger;
-	}
-
-
 	@Override
 	public ListenableFuture<Void> connect(final TcpConnectionHandler<P> handler) {
 		Assert.notNull(handler, "TcpConnectionHandler is required");
@@ -186,26 +176,12 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 			return handleShuttingDownConnectFailure(handler);
 		}
 
-		Mono<Void> connectMono = extendTcpClient(this.tcpClient, handler)
-				.handle(new ReactorNettyHandler(handler))
-				.connect()
+		Mono<Void> connectMono = this.tcpClient
+				.newHandler(new ReactorNettyHandler(handler))
 				.doOnError(handler::afterConnectFailure)
 				.then();
 
 		return new MonoToListenableFutureAdapter<>(connectMono);
-	}
-
-	/**
-	 * Provides an opportunity to initialize the {@link TcpClient} for the given
-	 * {@link TcpConnectionHandler} which may implement sub-interfaces such as
-	 * {@link org.springframework.messaging.simp.stomp.StompTcpConnectionHandler}
-	 * that expose further information.
-	 * @param tcpClient the candidate TcpClient
-	 * @param handler the handler for the TCP connection
-	 * @return the same handler or an updated instance
-	 */
-	protected TcpClient extendTcpClient(TcpClient tcpClient, TcpConnectionHandler<P> handler) {
-		return tcpClient;
 	}
 
 	@Override
@@ -218,24 +194,19 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 		}
 
 		// Report first connect to the ListenableFuture
-		CompletableFuture<Void> connectFuture = new CompletableFuture<>();
+		MonoProcessor<Void> connectMono = MonoProcessor.create();
 
-		extendTcpClient(this.tcpClient, handler)
-				.handle(new ReactorNettyHandler(handler))
-				.connect()
-				.doOnNext(conn -> connectFuture.complete(null))
-				.doOnError(connectFuture::completeExceptionally)
+		this.tcpClient
+				.newHandler(new ReactorNettyHandler(handler))
+				.doOnNext(updateConnectMono(connectMono))
+				.doOnError(updateConnectMono(connectMono))
 				.doOnError(handler::afterConnectFailure)    // report all connect failures to the handler
-				.flatMap(Connection::onDispose)             // post-connect issues
-				.retryWhen(Retry.from(signals -> signals
-						.map(retrySignal -> (int) retrySignal.totalRetriesInARow())
-						.flatMap(attempt -> reconnect(attempt, strategy))))
-				.repeatWhen(flux -> flux
-						.scan(1, (count, element) -> count++)
-						.flatMap(attempt -> reconnect(attempt, strategy)))
+				.flatMap(NettyContext::onClose)             // post-connect issues
+				.retryWhen(reconnectFunction(strategy))
+				.repeatWhen(reconnectFunction(strategy))
 				.subscribe();
 
-		return new CompletableToListenableFutureAdapter<>(connectFuture);
+		return new MonoToListenableFutureAdapter<>(connectMono);
 	}
 
 	private ListenableFuture<Void> handleShuttingDownConnectFailure(TcpConnectionHandler<P> handler) {
@@ -244,9 +215,25 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 		return new MonoToListenableFutureAdapter<>(Mono.error(ex));
 	}
 
-	private Publisher<? extends Long> reconnect(Integer attempt, ReconnectStrategy reconnectStrategy) {
-		Long time = reconnectStrategy.getTimeToNextAttempt(attempt);
-		return (time != null ? Mono.delay(Duration.ofMillis(time), this.scheduler) : Mono.empty());
+	private <T> Consumer<T> updateConnectMono(MonoProcessor<Void> connectMono) {
+		return o -> {
+			if (!connectMono.isTerminated()) {
+				if (o instanceof Throwable) {
+					connectMono.onError((Throwable) o);
+				}
+				else {
+					connectMono.onComplete();
+				}
+			}
+		};
+	}
+
+	private <T> Function<Flux<T>, Publisher<?>> reconnectFunction(ReconnectStrategy reconnectStrategy) {
+		return flux -> flux
+				.scan(1, (count, element) -> count++)
+				.flatMap(attempt -> Optional.ofNullable(reconnectStrategy.getTimeToNextAttempt(attempt))
+						.map(time -> Mono.delay(Duration.ofMillis(time), this.scheduler))
+						.orElse(Mono.empty()));
 	}
 
 	@Override
@@ -311,26 +298,24 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 		@Override
 		@SuppressWarnings("unchecked")
 		public Publisher<Void> apply(NettyInbound inbound, NettyOutbound outbound) {
-			inbound.withConnection(conn -> {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Connected to " + conn.address());
-				}
-			});
-			Sinks.Empty<Void> completionSink = Sinks.empty();
-			TcpConnection<P> connection = new ReactorNettyTcpConnection<>(inbound, outbound,  codec, completionSink);
-			scheduler.schedule(() -> this.connectionHandler.afterConnected(connection));
+			if (logger.isDebugEnabled()) {
+				logger.debug("Connected to " + inbound.remoteAddress());
+			}
+			DirectProcessor<Void> completion = DirectProcessor.create();
+			TcpConnection<P> connection = new ReactorNettyTcpConnection<>(inbound, outbound,  codec, completion);
+			scheduler.schedule(() -> connectionHandler.afterConnected(connection));
 
-			inbound.withConnection(conn -> conn.addHandler(new StompMessageDecoder<>(codec)));
+			inbound.context().addHandler(new StompMessageDecoder<>(codec));
 
 			inbound.receiveObject()
 					.cast(Message.class)
 					.publishOn(scheduler, PUBLISH_ON_BUFFER_SIZE)
 					.subscribe(
-							this.connectionHandler::handleMessage,
-							this.connectionHandler::handleFailure,
-							this.connectionHandler::afterConnectionClosed);
+							connectionHandler::handleMessage,
+							connectionHandler::handleFailure,
+							connectionHandler::afterConnectionClosed);
 
-			return completionSink.asMono();
+			return completion;
 		}
 	}
 
@@ -339,13 +324,13 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 
 		private final ReactorNettyCodec<P> codec;
 
-		StompMessageDecoder(ReactorNettyCodec<P> codec) {
+		public StompMessageDecoder(ReactorNettyCodec<P> codec) {
 			this.codec = codec;
 		}
 
 		@Override
 		protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-			Collection<Message<P>> messages = this.codec.decode(in);
+			Collection<Message<P>> messages = codec.decode(in);
 			out.addAll(messages);
 		}
 	}

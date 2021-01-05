@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package org.springframework.core.codec;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -28,7 +26,6 @@ import reactor.core.publisher.Mono;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
 
 /**
@@ -77,38 +74,6 @@ public interface Decoder<T> {
 	 */
 	Mono<T> decodeToMono(Publisher<DataBuffer> inputStream, ResolvableType elementType,
 			@Nullable MimeType mimeType, @Nullable Map<String, Object> hints);
-
-	/**
-	 * Decode a data buffer to an Object of type T. This is useful for scenarios,
-	 * that distinct messages (or events) are decoded and handled individually,
-	 * in fully aggregated form.
-	 * @param buffer the {@code DataBuffer} to decode
-	 * @param targetType the expected output type
-	 * @param mimeType the MIME type associated with the data
-	 * @param hints additional information about how to do encode
-	 * @return the decoded value, possibly {@code null}
-	 * @since 5.2
-	 */
-	@Nullable
-	default T decode(DataBuffer buffer, ResolvableType targetType,
-			@Nullable MimeType mimeType, @Nullable Map<String, Object> hints) throws DecodingException {
-
-		CompletableFuture<T> future = decodeToMono(Mono.just(buffer), targetType, mimeType, hints).toFuture();
-		Assert.state(future.isDone(), "DataBuffer decoding should have completed.");
-
-		Throwable failure;
-		try {
-			return future.get();
-		}
-		catch (ExecutionException ex) {
-			failure = ex.getCause();
-		}
-		catch (InterruptedException ex) {
-			failure = ex;
-		}
-		throw (failure instanceof CodecException ? (CodecException) failure :
-				new DecodingException("Failed to decode: " + failure.getMessage(), failure));
-	}
 
 	/**
 	 * Return the list of MIME types this decoder supports.

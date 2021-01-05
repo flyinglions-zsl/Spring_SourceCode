@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.HierarchicalBeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.core.convert.ConversionService;
-import org.springframework.core.metrics.ApplicationStartup;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringValueResolver;
 
@@ -52,15 +51,15 @@ import org.springframework.util.StringValueResolver;
 public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, SingletonBeanRegistry {
 
 	/**
-	 * Scope identifier for the standard singleton scope: {@value}.
-	 * <p>Custom scopes can be added via {@code registerScope}.
+	 * Scope identifier for the standard singleton scope: "singleton".
+	 * Custom scopes can be added via {@code registerScope}.
 	 * @see #registerScope
 	 */
 	String SCOPE_SINGLETON = "singleton";
 
 	/**
-	 * Scope identifier for the standard prototype scope: {@value}.
-	 * <p>Custom scopes can be added via {@code registerScope}.
+	 * Scope identifier for the standard prototype scope: "prototype".
+	 * Custom scopes can be added via {@code registerScope}.
 	 * @see #registerScope
 	 */
 	String SCOPE_PROTOTYPE = "prototype";
@@ -195,9 +194,9 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * bean property values, constructor argument values, etc.
 	 * <p>This will override the default PropertyEditor mechanism and hence make
 	 * any custom editors or custom editor registrars irrelevant.
-	 * @since 2.5
 	 * @see #addPropertyEditorRegistrar
 	 * @see #registerCustomEditor
+	 * @since 2.5
 	 */
 	void setTypeConverter(TypeConverter typeConverter);
 
@@ -276,20 +275,6 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 */
 	@Nullable
 	Scope getRegisteredScope(String scopeName);
-
-	/**
-	 * Set the {@code ApplicationStartup} for this bean factory.
-	 * <p>This allows the application context to record metrics during application startup.
-	 * @param applicationStartup the new application startup
-	 * @since 5.3
-	 */
-	void setApplicationStartup(ApplicationStartup applicationStartup);
-
-	/**
-	 * Return the {@code ApplicationStartup} for this bean factory.
-	 * @since 5.3
-	 */
-	ApplicationStartup getApplicationStartup();
 
 	/**
 	 * Provides a security access control context relevant to this factory.

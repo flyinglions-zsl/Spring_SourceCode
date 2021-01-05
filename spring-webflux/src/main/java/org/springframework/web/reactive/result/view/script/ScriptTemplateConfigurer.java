@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 package org.springframework.web.reactive.result.view.script;
 
 import java.nio.charset.Charset;
-import java.util.function.Supplier;
-
 import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
@@ -53,9 +51,6 @@ public class ScriptTemplateConfigurer implements ScriptTemplateConfig {
 
 	@Nullable
 	private ScriptEngine engine;
-
-	@Nullable
-	private Supplier<ScriptEngine> engineSupplier;
 
 	@Nullable
 	private String engineName;
@@ -99,10 +94,8 @@ public class ScriptTemplateConfigurer implements ScriptTemplateConfig {
 	 * You must define {@code engine} or {@code engineName}, not both.
 	 * <p>When the {@code sharedEngine} flag is set to {@code false}, you should not specify
 	 * the script engine with this setter, but with the {@link #setEngineName(String)}
-	 * or {@link #setEngineSupplier(Supplier)} (since it implies multiple lazy
-	 * instantiations of the script engine).
+	 * one (since it implies multiple lazy instantiations of the script engine).
 	 * @see #setEngineName(String)
-	 * @see #setEngineSupplier(Supplier)
 	 */
 	public void setEngine(@Nullable ScriptEngine engine) {
 		this.engine = engine;
@@ -115,30 +108,10 @@ public class ScriptTemplateConfigurer implements ScriptTemplateConfig {
 	}
 
 	/**
-	 * Set the {@link ScriptEngine} supplier to use by the view, usually used with
-	 * {@link #setSharedEngine(Boolean)} set to {@code false}.
-	 * If {@code renderFunction} is specified, the script engine must implement {@code Invocable}.
-	 * You must either define {@code engineSupplier}, {@code engine} or {@code engineName}.
-	 * @since 5.2
-	 * @see #setEngine(ScriptEngine)
-	 * @see #setEngineName(String)
-	 */
-	public void setEngineSupplier(@Nullable Supplier<ScriptEngine> engineSupplier) {
-		this.engineSupplier = engineSupplier;
-	}
-
-	@Override
-	@Nullable
-	public Supplier<ScriptEngine> getEngineSupplier() {
-		return this.engineSupplier;
-	}
-
-	/**
 	 * Set the engine name that will be used to instantiate the {@link ScriptEngine}.
 	 * If {@code renderFunction} is specified, the script engine must implement {@code Invocable}.
 	 * You must define {@code engine} or {@code engineName}, not both.
 	 * @see #setEngine(ScriptEngine)
-	 * @see #setEngineSupplier(Supplier)
 	 */
 	public void setEngineName(@Nullable String engineName) {
 		this.engineName = engineName;
@@ -160,7 +133,7 @@ public class ScriptTemplateConfigurer implements ScriptTemplateConfig {
 	 * {@link #setEngineName(String)}. Using {@link #setEngine(ScriptEngine)} is not
 	 * possible because multiple instances of the script engine need to be created for
 	 * each request.
-	 * @see <a href="https://docs.oracle.com/javase/8/docs/api/javax/script/ScriptEngineFactory.html#getParameter-java.lang.String-">THREADING ScriptEngine parameter</a>
+	 * @see <a href="https://docs.oracle.com/javase/8/docs/api/javax/script/ScriptEngineFactory.html#getParameter-java.lang.String-">THREADING ScriptEngine parameter<a/>
 	 */
 	public void setSharedEngine(@Nullable Boolean sharedEngine) {
 		this.sharedEngine = sharedEngine;

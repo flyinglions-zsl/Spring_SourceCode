@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,18 @@
 
 package org.springframework.web.filter;
 
-import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import org.springframework.web.testfixture.servlet.MockFilterConfig;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
+import org.springframework.mock.web.test.MockFilterConfig;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.util.WebUtils;
 
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.BDDMockito.*;
 
 /**
  * @author Rick Evans
@@ -52,7 +47,6 @@ public class CharacterEncodingFilterTests {
 		request.setCharacterEncoding(ENCODING);
 		given(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE)).willReturn(null);
 		given(request.getAttribute(filteredName(FILTER_NAME))).willReturn(null);
-		given(request.getDispatcherType()).willReturn(DispatcherType.REQUEST);
 
 		HttpServletResponse response = mock(HttpServletResponse.class);
 		FilterChain filterChain = mock(FilterChain.class);
@@ -73,7 +67,6 @@ public class CharacterEncodingFilterTests {
 		given(request.getCharacterEncoding()).willReturn(null);
 		given(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE)).willReturn(null);
 		given(request.getAttribute(filteredName(FILTER_NAME))).willReturn(null);
-		given(request.getDispatcherType()).willReturn(DispatcherType.REQUEST);
 
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -95,7 +88,6 @@ public class CharacterEncodingFilterTests {
 		given(request.getCharacterEncoding()).willReturn(ENCODING);
 		given(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE)).willReturn(null);
 		given(request.getAttribute(filteredName(FILTER_NAME))).willReturn(null);
-		given(request.getDispatcherType()).willReturn(DispatcherType.REQUEST);
 
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -116,7 +108,6 @@ public class CharacterEncodingFilterTests {
 		given(request.getCharacterEncoding()).willReturn(null);
 		given(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE)).willReturn(null);
 		given(request.getAttribute(filteredName(FILTER_NAME))).willReturn(null);
-		given(request.getDispatcherType()).willReturn(DispatcherType.REQUEST);
 
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -140,7 +131,6 @@ public class CharacterEncodingFilterTests {
 		given(request.getCharacterEncoding()).willReturn(null);
 		given(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE)).willReturn(null);
 		given(request.getAttribute(filteredName(CharacterEncodingFilter.class.getName()))).willReturn(null);
-		given(request.getDispatcherType()).willReturn(DispatcherType.REQUEST);
 
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -162,7 +152,6 @@ public class CharacterEncodingFilterTests {
 		request.setCharacterEncoding(ENCODING);
 		given(request.getAttribute(WebUtils.ERROR_REQUEST_URI_ATTRIBUTE)).willReturn(null);
 		given(request.getAttribute(filteredName(FILTER_NAME))).willReturn(null);
-		given(request.getDispatcherType()).willReturn(DispatcherType.REQUEST);
 
 		HttpServletResponse response = mock(HttpServletResponse.class);
 		FilterChain filterChain = mock(FilterChain.class);
@@ -181,5 +170,5 @@ public class CharacterEncodingFilterTests {
 	private String filteredName(String prefix) {
 		return prefix + OncePerRequestFilter.ALREADY_FILTERED_SUFFIX;
 	}
-
+	
 }

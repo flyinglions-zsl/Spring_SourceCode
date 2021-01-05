@@ -129,21 +129,6 @@ public class DefaultMessageSourceResolvable implements MessageSourceResolvable, 
 		return this.defaultMessage;
 	}
 
-	/**
-	 * Indicate whether the specified default message needs to be rendered for
-	 * substituting placeholders and/or {@link java.text.MessageFormat} escaping.
-	 * @return {@code true} if the default message may contain argument placeholders;
-	 * {@code false} if it definitely does not contain placeholders or custom escaping
-	 * and can therefore be simply exposed as-is
-	 * @since 5.1.7
-	 * @see #getDefaultMessage()
-	 * @see #getArguments()
-	 * @see AbstractMessageSource#renderDefaultMessage
-	 */
-	public boolean shouldRenderDefaultMessage() {
-		return true;
-	}
-
 
 	/**
 	 * Build a default String representation for this MessageSourceResolvable:
@@ -170,7 +155,7 @@ public class DefaultMessageSourceResolvable implements MessageSourceResolvable, 
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,13 @@
 
 package org.springframework.test.context.jdbc;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.AbstractTransactionalJUnit4SpringContextTests;
+
+import static org.junit.Assert.*;
 
 /**
  * Modified copy of {@link CustomScriptSyntaxSqlScriptsTests} with
@@ -30,14 +33,18 @@ import org.springframework.test.context.ContextConfiguration;
  */
 @ContextConfiguration(classes = EmptyDatabaseConfig.class)
 @DirtiesContext
-@SqlConfig(commentPrefixes = { "`", "%%" }, blockCommentStartDelimiter = "#$", blockCommentEndDelimiter = "$#", separator = "@@")
-class GlobalCustomScriptSyntaxSqlScriptsTests extends AbstractTransactionalTests {
+@SqlConfig(commentPrefix = "`", blockCommentStartDelimiter = "#$", blockCommentEndDelimiter = "$#", separator = "@@")
+public class GlobalCustomScriptSyntaxSqlScriptsTests extends AbstractTransactionalJUnit4SpringContextTests {
 
 	@Test
 	@Sql(scripts = "schema.sql", config = @SqlConfig(separator = ";"))
 	@Sql("data-add-users-with-custom-script-syntax.sql")
-	void methodLevelScripts() {
+	public void methodLevelScripts() {
 		assertNumUsers(3);
+	}
+
+	protected void assertNumUsers(int expected) {
+		assertEquals("Number of rows in the 'user' table.", expected, countRowsInTable("user"));
 	}
 
 }

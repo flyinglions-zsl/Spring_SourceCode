@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +34,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -59,7 +59,7 @@ import org.springframework.util.StringUtils;
  * @author Sam Brannen
  * @since 3.2
  */
-public final class SpringFactoriesLoader {
+public abstract class SpringFactoriesLoader {
 
 	/**
 	 * The location to look for factories.
@@ -70,11 +70,7 @@ public final class SpringFactoriesLoader {
 
 	private static final Log logger = LogFactory.getLog(SpringFactoriesLoader.class);
 
-	static final Map<ClassLoader, Map<String, List<String>>> cache = new ConcurrentReferenceHashMap<>();
-
-
-	private SpringFactoriesLoader() {
-	}
+	private static final Map<ClassLoader, MultiValueMap<String, String>> cache = new ConcurrentReferenceHashMap<>();
 
 
 	/**
@@ -83,28 +79,25 @@ public final class SpringFactoriesLoader {
 	 * <p>The returned factories are sorted through {@link AnnotationAwareOrderComparator}.
 	 * <p>If a custom instantiation strategy is required, use {@link #loadFactoryNames}
 	 * to obtain all registered factory names.
-	 * <p>As of Spring Framework 5.3, if duplicate implementation class names are
-	 * discovered for a given factory type, only one instance of the duplicated
-	 * implementation type will be instantiated.
-	 * @param factoryType the interface or abstract class representing the factory
+	 * @param factoryClass the interface or abstract class representing the factory
 	 * @param classLoader the ClassLoader to use for loading (can be {@code null} to use the default)
 	 * @throws IllegalArgumentException if any factory implementation class cannot
 	 * be loaded or if an error occurs while instantiating any factory
 	 * @see #loadFactoryNames
 	 */
-	public static <T> List<T> loadFactories(Class<T> factoryType, @Nullable ClassLoader classLoader) {
-		Assert.notNull(factoryType, "'factoryType' must not be null");
+	public static <T> List<T> loadFactories(Class<T> factoryClass, @Nullable ClassLoader classLoader) {
+		Assert.notNull(factoryClass, "'factoryClass' must not be null");
 		ClassLoader classLoaderToUse = classLoader;
 		if (classLoaderToUse == null) {
 			classLoaderToUse = SpringFactoriesLoader.class.getClassLoader();
 		}
-		List<String> factoryImplementationNames = loadFactoryNames(factoryType, classLoaderToUse);
+		List<String> factoryNames = loadFactoryNames(factoryClass, classLoaderToUse);
 		if (logger.isTraceEnabled()) {
-			logger.trace("Loaded [" + factoryType.getName() + "] names: " + factoryImplementationNames);
+			logger.trace("Loaded [" + factoryClass.getName() + "] names: " + factoryNames);
 		}
-		List<T> result = new ArrayList<>(factoryImplementationNames.size());
-		for (String factoryImplementationName : factoryImplementationNames) {
-			result.add(instantiateFactory(factoryImplementationName, factoryType, classLoaderToUse));
+		List<T> result = new ArrayList<>(factoryNames.size());
+		for (String factoryName : factoryNames) {
+			result.add(instantiateFactory(factoryName, factoryClass, classLoaderToUse));
 		}
 		AnnotationAwareOrderComparator.sort(result);
 		return result;
@@ -114,74 +107,60 @@ public final class SpringFactoriesLoader {
 	 * Load the fully qualified class names of factory implementations of the
 	 * given type from {@value #FACTORIES_RESOURCE_LOCATION}, using the given
 	 * class loader.
-	 * <p>As of Spring Framework 5.3, if a particular implementation class name
-	 * is discovered more than once for the given factory type, duplicates will
-	 * be ignored.
-	 * @param factoryType the interface or abstract class representing the factory
+	 * @param factoryClass the interface or abstract class representing the factory
 	 * @param classLoader the ClassLoader to use for loading resources; can be
 	 * {@code null} to use the default
 	 * @throws IllegalArgumentException if an error occurs while loading factory names
 	 * @see #loadFactories
 	 */
-	public static List<String> loadFactoryNames(Class<?> factoryType, @Nullable ClassLoader classLoader) {
-		ClassLoader classLoaderToUse = classLoader;
-		if (classLoaderToUse == null) {
-			classLoaderToUse = SpringFactoriesLoader.class.getClassLoader();
-		}
-		String factoryTypeName = factoryType.getName();
-		return loadSpringFactories(classLoaderToUse).getOrDefault(factoryTypeName, Collections.emptyList());
+	public static List<String> loadFactoryNames(Class<?> factoryClass, @Nullable ClassLoader classLoader) {
+		String factoryClassName = factoryClass.getName();
+		return loadSpringFactories(classLoader).getOrDefault(factoryClassName, Collections.emptyList());
 	}
 
-	private static Map<String, List<String>> loadSpringFactories(ClassLoader classLoader) {
-		Map<String, List<String>> result = cache.get(classLoader);
+	private static Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader) {
+		MultiValueMap<String, String> result = cache.get(classLoader);
 		if (result != null) {
 			return result;
 		}
 
-		result = new HashMap<>();
 		try {
-			Enumeration<URL> urls = classLoader.getResources(FACTORIES_RESOURCE_LOCATION);
+			Enumeration<URL> urls = (classLoader != null ?
+					classLoader.getResources(FACTORIES_RESOURCE_LOCATION) :
+					ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
+			result = new LinkedMultiValueMap<>();
 			while (urls.hasMoreElements()) {
 				URL url = urls.nextElement();
 				UrlResource resource = new UrlResource(url);
 				Properties properties = PropertiesLoaderUtils.loadProperties(resource);
 				for (Map.Entry<?, ?> entry : properties.entrySet()) {
-					String factoryTypeName = ((String) entry.getKey()).trim();
-					String[] factoryImplementationNames =
-							StringUtils.commaDelimitedListToStringArray((String) entry.getValue());
-					for (String factoryImplementationName : factoryImplementationNames) {
-						result.computeIfAbsent(factoryTypeName, key -> new ArrayList<>())
-								.add(factoryImplementationName.trim());
+					String factoryClassName = ((String) entry.getKey()).trim();
+					for (String factoryName : StringUtils.commaDelimitedListToStringArray((String) entry.getValue())) {
+						result.add(factoryClassName, factoryName.trim());
 					}
 				}
 			}
-
-			// Replace all lists with unmodifiable lists containing unique elements
-			result.replaceAll((factoryType, implementations) -> implementations.stream().distinct()
-					.collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList)));
 			cache.put(classLoader, result);
+			return result;
 		}
 		catch (IOException ex) {
 			throw new IllegalArgumentException("Unable to load factories from location [" +
 					FACTORIES_RESOURCE_LOCATION + "]", ex);
 		}
-		return result;
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <T> T instantiateFactory(String factoryImplementationName, Class<T> factoryType, ClassLoader classLoader) {
+	private static <T> T instantiateFactory(String instanceClassName, Class<T> factoryClass, ClassLoader classLoader) {
 		try {
-			Class<?> factoryImplementationClass = ClassUtils.forName(factoryImplementationName, classLoader);
-			if (!factoryType.isAssignableFrom(factoryImplementationClass)) {
+			Class<?> instanceClass = ClassUtils.forName(instanceClassName, classLoader);
+			if (!factoryClass.isAssignableFrom(instanceClass)) {
 				throw new IllegalArgumentException(
-						"Class [" + factoryImplementationName + "] is not assignable to factory type [" + factoryType.getName() + "]");
+						"Class [" + instanceClassName + "] is not assignable to [" + factoryClass.getName() + "]");
 			}
-			return (T) ReflectionUtils.accessibleConstructor(factoryImplementationClass).newInstance();
+			return (T) ReflectionUtils.accessibleConstructor(instanceClass).newInstance();
 		}
 		catch (Throwable ex) {
-			throw new IllegalArgumentException(
-				"Unable to instantiate factory class [" + factoryImplementationName + "] for factory type [" + factoryType.getName() + "]",
-				ex);
+			throw new IllegalArgumentException("Unable to instantiate factory class: " + factoryClass.getName(), ex);
 		}
 	}
 

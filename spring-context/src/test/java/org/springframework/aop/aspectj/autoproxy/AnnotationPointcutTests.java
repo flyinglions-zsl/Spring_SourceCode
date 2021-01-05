@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ package org.springframework.aop.aspectj.autoproxy;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Juergen Hoeller
@@ -34,7 +34,7 @@ public class AnnotationPointcutTests {
 	private AnnotatedTestBean testBean;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		ClassPathXmlApplicationContext ctx =
 				new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
@@ -45,12 +45,12 @@ public class AnnotationPointcutTests {
 
 	@Test
 	public void testAnnotationBindingInAroundAdvice() {
-		assertThat(testBean.doThis()).isEqualTo("this value");
+		assertEquals("this value", testBean.doThis());
 	}
 
 	@Test
 	public void testNoMatchingWithoutAnnotationPresent() {
-		assertThat(testBean.doTheOther()).isEqualTo("doTheOther");
+		assertEquals("doTheOther", testBean.doTheOther());
 	}
 
 }

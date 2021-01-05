@@ -45,7 +45,6 @@ public class SpringWebConstraintValidatorFactory implements ConstraintValidatorF
 	}
 
 	// Bean Validation 1.1 releaseInstance method
-	@Override
 	public void releaseInstance(ConstraintValidator<?, ?> instance) {
 		getWebApplicationContext().getAutowireCapableBeanFactory().destroyBean(instance);
 	}

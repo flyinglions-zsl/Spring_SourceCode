@@ -18,7 +18,6 @@ package org.springframework.cache.jcache.interceptor;
 
 import java.util.Collection;
 import java.util.Collections;
-
 import javax.cache.annotation.CacheInvocationContext;
 
 import org.springframework.cache.Cache;
@@ -54,7 +53,7 @@ class CacheResolverAdapter implements CacheResolver {
 	 * that this instance is using.
 	 */
 	protected javax.cache.annotation.CacheResolver getTarget() {
-		return this.target;
+		return target;
 	}
 
 	@Override

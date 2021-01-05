@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,10 @@
 package org.springframework.test.web.servlet.result;
 
 import java.util.Map;
-
 import javax.xml.xpath.XPathExpressionException;
 
 import org.hamcrest.Matcher;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import org.springframework.lang.Nullable;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -48,7 +46,7 @@ public class XpathResultMatchers {
 	 * {@link MockMvcResultMatchers#xpath(String, Object...)} or
 	 * {@link MockMvcResultMatchers#xpath(String, Map, Object...)}.
 	 * @param expression the XPath expression
-	 * @param namespaces the XML namespaces referenced in the XPath expression, or {@code null}
+	 * @param namespaces XML namespaces referenced in the XPath expression, or {@code null}
 	 * @param args arguments to parameterize the XPath expression with using the
 	 * formatting specifiers defined in {@link String#format(String, Object...)}
 	 */
@@ -63,22 +61,10 @@ public class XpathResultMatchers {
 	 * Evaluate the XPath and assert the {@link Node} content found with the
 	 * given Hamcrest {@link Matcher}.
 	 */
-	public ResultMatcher node(Matcher<? super Node> matcher) {
+	public ResultMatcher node(final Matcher<? super Node> matcher) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertNode(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
-		};
-	}
-
-	/**
-	 * Evaluate the XPath and assert the {@link NodeList} content found with the
-	 * given Hamcrest {@link Matcher}.
-	 * @since 5.2.2
-	 */
-	public ResultMatcher nodeList(Matcher<? super NodeList> matcher) {
-		return result -> {
-			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertNodeList(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
+			xpathHelper.assertNode(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
 		};
 	}
 
@@ -96,7 +82,7 @@ public class XpathResultMatchers {
 	public ResultMatcher exists() {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.exists(response.getContentAsByteArray(), getDefinedEncoding(response));
+			xpathHelper.exists(response.getContentAsByteArray(), getDefinedEncoding(response));
 		};
 	}
 
@@ -106,7 +92,7 @@ public class XpathResultMatchers {
 	public ResultMatcher doesNotExist() {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.doesNotExist(response.getContentAsByteArray(), getDefinedEncoding(response));
+			xpathHelper.doesNotExist(response.getContentAsByteArray(), getDefinedEncoding(response));
 		};
 	}
 
@@ -114,20 +100,20 @@ public class XpathResultMatchers {
 	 * Evaluate the XPath and assert the number of nodes found with the given
 	 * Hamcrest {@link Matcher}.
 	 */
-	public ResultMatcher nodeCount(Matcher<? super Integer> matcher) {
+	public ResultMatcher nodeCount(final Matcher<Integer> matcher) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertNodeCount(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
+			xpathHelper.assertNodeCount(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
 		};
 	}
 
 	/**
 	 * Evaluate the XPath and assert the number of nodes found.
 	 */
-	public ResultMatcher nodeCount(int expectedCount) {
+	public ResultMatcher nodeCount(final int expectedCount) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertNodeCount(response.getContentAsByteArray(), getDefinedEncoding(response), expectedCount);
+			xpathHelper.assertNodeCount(response.getContentAsByteArray(), getDefinedEncoding(response), expectedCount);
 		};
 	}
 
@@ -135,20 +121,20 @@ public class XpathResultMatchers {
 	 * Apply the XPath and assert the {@link String} value found with the given
 	 * Hamcrest {@link Matcher}.
 	 */
-	public ResultMatcher string(Matcher<? super String> matcher) {
+	public ResultMatcher string(final Matcher<? super String> matcher) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertString(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
+			xpathHelper.assertString(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
 		};
 	}
 
 	/**
 	 * Apply the XPath and assert the {@link String} value found.
 	 */
-	public ResultMatcher string(String expectedValue) {
+	public ResultMatcher string(final String expectedValue) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertString(response.getContentAsByteArray(), getDefinedEncoding(response), expectedValue);
+			xpathHelper.assertString(response.getContentAsByteArray(), getDefinedEncoding(response), expectedValue);
 		};
 	}
 
@@ -156,30 +142,30 @@ public class XpathResultMatchers {
 	 * Evaluate the XPath and assert the {@link Double} value found with the
 	 * given Hamcrest {@link Matcher}.
 	 */
-	public ResultMatcher number(Matcher<? super Double> matcher) {
+	public ResultMatcher number(final Matcher<? super Double> matcher) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertNumber(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
+			xpathHelper.assertNumber(response.getContentAsByteArray(), getDefinedEncoding(response), matcher);
 		};
 	}
 
 	/**
 	 * Evaluate the XPath and assert the {@link Double} value found.
 	 */
-	public ResultMatcher number(Double expectedValue) {
+	public ResultMatcher number(final Double expectedValue) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertNumber(response.getContentAsByteArray(), getDefinedEncoding(response), expectedValue);
+			xpathHelper.assertNumber(response.getContentAsByteArray(), getDefinedEncoding(response), expectedValue);
 		};
 	}
 
 	/**
 	 * Evaluate the XPath and assert the {@link Boolean} value found.
 	 */
-	public ResultMatcher booleanValue(Boolean value) {
+	public ResultMatcher booleanValue(final Boolean value) {
 		return result -> {
 			MockHttpServletResponse response = result.getResponse();
-			this.xpathHelper.assertBoolean(response.getContentAsByteArray(), getDefinedEncoding(response), value);
+			xpathHelper.assertBoolean(response.getContentAsByteArray(), getDefinedEncoding(response), value);
 		};
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,14 @@ package org.springframework.jdbc.core.support;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.sql.DataSource;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+import static org.junit.Assert.*;
+import static org.mockito.BDDMockito.*;
 
 /**
  * @author Juergen Hoeller
@@ -46,9 +45,9 @@ public class JdbcDaoSupportTests {
 		};
 		dao.setDataSource(ds);
 		dao.afterPropertiesSet();
-		assertThat(dao.getDataSource()).as("Correct DataSource").isEqualTo(ds);
-		assertThat(dao.getJdbcTemplate().getDataSource()).as("Correct JdbcTemplate").isEqualTo(ds);
-		assertThat(test.size()).as("initDao called").isEqualTo(1);
+		assertEquals("Correct DataSource", ds, dao.getDataSource());
+		assertEquals("Correct JdbcTemplate", ds, dao.getJdbcTemplate().getDataSource());
+		assertEquals("initDao called", 1, test.size());
 	}
 
 	@Test
@@ -63,8 +62,8 @@ public class JdbcDaoSupportTests {
 		};
 		dao.setJdbcTemplate(template);
 		dao.afterPropertiesSet();
-		assertThat(template).as("Correct JdbcTemplate").isEqualTo(dao.getJdbcTemplate());
-		assertThat(test.size()).as("initDao called").isEqualTo(1);
+		assertEquals("Correct JdbcTemplate", dao.getJdbcTemplate(), template);
+		assertEquals("initDao called", 1, test.size());
 	}
 
 }

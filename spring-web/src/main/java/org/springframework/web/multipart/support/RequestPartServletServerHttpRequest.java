@@ -20,7 +20,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
 
@@ -28,7 +27,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpRequest;
-import org.springframework.lang.Nullable;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
@@ -84,11 +82,15 @@ public class RequestPartServletServerHttpRequest extends ServletServerHttpReques
 	@Override
 	public InputStream getBody() throws IOException {
 		// Prefer Servlet Part resolution to cover file as well as parameter streams
-		boolean servletParts = (this.multipartRequest instanceof StandardMultipartHttpServletRequest);
-		if (servletParts) {
-			Part part = retrieveServletPart();
-			if (part != null) {
-				return part.getInputStream();
+		if (this.multipartRequest instanceof StandardMultipartHttpServletRequest) {
+			try {
+				Part part = this.multipartRequest.getPart(this.requestPartName);
+				if (part != null) {
+					return part.getInputStream();
+				}
+			}
+			catch (Exception ex) {
+				throw new MultipartException("Failed to retrieve request part '" + this.requestPartName + "'", ex);
 			}
 		}
 
@@ -102,25 +104,7 @@ public class RequestPartServletServerHttpRequest extends ServletServerHttpReques
 			return new ByteArrayInputStream(paramValue.getBytes(determineCharset()));
 		}
 
-		// Fallback: Servlet Part resolution even if not indicated
-		if (!servletParts) {
-			Part part = retrieveServletPart();
-			if (part != null) {
-				return part.getInputStream();
-			}
-		}
-
 		throw new IllegalStateException("No body available for request part '" + this.requestPartName + "'");
-	}
-
-	@Nullable
-	private Part retrieveServletPart() {
-		try {
-			return this.multipartRequest.getPart(this.requestPartName);
-		}
-		catch (Exception ex) {
-			throw new MultipartException("Failed to retrieve request part '" + this.requestPartName + "'", ex);
-		}
 	}
 
 	private Charset determineCharset() {

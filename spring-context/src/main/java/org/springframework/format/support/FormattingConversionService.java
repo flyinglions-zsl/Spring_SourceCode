@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,6 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.format.Parser;
 import org.springframework.format.Printer;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.util.StringValueResolver;
 
@@ -66,18 +64,6 @@ public class FormattingConversionService extends GenericConversionService
 		this.embeddedValueResolver = resolver;
 	}
 
-
-	@Override
-	public void addPrinter(Printer<?> printer) {
-		Class<?> fieldType = getFieldType(printer, Printer.class);
-		addConverter(new PrinterConverter(fieldType, printer, this));
-	}
-
-	@Override
-	public void addParser(Parser<?> parser) {
-		Class<?> fieldType = getFieldType(parser, Parser.class);
-		addConverter(new ParserConverter(fieldType, parser, this));
-	}
 
 	@Override
 	public void addFormatter(Formatter<?> formatter) {
@@ -111,18 +97,15 @@ public class FormattingConversionService extends GenericConversionService
 
 
 	static Class<?> getFieldType(Formatter<?> formatter) {
-		return getFieldType(formatter, Formatter.class);
-	}
-
-	private static <T> Class<?> getFieldType(T instance, Class<T> genericInterface) {
-		Class<?> fieldType = GenericTypeResolver.resolveTypeArgument(instance.getClass(), genericInterface);
-		if (fieldType == null && instance instanceof DecoratingProxy) {
+		Class<?> fieldType = GenericTypeResolver.resolveTypeArgument(formatter.getClass(), Formatter.class);
+		if (fieldType == null && formatter instanceof DecoratingProxy) {
 			fieldType = GenericTypeResolver.resolveTypeArgument(
-					((DecoratingProxy) instance).getDecoratedClass(), genericInterface);
+					((DecoratingProxy) formatter).getDecoratedClass(), Formatter.class);
 		}
-		Assert.notNull(fieldType, () -> "Unable to extract the parameterized field type from " +
-					ClassUtils.getShortName(genericInterface) + " [" + instance.getClass().getName() +
-					"]; does the class parameterize the <T> generic type?");
+		if (fieldType == null) {
+			throw new IllegalArgumentException("Unable to extract the parameterized field type from Formatter [" +
+					formatter.getClass().getName() + "]; does the class parameterize the <T> generic type?");
+		}
 		return fieldType;
 	}
 
@@ -310,7 +293,7 @@ public class FormattingConversionService extends GenericConversionService
 
 		@Override
 		public Set<ConvertiblePair> getConvertibleTypes() {
-			return Collections.singleton(new ConvertiblePair(String.class, this.fieldType));
+			return Collections.singleton(new ConvertiblePair(String.class, fieldType));
 		}
 
 		@Override
@@ -366,12 +349,9 @@ public class FormattingConversionService extends GenericConversionService
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
+		public boolean equals(Object other) {
 			if (this == other) {
 				return true;
-			}
-			if (!(other instanceof AnnotationConverterKey)) {
-				return false;
 			}
 			AnnotationConverterKey otherKey = (AnnotationConverterKey) other;
 			return (this.fieldType == otherKey.fieldType && this.annotation.equals(otherKey.annotation));

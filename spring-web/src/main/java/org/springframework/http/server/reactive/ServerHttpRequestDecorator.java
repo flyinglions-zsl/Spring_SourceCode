@@ -56,11 +56,6 @@ public class ServerHttpRequestDecorator implements ServerHttpRequest {
 	// ServerHttpRequest delegation methods...
 
 	@Override
-	public String getId() {
-		return getDelegate().getId();
-	}
-
-	@Override
 	@Nullable
 	public HttpMethod getMethod() {
 		return getDelegate().getMethod();
@@ -94,12 +89,6 @@ public class ServerHttpRequestDecorator implements ServerHttpRequest {
 	@Override
 	public MultiValueMap<String, HttpCookie> getCookies() {
 		return getDelegate().getCookies();
-	}
-
-	@Override
-	@Nullable
-	public InetSocketAddress getLocalAddress() {
-		return getDelegate().getLocalAddress();
 	}
 
 	@Override

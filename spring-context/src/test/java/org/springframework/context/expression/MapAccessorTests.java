@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,13 @@ package org.springframework.context.expression;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
+import org.junit.Test;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelCompiler;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for compilation of {@link MapAccessor}.
@@ -44,29 +43,29 @@ public class MapAccessorTests {
 
 		// basic
 		Expression ex = sep.parseExpression("foo");
-		assertThat(ex.getValue(sec,testMap)).isEqualTo("bar");
-		assertThat(SpelCompiler.compile(ex)).isTrue();
-		assertThat(ex.getValue(sec,testMap)).isEqualTo("bar");
+		assertEquals("bar",ex.getValue(sec,testMap));
+		assertTrue(SpelCompiler.compile(ex));
+		assertEquals("bar",ex.getValue(sec,testMap));
 
 		// compound expression
 		ex = sep.parseExpression("foo.toUpperCase()");
-		assertThat(ex.getValue(sec,testMap)).isEqualTo("BAR");
-		assertThat(SpelCompiler.compile(ex)).isTrue();
-		assertThat(ex.getValue(sec,testMap)).isEqualTo("BAR");
+		assertEquals("BAR",ex.getValue(sec,testMap));
+		assertTrue(SpelCompiler.compile(ex));
+		assertEquals("BAR",ex.getValue(sec,testMap));
 
 		// nested map
 		Map<String,Map<String,Object>> nestedMap = getNestedTestMap();
 		ex = sep.parseExpression("aaa.foo.toUpperCase()");
-		assertThat(ex.getValue(sec,nestedMap)).isEqualTo("BAR");
-		assertThat(SpelCompiler.compile(ex)).isTrue();
-		assertThat(ex.getValue(sec,nestedMap)).isEqualTo("BAR");
+		assertEquals("BAR",ex.getValue(sec,nestedMap));
+		assertTrue(SpelCompiler.compile(ex));
+		assertEquals("BAR",ex.getValue(sec,nestedMap));
 
 		// avoiding inserting checkcast because first part of expression returns a Map
 		ex = sep.parseExpression("getMap().foo");
 		MapGetter mapGetter = new MapGetter();
-		assertThat(ex.getValue(sec,mapGetter)).isEqualTo("bar");
-		assertThat(SpelCompiler.compile(ex)).isTrue();
-		assertThat(ex.getValue(sec,mapGetter)).isEqualTo("bar");
+		assertEquals("bar",ex.getValue(sec,mapGetter));
+		assertTrue(SpelCompiler.compile(ex));
+		assertEquals("bar",ex.getValue(sec,mapGetter));
 	}
 
 	public static class MapGetter {

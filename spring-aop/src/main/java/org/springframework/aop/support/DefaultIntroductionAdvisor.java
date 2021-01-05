@@ -150,7 +150,7 @@ public class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFil
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -168,7 +168,7 @@ public class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFil
 
 	@Override
 	public String toString() {
-		return getClass().getName() + ": advice [" + this.advice + "]; interfaces " +
+		return ClassUtils.getShortName(getClass()) + ": advice [" + this.advice + "]; interfaces " +
 				ClassUtils.classNamesToString(this.interfaces);
 	}
 

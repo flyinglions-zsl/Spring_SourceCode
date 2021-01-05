@@ -32,7 +32,6 @@ import org.springframework.lang.Nullable;
  * @author Sebastien Deleuze
  * @author Juergen Hoeller
  * @since 4.2
- * @param <T> the converted object type
  */
 public abstract class AbstractGenericHttpMessageConverter<T> extends AbstractHttpMessageConverter<T>
 		implements GenericHttpMessageConverter<T> {
@@ -80,7 +79,6 @@ public abstract class AbstractGenericHttpMessageConverter<T> extends AbstractHtt
 	 * This implementation sets the default headers by calling {@link #addDefaultHeaders},
 	 * and then calls {@link #writeInternal}.
 	 */
-	@Override
 	public final void write(final T t, @Nullable final Type type, @Nullable MediaType contentType,
 			HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
 

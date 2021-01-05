@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,15 @@
 
 package org.springframework.beans;
 
-import java.util.Iterator;
+import org.junit.Test;
 
-import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link MutablePropertyValues}.
  *
  * @author Rod Johnson
  * @author Chris Beams
- * @author Juergen Hoeller
  */
 public class MutablePropertyValuesTests extends AbstractPropertyValuesTests {
 
@@ -44,7 +40,7 @@ public class MutablePropertyValuesTests extends AbstractPropertyValuesTests {
 		doTestTony(deepCopy);
 		deepCopy.setPropertyValueAt(new PropertyValue("name", "Gordon"), 0);
 		doTestTony(pvs);
-		assertThat(deepCopy.getPropertyValue("name").getValue()).isEqualTo("Gordon");
+		assertEquals("Gordon", deepCopy.getPropertyValue("name").getValue());
 	}
 
 	@Test
@@ -56,10 +52,10 @@ public class MutablePropertyValuesTests extends AbstractPropertyValuesTests {
 		doTestTony(pvs);
 		PropertyValue addedPv = new PropertyValue("rod", "Rod");
 		pvs.addPropertyValue(addedPv);
-		assertThat(pvs.getPropertyValue("rod").equals(addedPv)).isTrue();
+		assertTrue(pvs.getPropertyValue("rod").equals(addedPv));
 		PropertyValue changedPv = new PropertyValue("forname", "Greg");
 		pvs.addPropertyValue(changedPv);
-		assertThat(pvs.getPropertyValue("forname").equals(changedPv)).isTrue();
+		assertTrue(pvs.getPropertyValue("forname").equals(changedPv));
 	}
 
 	@Test
@@ -70,7 +66,7 @@ public class MutablePropertyValuesTests extends AbstractPropertyValuesTests {
 		pvs.addPropertyValue(new PropertyValue("age", "50"));
 		MutablePropertyValues pvs2 = pvs;
 		PropertyValues changes = pvs2.changesSince(pvs);
-		assertThat(changes.getPropertyValues().length == 0).as("changes are empty").isTrue();
+		assertTrue("changes are empty", changes.getPropertyValues().length == 0);
 	}
 
 	@Test
@@ -82,66 +78,29 @@ public class MutablePropertyValuesTests extends AbstractPropertyValuesTests {
 
 		MutablePropertyValues pvs2 = new MutablePropertyValues(pvs);
 		PropertyValues changes = pvs2.changesSince(pvs);
-		assertThat(changes.getPropertyValues().length == 0).as("changes are empty, not of length " + changes.getPropertyValues().length).isTrue();
+		assertTrue("changes are empty, not of length " + changes.getPropertyValues().length,
+				changes.getPropertyValues().length == 0);
 
 		pvs2.addPropertyValue(new PropertyValue("forname", "Gordon"));
 		changes = pvs2.changesSince(pvs);
-		assertThat(changes.getPropertyValues().length).as("1 change").isEqualTo(1);
+		assertEquals("1 change", 1, changes.getPropertyValues().length);
 		PropertyValue fn = changes.getPropertyValue("forname");
-		assertThat(fn != null).as("change is forname").isTrue();
-		assertThat(fn.getValue().equals("Gordon")).as("new value is gordon").isTrue();
+		assertTrue("change is forname", fn != null);
+		assertTrue("new value is gordon", fn.getValue().equals("Gordon"));
 
 		MutablePropertyValues pvs3 = new MutablePropertyValues(pvs);
 		changes = pvs3.changesSince(pvs);
-		assertThat(changes.getPropertyValues().length == 0).as("changes are empty, not of length " + changes.getPropertyValues().length).isTrue();
+		assertTrue("changes are empty, not of length " + changes.getPropertyValues().length,
+				changes.getPropertyValues().length == 0);
 
 		// add new
 		pvs3.addPropertyValue(new PropertyValue("foo", "bar"));
 		pvs3.addPropertyValue(new PropertyValue("fi", "fum"));
 		changes = pvs3.changesSince(pvs);
-		assertThat(changes.getPropertyValues().length == 2).as("2 change").isTrue();
+		assertTrue("2 change", changes.getPropertyValues().length == 2);
 		fn = changes.getPropertyValue("foo");
-		assertThat(fn != null).as("change in foo").isTrue();
-		assertThat(fn.getValue().equals("bar")).as("new value is bar").isTrue();
-	}
-
-	@Test
-	public void iteratorContainsPropertyValue() {
-		MutablePropertyValues pvs = new MutablePropertyValues();
-		pvs.add("foo", "bar");
-
-		Iterator<PropertyValue> it = pvs.iterator();
-		assertThat(it.hasNext()).isTrue();
-		PropertyValue pv = it.next();
-		assertThat(pv.getName()).isEqualTo("foo");
-		assertThat(pv.getValue()).isEqualTo("bar");
-		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(it::remove);
-		assertThat(it.hasNext()).isFalse();
-	}
-
-	@Test
-	public void iteratorIsEmptyForEmptyValues() {
-		MutablePropertyValues pvs = new MutablePropertyValues();
-		Iterator<PropertyValue> it = pvs.iterator();
-		assertThat(it.hasNext()).isFalse();
-	}
-
-	@Test
-	public void streamContainsPropertyValue() {
-		MutablePropertyValues pvs = new MutablePropertyValues();
-		pvs.add("foo", "bar");
-
-		assertThat(pvs.stream()).isNotNull();
-		assertThat(pvs.stream().count()).isEqualTo(1L);
-		assertThat(pvs.stream().anyMatch(pv -> "foo".equals(pv.getName()) && "bar".equals(pv.getValue()))).isTrue();
-		assertThat(pvs.stream().anyMatch(pv -> "bar".equals(pv.getName()) && "foo".equals(pv.getValue()))).isFalse();
-	}
-
-	@Test
-	public void streamIsEmptyForEmptyValues() {
-		MutablePropertyValues pvs = new MutablePropertyValues();
-		assertThat(pvs.stream()).isNotNull();
-		assertThat(pvs.stream().count()).isEqualTo(0L);
+		assertTrue("change in foo", fn != null);
+		assertTrue("new value is bar", fn.getValue().equals("bar"));
 	}
 
 }

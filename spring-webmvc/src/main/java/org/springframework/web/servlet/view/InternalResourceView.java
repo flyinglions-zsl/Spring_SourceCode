@@ -17,7 +17,6 @@
 package org.springframework.web.servlet.view;
 
 import java.util.Map;
-
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -158,7 +157,7 @@ public class InternalResourceView extends AbstractUrlBasedView {
 		if (useInclude(request, response)) {
 			response.setContentType(getContentType());
 			if (logger.isDebugEnabled()) {
-				logger.debug("Including [" + getUrl() + "]");
+				logger.debug("Including resource [" + getUrl() + "] in InternalResourceView '" + getBeanName() + "'");
 			}
 			rd.include(request, response);
 		}
@@ -166,7 +165,7 @@ public class InternalResourceView extends AbstractUrlBasedView {
 		else {
 			// Note: The forwarded resource is supposed to determine the content type itself.
 			if (logger.isDebugEnabled()) {
-				logger.debug("Forwarding to [" + getUrl() + "]");
+				logger.debug("Forwarding to resource [" + getUrl() + "] in InternalResourceView '" + getBeanName() + "'");
 			}
 			rd.forward(request, response);
 		}

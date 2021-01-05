@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,14 @@ import java.util.Locale;
 
 import org.apache.tiles.request.Request;
 import org.apache.tiles.request.render.Renderer;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.support.StaticWebApplicationContext;
-import org.springframework.web.testfixture.servlet.MockServletContext;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.junit.Assert.*;
+import static org.mockito.BDDMockito.*;
 
 /**
  * Test fixture for {@link TilesViewResolver}.
@@ -44,7 +40,7 @@ public class TilesViewResolverTests {
 	private Renderer renderer;
 
 
-	@BeforeEach
+	@Before
 	public void setUp() {
 		StaticWebApplicationContext wac = new StaticWebApplicationContext();
 		wac.setServletContext(new MockServletContext());
@@ -62,9 +58,8 @@ public class TilesViewResolverTests {
 		given(this.renderer.isRenderable(eq("/template.test"), isA(Request.class))).willReturn(true);
 		given(this.renderer.isRenderable(eq("/nonexistent.test"), isA(Request.class))).willReturn(false);
 
-		boolean condition = this.viewResolver.resolveViewName("/template.test", Locale.ITALY) instanceof TilesView;
-		assertThat(condition).isTrue();
-		assertThat(this.viewResolver.resolveViewName("/nonexistent.test", Locale.ITALY)).isNull();
+		assertTrue(this.viewResolver.resolveViewName("/template.test", Locale.ITALY) instanceof TilesView);
+		assertNull(this.viewResolver.resolveViewName("/nonexistent.test", Locale.ITALY));
 
 		verify(this.renderer).isRenderable(eq("/template.test"), isA(Request.class));
 		verify(this.renderer).isRenderable(eq("/nonexistent.test"), isA(Request.class));

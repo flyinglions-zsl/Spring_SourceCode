@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.core.io.AbstractResource;
@@ -67,7 +66,7 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 
 	private AntPathMatcher pathMatcher = new AntPathMatcher();
 
-	/** Map from path pattern -> VersionStrategy. */
+	/** Map from path pattern -> VersionStrategy */
 	private final Map<String, VersionStrategy> versionStrategyMap = new LinkedHashMap<>();
 
 
@@ -75,7 +74,7 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 	 * Set a Map with URL paths as keys and {@code VersionStrategy} as values.
 	 * <p>Supports direct URL matches and Ant-style pattern matches. For syntax
 	 * details, see the {@link org.springframework.util.AntPathMatcher} javadoc.
-	 * @param map a map with URLs as keys and version strategies as values
+	 * @param map map with URLs as keys and version strategies as values
 	 */
 	public void setStrategyMap(Map<String, VersionStrategy> map) {
 		this.versionStrategyMap.clear();
@@ -170,10 +169,17 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 
 		String candidateVersion = versionStrategy.extractVersion(requestPath);
 		if (!StringUtils.hasLength(candidateVersion)) {
+			if (logger.isTraceEnabled()) {
+				logger.trace("No version found in path \"" + requestPath + "\"");
+			}
 			return null;
 		}
 
 		String simplePath = versionStrategy.removeVersion(requestPath, candidateVersion);
+		if (logger.isTraceEnabled()) {
+			logger.trace("Extracted version from path, re-resolving without version: \"" + simplePath + "\"");
+		}
+
 		Resource baseResource = chain.resolveResource(request, simplePath, locations);
 		if (baseResource == null) {
 			return null;
@@ -181,11 +187,14 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 
 		String actualVersion = versionStrategy.getResourceVersion(baseResource);
 		if (candidateVersion.equals(actualVersion)) {
+			if (logger.isTraceEnabled()) {
+				logger.trace("Resource matches extracted version [" + candidateVersion + "]");
+			}
 			return new FileNameVersionedResource(baseResource, candidateVersion);
 		}
 		else {
 			if (logger.isTraceEnabled()) {
-				logger.trace("Found resource for \"" + requestPath + "\", but version [" +
+				logger.trace("Potential resource found for \"" + requestPath + "\", but version [" +
 						candidateVersion + "] does not match");
 			}
 			return null;
@@ -202,9 +211,15 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 			if (versionStrategy == null) {
 				return baseUrl;
 			}
+			if (logger.isTraceEnabled()) {
+				logger.trace("Getting the original resource to determine version for path \"" + resourceUrlPath + "\"");
+			}
 			Resource resource = chain.resolveResource(null, baseUrl, locations);
 			Assert.state(resource != null, "Unresolvable resource");
 			String version = versionStrategy.getResourceVersion(resource);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Determined version [" + version + "] for " + resource);
+			}
 			return versionStrategy.addVersion(baseUrl, version);
 		}
 		return baseUrl;
@@ -313,7 +328,7 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 		public HttpHeaders getResponseHeaders() {
 			HttpHeaders headers = (this.original instanceof HttpResource ?
 					((HttpResource) this.original).getResponseHeaders() : new HttpHeaders());
-			headers.setETag("W/\"" + this.version + "\"");
+			headers.setETag("\"" + this.version + "\"");
 			return headers;
 		}
 	}

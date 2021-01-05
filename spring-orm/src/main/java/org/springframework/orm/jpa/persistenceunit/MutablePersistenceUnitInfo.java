@@ -17,10 +17,9 @@
 package org.springframework.orm.jpa.persistenceunit;
 
 import java.net.URL;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-
 import javax.persistence.SharedCacheMode;
 import javax.persistence.ValidationMode;
 import javax.persistence.spi.ClassTransformer;
@@ -61,16 +60,16 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	@Nullable
 	private DataSource jtaDataSource;
 
-	private final List<String> mappingFileNames = new ArrayList<>();
+	private final List<String> mappingFileNames = new LinkedList<>();
 
-	private final List<URL> jarFileUrls = new ArrayList<>();
+	private final List<URL> jarFileUrls = new LinkedList<>();
 
 	@Nullable
 	private URL persistenceUnitRootUrl;
 
-	private final List<String> managedClassNames = new ArrayList<>();
+	private final List<String> managedClassNames = new LinkedList<>();
 
-	private final List<String> managedPackages = new ArrayList<>();
+	private final List<String> managedPackages = new LinkedList<>();
 
 	private boolean excludeUnlistedClasses = false;
 

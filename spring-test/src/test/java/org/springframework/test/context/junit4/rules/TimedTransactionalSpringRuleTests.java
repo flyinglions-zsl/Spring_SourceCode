@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.junit.runners.JUnit4;
 import org.springframework.test.annotation.Repeat;
 import org.springframework.test.context.junit4.TimedTransactionalSpringRunnerTests;
 
-import static org.springframework.test.transaction.TransactionAssert.assertThatTransaction;
+import static org.springframework.test.transaction.TransactionTestUtils.*;
 
 /**
  * This class is an extension of {@link TimedTransactionalSpringRunnerTests}
@@ -59,7 +59,7 @@ public class TimedTransactionalSpringRuleTests extends TimedTransactionalSpringR
 	@Repeat(5)
 	@Override
 	public void transactionalWithJUnitTimeout() {
-		assertThatTransaction().isNotActive();
+		assertInTransaction(false);
 	}
 
 	/**
@@ -67,7 +67,7 @@ public class TimedTransactionalSpringRuleTests extends TimedTransactionalSpringR
 	 */
 	@Test
 	public void transactionalWithJUnitRuleBasedTimeout() {
-		assertThatTransaction().isActive();
+		assertInTransaction(true);
 	}
 
 	// All other tests are in superclass.

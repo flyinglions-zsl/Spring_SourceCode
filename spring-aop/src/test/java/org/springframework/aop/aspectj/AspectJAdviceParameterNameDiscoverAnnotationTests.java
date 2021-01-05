@@ -17,7 +17,7 @@
 package org.springframework.aop.aspectj;
 
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 /**
  * Additional parameter name discover tests that need Java 5.

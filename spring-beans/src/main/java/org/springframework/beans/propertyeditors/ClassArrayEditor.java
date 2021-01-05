@@ -17,7 +17,6 @@
 package org.springframework.beans.propertyeditors;
 
 import java.beans.PropertyEditorSupport;
-import java.util.StringJoiner;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
@@ -83,11 +82,14 @@ public class ClassArrayEditor extends PropertyEditorSupport {
 		if (ObjectUtils.isEmpty(classes)) {
 			return "";
 		}
-		StringJoiner sj = new StringJoiner(",");
-		for (Class<?> klass : classes) {
-			sj.add(ClassUtils.getQualifiedName(klass));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < classes.length; ++i) {
+			if (i > 0) {
+				sb.append(",");
+			}
+			sb.append(ClassUtils.getQualifiedName(classes[i]));
 		}
-		return sj.toString();
+		return sb.toString();
 	}
 
 }

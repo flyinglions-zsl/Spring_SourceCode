@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import org.springframework.jdbc.core.namedparam.ParsedSql;
 import org.springframework.lang.Nullable;
 
 /**
- * Reusable operation object representing an SQL query.
+ * Reusable operation object representing a SQL query.
  *
  * <p>Subclasses must implement the {@link #newRowMapper} method to provide
  * an object that can extract the results of iterating over the
@@ -51,7 +51,6 @@ import org.springframework.lang.Nullable;
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @author Thomas Risberg
- * @param <T> the result type
  * @see SqlUpdate
  */
 public abstract class SqlQuery<T> extends SqlOperation {
@@ -102,7 +101,7 @@ public abstract class SqlQuery<T> extends SqlOperation {
 	 * @param params parameters, similar to JDO query parameters.
 	 * Primitive parameters must be represented by their Object wrapper type.
 	 * The ordering of parameters is significant.
-	 * @param context the contextual information passed to the {@code mapRow}
+	 * @param context contextual information passed to the {@code mapRow}
 	 * callback method. The JDBC operation itself doesn't rely on this parameter,
 	 * but it can be useful for creating the objects of the result list.
 	 * @return a List of objects, one per row of the ResultSet. Normally all these
@@ -215,7 +214,7 @@ public abstract class SqlQuery<T> extends SqlOperation {
 	 * the SqlParameters. Primitive parameters must be represented by their Object wrapper
 	 * type. The ordering of parameters is not significant since they are supplied in a
 	 * SqlParameterMap which is an implementation of the Map interface.
-	 * @param context the contextual information passed to the {@code mapRow}
+	 * @param context contextual information passed to the {@code mapRow}
 	 * callback method. The JDBC operation itself doesn't rely on this parameter,
 	 * but it can be useful for creating the objects of the result list.
 	 * @return a List of objects, one per row of the ResultSet. Normally all these
@@ -228,7 +227,7 @@ public abstract class SqlQuery<T> extends SqlOperation {
 		String sqlToUse = NamedParameterUtils.substituteNamedParameters(parsedSql, paramSource);
 		Object[] params = NamedParameterUtils.buildValueArray(parsedSql, paramSource, getDeclaredParameters());
 		RowMapper<T> rowMapper = newRowMapper(params, context);
-		return getJdbcTemplate().query(newPreparedStatementCreator(sqlToUse, params), rowMapper);
+ 		return getJdbcTemplate().query(newPreparedStatementCreator(sqlToUse, params), rowMapper);
 	}
 
 	/**
@@ -334,10 +333,10 @@ public abstract class SqlQuery<T> extends SqlOperation {
 
 	/**
 	 * Generic object finder method for named parameters.
-	 * @param paramMap a Map of parameter name to parameter object,
+	 * @param paramMap Map of parameter name to parameter object,
 	 * matching named parameters specified in the SQL statement.
 	 * Ordering is not significant.
-	 * @param context the contextual information passed to the {@code mapRow}
+	 * @param context contextual information passed to the {@code mapRow}
 	 * callback method. The JDBC operation itself doesn't rely on this parameter,
 	 * but it can be useful for creating the objects of the result list.
 	 * @return a List of objects, one per row of the ResultSet. Normally all these
@@ -351,7 +350,7 @@ public abstract class SqlQuery<T> extends SqlOperation {
 
 	/**
 	 * Convenient method to execute without context.
-	 * @param paramMap a Map of parameter name to parameter object,
+	 * @param paramMap Map of parameter name to parameter object,
 	 * matching named parameters specified in the SQL statement.
 	 * Ordering is not significant.
 	 */
@@ -363,11 +362,11 @@ public abstract class SqlQuery<T> extends SqlOperation {
 
 	/**
 	 * Subclasses must implement this method to extract an object per row, to be
-	 * returned by the {@code execute} method as an aggregated {@link List}.
+	 * returned by the <cod>execute</code> method as an aggregated {@link List}.
 	 * @param parameters the parameters to the {@code execute()} method,
 	 * in case subclass is interested; may be {@code null} if there
 	 * were no parameters.
-	 * @param context the contextual information passed to the {@code mapRow}
+	 * @param context contextual information passed to the {@code mapRow}
 	 * callback method. The JDBC operation itself doesn't rely on this parameter,
 	 * but it can be useful for creating the objects of the result list.
 	 * @see #execute

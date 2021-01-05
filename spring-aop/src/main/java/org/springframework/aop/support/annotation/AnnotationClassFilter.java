@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ package org.springframework.aop.support.annotation;
 import java.lang.annotation.Annotation;
 
 import org.springframework.aop.ClassFilter;
-import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.lang.Nullable;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.Assert;
 
 /**
@@ -51,7 +50,7 @@ public class AnnotationClassFilter implements ClassFilter {
 	 * @param annotationType the annotation type to look for
 	 * @param checkInherited whether to also check the superclasses and
 	 * interfaces as well as meta-annotations for the annotation type
-	 * (i.e. whether to use {@link AnnotatedElementUtils#hasAnnotation}
+	 * (i.e. whether to use {@link AnnotationUtils#findAnnotation(Class, Class)}
 	 * semantics instead of standard Java {@link Class#isAnnotationPresent})
 	 */
 	public AnnotationClassFilter(Class<? extends Annotation> annotationType, boolean checkInherited) {
@@ -63,12 +62,13 @@ public class AnnotationClassFilter implements ClassFilter {
 
 	@Override
 	public boolean matches(Class<?> clazz) {
-		return (this.checkInherited ? AnnotatedElementUtils.hasAnnotation(clazz, this.annotationType) :
+		return (this.checkInherited ?
+				(AnnotationUtils.findAnnotation(clazz, this.annotationType) != null) :
 				clazz.isAnnotationPresent(this.annotationType));
 	}
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

@@ -161,7 +161,7 @@ public class EncodedResource implements InputStreamSource {
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

@@ -18,7 +18,6 @@ package org.springframework.ejb.access;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
 import javax.naming.Context;
 import javax.naming.NamingException;
 
@@ -184,7 +183,7 @@ public abstract class AbstractSlsbInvokerInterceptor extends JndiObjectLocator
 
 
 	/**
-	 * Prepares the thread context if necessary, and delegates to
+	 * Prepares the thread context if necessar, and delegates to
 	 * {@link #invokeInContext}.
 	 */
 	@Override

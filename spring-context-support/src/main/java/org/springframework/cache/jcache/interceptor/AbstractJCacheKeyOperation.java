@@ -19,7 +19,6 @@ package org.springframework.cache.jcache.interceptor;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.cache.annotation.CacheInvocationParameter;
 import javax.cache.annotation.CacheMethodDetails;
 
@@ -31,7 +30,6 @@ import org.springframework.cache.interceptor.KeyGenerator;
  *
  * @author Stephane Nicoll
  * @since 4.1
- * @param <A> the annotation type
  */
 abstract class AbstractJCacheKeyOperation<A extends Annotation> extends AbstractJCacheOperation<A> {
 

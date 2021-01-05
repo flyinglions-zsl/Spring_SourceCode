@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.core.SpringProperties;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -35,20 +34,12 @@ import org.springframework.util.Assert;
  * See {@link org.springframework.jdbc.core.JdbcTemplate}.
  *
  * @author Juergen Hoeller
- * @author Sebastien Deleuze
  * @since 28.11.2003
  * @see org.springframework.jdbc.core.JdbcTemplate
  */
 public abstract class JdbcAccessor implements InitializingBean {
 
-	/**
-	 * Boolean flag controlled by a {@code spring.xml.ignore} system property that instructs Spring to
-	 * ignore XML, i.e. to not initialize the XML-related infrastructure.
-	 * <p>The default is "false".
-	 */
-	private static final boolean shouldIgnoreXml = SpringProperties.getFlag("spring.xml.ignore");
-
-	/** Logger available to subclasses. */
+	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	@Nullable
@@ -89,16 +80,14 @@ public abstract class JdbcAccessor implements InitializingBean {
 
 	/**
 	 * Specify the database product name for the DataSource that this accessor uses.
-	 * This allows to initialize an SQLErrorCodeSQLExceptionTranslator without
+	 * This allows to initialize a SQLErrorCodeSQLExceptionTranslator without
 	 * obtaining a Connection from the DataSource to get the meta-data.
 	 * @param dbName the database product name that identifies the error codes entry
 	 * @see SQLErrorCodeSQLExceptionTranslator#setDatabaseProductName
 	 * @see java.sql.DatabaseMetaData#getDatabaseProductName()
 	 */
 	public void setDatabaseProductName(String dbName) {
-		if (!shouldIgnoreXml) {
-			this.exceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(dbName);
-		}
+		this.exceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(dbName);
 	}
 
 	/**
@@ -129,10 +118,7 @@ public abstract class JdbcAccessor implements InitializingBean {
 			exceptionTranslator = this.exceptionTranslator;
 			if (exceptionTranslator == null) {
 				DataSource dataSource = getDataSource();
-				if (shouldIgnoreXml) {
-					exceptionTranslator = new SQLExceptionSubclassTranslator();
-				}
-				else if (dataSource != null) {
+				if (dataSource != null) {
 					exceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(dataSource);
 				}
 				else {
@@ -146,7 +132,7 @@ public abstract class JdbcAccessor implements InitializingBean {
 
 	/**
 	 * Set whether to lazily initialize the SQLExceptionTranslator for this accessor,
-	 * on first encounter of an SQLException. Default is "true"; can be switched to
+	 * on first encounter of a SQLException. Default is "true"; can be switched to
 	 * "false" for initialization on startup.
 	 * <p>Early initialization just applies if {@code afterPropertiesSet()} is called.
 	 * @see #getExceptionTranslator()

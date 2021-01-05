@@ -17,10 +17,9 @@
 package org.springframework.beans.factory.support;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -39,7 +38,7 @@ public class ReplaceOverride extends MethodOverride {
 
 	private final String methodReplacerBeanName;
 
-	private final List<String> typeIdentifiers = new ArrayList<>();
+	private final List<String> typeIdentifiers = new LinkedList<>();
 
 
 	/**
@@ -96,7 +95,7 @@ public class ReplaceOverride extends MethodOverride {
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (!(other instanceof ReplaceOverride) || !super.equals(other)) {
 			return false;
 		}

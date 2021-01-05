@@ -111,9 +111,13 @@ class CacheAdviceParser extends AbstractSingleBeanDefinitionParser {
 			CacheableOperation.Builder builder = prop.merge(opElement,
 					parserContext.getReaderContext(), new CacheableOperation.Builder());
 			builder.setUnless(getAttributeValue(opElement, "unless", ""));
-			builder.setSync(Boolean.parseBoolean(getAttributeValue(opElement, "sync", "false")));
+			builder.setSync(Boolean.valueOf(getAttributeValue(opElement, "sync", "false")));
 
-			Collection<CacheOperation> col = cacheOpMap.computeIfAbsent(nameHolder, k -> new ArrayList<>(2));
+			Collection<CacheOperation> col = cacheOpMap.get(nameHolder);
+			if (col == null) {
+				col = new ArrayList<>(2);
+				cacheOpMap.put(nameHolder, col);
+			}
 			col.add(builder.build());
 		}
 
@@ -128,15 +132,19 @@ class CacheAdviceParser extends AbstractSingleBeanDefinitionParser {
 
 			String wide = opElement.getAttribute("all-entries");
 			if (StringUtils.hasText(wide)) {
-				builder.setCacheWide(Boolean.parseBoolean(wide.trim()));
+				builder.setCacheWide(Boolean.valueOf(wide.trim()));
 			}
 
 			String after = opElement.getAttribute("before-invocation");
 			if (StringUtils.hasText(after)) {
-				builder.setBeforeInvocation(Boolean.parseBoolean(after.trim()));
+				builder.setBeforeInvocation(Boolean.valueOf(after.trim()));
 			}
 
-			Collection<CacheOperation> col = cacheOpMap.computeIfAbsent(nameHolder, k -> new ArrayList<>(2));
+			Collection<CacheOperation> col = cacheOpMap.get(nameHolder);
+			if (col == null) {
+				col = new ArrayList<>(2);
+				cacheOpMap.put(nameHolder, col);
+			}
 			col.add(builder.build());
 		}
 
@@ -150,7 +158,11 @@ class CacheAdviceParser extends AbstractSingleBeanDefinitionParser {
 					parserContext.getReaderContext(), new CachePutOperation.Builder());
 			builder.setUnless(getAttributeValue(opElement, "unless", ""));
 
-			Collection<CacheOperation> col = cacheOpMap.computeIfAbsent(nameHolder, k -> new ArrayList<>(2));
+			Collection<CacheOperation> col = cacheOpMap.get(nameHolder);
+			if (col == null) {
+				col = new ArrayList<>(2);
+				cacheOpMap.put(nameHolder, col);
+			}
 			col.add(builder.build());
 		}
 

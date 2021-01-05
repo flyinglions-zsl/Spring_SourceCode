@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.springframework.expression.spel.CodeFlow;
 import org.springframework.expression.spel.ExpressionState;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * Represents the elvis operator ?:. For an expression "a?:b" if a is not null, the value
@@ -35,8 +36,8 @@ import org.springframework.util.ObjectUtils;
  */
 public class Elvis extends SpelNodeImpl {
 
-	public Elvis(int startPos, int endPos, SpelNodeImpl... args) {
-		super(startPos, endPos, args);
+	public Elvis(int pos, SpelNodeImpl... args) {
+		super(pos, args);
 	}
 
 
@@ -51,7 +52,7 @@ public class Elvis extends SpelNodeImpl {
 	public TypedValue getValueInternal(ExpressionState state) throws EvaluationException {
 		TypedValue value = this.children[0].getValueInternal(state);
 		// If this check is changed, the generateCode method will need changing too
-		if (value.getValue() != null && !"".equals(value.getValue())) {
+		if (!StringUtils.isEmpty(value.getValue())) {
 			return value;
 		}
 		else {

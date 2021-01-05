@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.web.socket;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -25,7 +24,6 @@ import org.springframework.util.ObjectUtils;
  *
  * @author Rossen Stoyanchev
  * @since 4.0
- * @param <T> the payload type
  */
 public abstract class AbstractWebSocketMessage<T> implements WebSocketMessage<T> {
 
@@ -60,7 +58,6 @@ public abstract class AbstractWebSocketMessage<T> implements WebSocketMessage<T>
 	/**
 	 * Return the message payload (never {@code null}).
 	 */
-	@Override
 	public T getPayload() {
 		return this.payload;
 	}
@@ -68,14 +65,13 @@ public abstract class AbstractWebSocketMessage<T> implements WebSocketMessage<T>
 	/**
 	 * Whether this is the last part of a message sent as a series of partial messages.
 	 */
-	@Override
 	public boolean isLast() {
 		return this.last;
 	}
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

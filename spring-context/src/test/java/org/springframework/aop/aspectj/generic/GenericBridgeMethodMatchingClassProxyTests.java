@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2007 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package org.springframework.aop.aspectj.generic;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Tests for AspectJ pointcut expression matching when working with bridge methods.
@@ -35,13 +35,13 @@ public class GenericBridgeMethodMatchingClassProxyTests extends GenericBridgeMet
 	@Test
 	public void testGenericDerivedInterfaceMethodThroughClass() {
 		((DerivedStringParameterizedClass) testBean).genericDerivedInterfaceMethod("");
-		assertThat(counterAspect.count).isEqualTo(1);
+		assertEquals(1, counterAspect.count);
 	}
 
 	@Test
 	public void testGenericBaseInterfaceMethodThroughClass() {
 		((DerivedStringParameterizedClass) testBean).genericBaseInterfaceMethod("");
-		assertThat(counterAspect.count).isEqualTo(1);
+		assertEquals(1, counterAspect.count);
 	}
 
 }

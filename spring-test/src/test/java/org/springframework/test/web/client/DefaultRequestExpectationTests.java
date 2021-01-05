@@ -19,26 +19,27 @@ package org.springframework.test.web.client;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.ClientHttpRequest;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.springframework.http.HttpMethod.GET;
-import static org.springframework.http.HttpMethod.POST;
-import static org.springframework.test.web.client.ExpectedCount.once;
-import static org.springframework.test.web.client.ExpectedCount.twice;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.junit.Assert.*;
+import static org.springframework.http.HttpMethod.*;
+import static org.springframework.test.web.client.ExpectedCount.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
  * Unit tests for {@link DefaultRequestExpectation}.
  * @author Rossen Stoyanchev
  */
 public class DefaultRequestExpectationTests {
+
+	@Rule
+	public ExpectedException thrown = ExpectedException.none();
 
 
 	@Test
@@ -51,9 +52,9 @@ public class DefaultRequestExpectationTests {
 	public void matchWithFailedExpectation() throws Exception {
 		RequestExpectation expectation = new DefaultRequestExpectation(once(), requestTo("/foo"));
 		expectation.andExpect(method(POST));
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				expectation.match(createRequest(GET, "/foo")))
-			.withMessageContaining("Unexpected HttpMethod expected:<POST> but was:<GET>");
+
+		this.thrown.expectMessage("Unexpected HttpMethod expected:<POST> but was:<GET>");
+		expectation.match(createRequest(GET, "/foo"));
 	}
 
 	@Test
@@ -62,10 +63,10 @@ public class DefaultRequestExpectationTests {
 		expectation.andRespond(withSuccess());
 
 		expectation.incrementAndValidate();
-		assertThat(expectation.hasRemainingCount()).isTrue();
+		assertTrue(expectation.hasRemainingCount());
 
 		expectation.incrementAndValidate();
-		assertThat(expectation.hasRemainingCount()).isFalse();
+		assertFalse(expectation.hasRemainingCount());
 	}
 
 	@Test
@@ -74,10 +75,10 @@ public class DefaultRequestExpectationTests {
 		expectation.andRespond(withSuccess());
 
 		expectation.incrementAndValidate();
-		assertThat(expectation.isSatisfied()).isFalse();
+		assertFalse(expectation.isSatisfied());
 
 		expectation.incrementAndValidate();
-		assertThat(expectation.isSatisfied()).isTrue();
+		assertTrue(expectation.isSatisfied());
 	}
 
 

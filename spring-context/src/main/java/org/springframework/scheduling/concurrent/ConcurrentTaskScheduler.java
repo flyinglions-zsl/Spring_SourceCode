@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.scheduling.concurrent;
 
-import java.time.Clock;
 import java.util.Date;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -24,7 +23,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
 import javax.enterprise.concurrent.LastExecution;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 
@@ -89,8 +87,6 @@ public class ConcurrentTaskScheduler extends ConcurrentTaskExecutor implements T
 
 	@Nullable
 	private ErrorHandler errorHandler;
-
-	private Clock clock = Clock.systemDefaultZone();
 
 
 	/**
@@ -171,21 +167,6 @@ public class ConcurrentTaskScheduler extends ConcurrentTaskExecutor implements T
 		this.errorHandler = errorHandler;
 	}
 
-	/**
-	 * Set the clock to use for scheduling purposes.
-	 * <p>The default clock is the system clock for the default time zone.
-	 * @since 5.3
-	 * @see Clock#systemDefaultZone()
-	 */
-	public void setClock(Clock clock) {
-		this.clock = clock;
-	}
-
-	@Override
-	public Clock getClock() {
-		return this.clock;
-	}
-
 
 	@Override
 	@Nullable
@@ -197,7 +178,7 @@ public class ConcurrentTaskScheduler extends ConcurrentTaskExecutor implements T
 			else {
 				ErrorHandler errorHandler =
 						(this.errorHandler != null ? this.errorHandler : TaskUtils.getDefaultErrorHandler(true));
-				return new ReschedulingRunnable(task, trigger, this.clock, this.scheduledExecutor, errorHandler).schedule();
+				return new ReschedulingRunnable(task, trigger, this.scheduledExecutor, errorHandler).schedule();
 			}
 		}
 		catch (RejectedExecutionException ex) {
@@ -207,7 +188,7 @@ public class ConcurrentTaskScheduler extends ConcurrentTaskExecutor implements T
 
 	@Override
 	public ScheduledFuture<?> schedule(Runnable task, Date startTime) {
-		long initialDelay = startTime.getTime() - this.clock.millis();
+		long initialDelay = startTime.getTime() - System.currentTimeMillis();
 		try {
 			return this.scheduledExecutor.schedule(decorateTask(task, false), initialDelay, TimeUnit.MILLISECONDS);
 		}
@@ -218,7 +199,7 @@ public class ConcurrentTaskScheduler extends ConcurrentTaskExecutor implements T
 
 	@Override
 	public ScheduledFuture<?> scheduleAtFixedRate(Runnable task, Date startTime, long period) {
-		long initialDelay = startTime.getTime() - this.clock.millis();
+		long initialDelay = startTime.getTime() - System.currentTimeMillis();
 		try {
 			return this.scheduledExecutor.scheduleAtFixedRate(decorateTask(task, true), initialDelay, period, TimeUnit.MILLISECONDS);
 		}
@@ -239,7 +220,7 @@ public class ConcurrentTaskScheduler extends ConcurrentTaskExecutor implements T
 
 	@Override
 	public ScheduledFuture<?> scheduleWithFixedDelay(Runnable task, Date startTime, long delay) {
-		long initialDelay = startTime.getTime() - this.clock.millis();
+		long initialDelay = startTime.getTime() - System.currentTimeMillis();
 		try {
 			return this.scheduledExecutor.scheduleWithFixedDelay(decorateTask(task, true), initialDelay, delay, TimeUnit.MILLISECONDS);
 		}

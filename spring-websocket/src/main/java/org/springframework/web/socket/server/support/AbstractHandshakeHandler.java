@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,34 +71,23 @@ import org.springframework.web.socket.server.RequestUpgradeStrategy;
  */
 public abstract class AbstractHandshakeHandler implements HandshakeHandler, Lifecycle {
 
-	private static final boolean jettyWsPresent;
+	private static final boolean jettyWsPresent = ClassUtils.isPresent(
+			"org.eclipse.jetty.websocket.server.WebSocketServerFactory", AbstractHandshakeHandler.class.getClassLoader());
 
-	private static final boolean tomcatWsPresent;
+	private static final boolean tomcatWsPresent = ClassUtils.isPresent(
+			"org.apache.tomcat.websocket.server.WsHttpUpgradeHandler", AbstractHandshakeHandler.class.getClassLoader());
 
-	private static final boolean undertowWsPresent;
+	private static final boolean undertowWsPresent = ClassUtils.isPresent(
+			"io.undertow.websockets.jsr.ServerWebSocketContainer", AbstractHandshakeHandler.class.getClassLoader());
 
-	private static final boolean glassfishWsPresent;
+	private static final boolean glassfishWsPresent = ClassUtils.isPresent(
+			"org.glassfish.tyrus.servlet.TyrusHttpUpgradeHandler", AbstractHandshakeHandler.class.getClassLoader());
 
-	private static final boolean weblogicWsPresent;
+	private static final boolean weblogicWsPresent = ClassUtils.isPresent(
+			"weblogic.websocket.tyrus.TyrusServletWriter", AbstractHandshakeHandler.class.getClassLoader());
 
-	private static final boolean websphereWsPresent;
-
-	static {
-		ClassLoader classLoader = AbstractHandshakeHandler.class.getClassLoader();
-		jettyWsPresent = ClassUtils.isPresent(
-				"org.eclipse.jetty.websocket.server.WebSocketServerFactory", classLoader);
-		tomcatWsPresent = ClassUtils.isPresent(
-				"org.apache.tomcat.websocket.server.WsHttpUpgradeHandler", classLoader);
-		undertowWsPresent = ClassUtils.isPresent(
-				"io.undertow.websockets.jsr.ServerWebSocketContainer", classLoader);
-		glassfishWsPresent = ClassUtils.isPresent(
-				"org.glassfish.tyrus.servlet.TyrusHttpUpgradeHandler", classLoader);
-		weblogicWsPresent = ClassUtils.isPresent(
-				"weblogic.websocket.tyrus.TyrusServletWriter", classLoader);
-		websphereWsPresent = ClassUtils.isPresent(
-				"com.ibm.websphere.wsoc.WsWsocServerContainer", classLoader);
-
-	}
+	private static final boolean websphereWsPresent = ClassUtils.isPresent(
+			"com.ibm.websphere.wsoc.WsWsocServerContainer", AbstractHandshakeHandler.class.getClassLoader());
 
 
 	protected final Log logger = LogFactory.getLog(getClass());
@@ -107,7 +96,7 @@ public abstract class AbstractHandshakeHandler implements HandshakeHandler, Life
 
 	private final List<String> supportedProtocols = new ArrayList<>();
 
-	private volatile boolean running;
+	private volatile boolean running = false;
 
 
 	/**
@@ -157,7 +146,7 @@ public abstract class AbstractHandshakeHandler implements HandshakeHandler, Life
 			Class<?> clazz = ClassUtils.forName(className, AbstractHandshakeHandler.class.getClassLoader());
 			return (RequestUpgradeStrategy) ReflectionUtils.accessibleConstructor(clazz).newInstance();
 		}
-		catch (Exception ex) {
+		catch (Throwable ex) {
 			throw new IllegalStateException(
 					"Failed to instantiate RequestUpgradeStrategy: " + className, ex);
 		}

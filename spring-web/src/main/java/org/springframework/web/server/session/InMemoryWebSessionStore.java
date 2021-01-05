@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import org.springframework.util.Assert;
 import org.springframework.util.IdGenerator;
@@ -112,13 +111,9 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 
 	@Override
 	public Mono<WebSession> createWebSession() {
-
-		// Opportunity to clean expired sessions
 		Instant now = this.clock.instant();
 		this.expiredSessionChecker.checkIfNecessary(now);
-
-		return Mono.<WebSession>fromSupplier(() -> new InMemoryWebSession(now))
-				.subscribeOn(Schedulers.boundedElastic());
+		return Mono.fromSupplier(() -> new InMemoryWebSession(now));
 	}
 
 	@Override
@@ -145,7 +140,6 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		return Mono.empty();
 	}
 
-	@Override
 	public Mono<WebSession> updateLastAccessTime(WebSession session) {
 		return Mono.fromSupplier(() -> {
 			Assert.isInstanceOf(InMemoryWebSession.class, session);
@@ -246,35 +240,17 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 
 		@Override
 		public Mono<Void> save() {
-
-			checkMaxSessionsLimit();
-
-			// Implicitly started session..
-			if (!getAttributes().isEmpty()) {
-				this.state.compareAndSet(State.NEW, State.STARTED);
-			}
-
-			if (isStarted()) {
-				// Save
-				InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
-
-				// Unless it was invalidated
-				if (this.state.get().equals(State.EXPIRED)) {
-					InMemoryWebSessionStore.this.sessions.remove(this.getId());
-					return Mono.error(new IllegalStateException("Session was invalidated"));
-				}
-			}
-
-			return Mono.empty();
-		}
-
-		private void checkMaxSessionsLimit() {
 			if (sessions.size() >= maxSessions) {
 				expiredSessionChecker.removeExpiredSessions(clock.instant());
 				if (sessions.size() >= maxSessions) {
-					throw new IllegalStateException("Max sessions limit reached: " + sessions.size());
+					return Mono.error(new IllegalStateException("Max sessions limit reached: " + sessions.size()));
 				}
 			}
+			if (!getAttributes().isEmpty()) {
+				this.state.compareAndSet(State.NEW, State.STARTED);
+			}
+			InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
+			return Mono.empty();
 		}
 
 		@Override

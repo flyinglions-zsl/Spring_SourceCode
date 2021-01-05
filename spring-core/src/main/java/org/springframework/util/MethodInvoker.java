@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,9 +38,6 @@ import org.springframework.lang.Nullable;
  */
 public class MethodInvoker {
 
-	private static final Object[] EMPTY_ARGUMENTS = new Object[0];
-
-
 	@Nullable
 	protected Class<?> targetClass;
 
@@ -56,7 +53,7 @@ public class MethodInvoker {
 	@Nullable
 	private Object[] arguments;
 
-	/** The method we will call. */
+	/** The method we will call */
 	@Nullable
 	private Method methodObject;
 
@@ -144,7 +141,7 @@ public class MethodInvoker {
 	 * Return the arguments for the method invocation.
 	 */
 	public Object[] getArguments() {
-		return (this.arguments != null ? this.arguments : EMPTY_ARGUMENTS);
+		return (this.arguments != null ? this.arguments : new Object[0]);
 	}
 
 
@@ -225,8 +222,8 @@ public class MethodInvoker {
 
 		for (Method candidate : candidates) {
 			if (candidate.getName().equals(targetMethod)) {
-				if (candidate.getParameterCount() == argCount) {
-					Class<?>[] paramTypes = candidate.getParameterTypes();
+				Class<?>[] paramTypes = candidate.getParameterTypes();
+				if (paramTypes.length == argCount) {
 					int typeDiffWeight = getTypeDifferenceWeight(paramTypes, arguments);
 					if (typeDiffWeight < minTypeDiffWeight) {
 						minTypeDiffWeight = typeDiffWeight;

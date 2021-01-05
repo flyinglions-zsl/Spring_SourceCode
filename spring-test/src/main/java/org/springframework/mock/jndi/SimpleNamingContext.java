@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
-
 import javax.naming.Binding;
 import javax.naming.Context;
 import javax.naming.Name;
@@ -51,10 +50,7 @@ import org.springframework.util.StringUtils;
  * @author Juergen Hoeller
  * @see SimpleNamingContextBuilder
  * @see org.springframework.jndi.JndiTemplate#createInitialContext
- * @deprecated Deprecated as of Spring Framework 5.2 in favor of complete solutions from
- * third parties such as <a href="https://github.com/h-thurow/Simple-JNDI">Simple-JNDI</a>
  */
-@Deprecated
 public class SimpleNamingContext implements Context {
 
 	private final Log logger = LogFactory.getLog(getClass());

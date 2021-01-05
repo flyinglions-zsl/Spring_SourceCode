@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@
 package org.springframework.test.web.reactive.server;
 
 import java.net.URI;
-import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
+import org.junit.Test;
+import reactor.core.publisher.MonoProcessor;
 
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -33,22 +32,20 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.http.client.reactive.MockClientHttpRequest;
 import org.springframework.mock.http.client.reactive.MockClientHttpResponse;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasItems;
-import static org.mockito.Mockito.mock;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link HeaderAssertions}.
  *
  * @author Rossen Stoyanchev
  * @author Sam Brannen
+ * @since 5.0
  */
-class HeaderAssertionTests {
+public class HeaderAssertionTests {
 
 	@Test
-	void valueEquals() {
+	public void valueEquals() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.add("foo", "bar");
 		HeaderAssertions assertions = headerAssertions(headers);
@@ -56,21 +53,33 @@ class HeaderAssertionTests {
 		// Success
 		assertions.valueEquals("foo", "bar");
 
-		// Missing header
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.valueEquals("what?!", "bar"));
+		try {
+			assertions.valueEquals("what?!", "bar");
+			fail("Missing header expected");
+		}
+		catch (AssertionError error) {
+			// expected
+		}
 
-		// Wrong value
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.valueEquals("foo", "what?!"));
+		try {
+			assertions.valueEquals("foo", "what?!");
+			fail("Wrong value expected");
+		}
+		catch (AssertionError error) {
+			// expected
+		}
 
-		// Wrong # of values
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.valueEquals("foo", "bar", "what?!"));
+		try {
+			assertions.valueEquals("foo", "bar", "what?!");
+			fail("Wrong # of values expected");
+		}
+		catch (AssertionError error) {
+			// expected
+		}
 	}
 
 	@Test
-	void valueEqualsWithMultipleValues() {
+	public void valueEqualsWithMultipeValues() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.add("foo", "bar");
 		headers.add("foo", "baz");
@@ -79,106 +88,88 @@ class HeaderAssertionTests {
 		// Success
 		assertions.valueEquals("foo", "bar", "baz");
 
-		// Wrong value
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.valueEquals("foo", "bar", "what?!"));
+		try {
+			assertions.valueEquals("foo", "bar", "what?!");
+			fail("Wrong value expected");
+		}
+		catch (AssertionError error) {
+			// expected
+		}
 
-		// Too few values
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.valueEquals("foo", "bar"));
+		try {
+			assertions.valueEquals("foo", "bar");
+			fail("Too few values expected");
+		}
+		catch (AssertionError error) {
+			// expected
+		}
+
 	}
 
 	@Test
-	void valueMatches() {
+	public void valueMatches() {
 		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.parseMediaType("application/json;charset=UTF-8"));
+		headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
 		HeaderAssertions assertions = headerAssertions(headers);
 
 		// Success
 		assertions.valueMatches("Content-Type", ".*UTF-8.*");
 
-		// Wrong pattern
-		assertThatExceptionOfType(AssertionError.class)
-				.isThrownBy(() -> assertions.valueMatches("Content-Type", ".*ISO-8859-1.*"))
-				.satisfies(ex -> assertThat(ex.getCause()).hasMessage("Response header " +
-						"'Content-Type'=[application/json;charset=UTF-8] does not match " +
-						"[.*ISO-8859-1.*]"));
+		try {
+			assertions.valueMatches("Content-Type", ".*ISO-8859-1.*");
+			fail("Wrong pattern expected");
+		}
+		catch (AssertionError error) {
+			Throwable cause = error.getCause();
+			assertNotNull(cause);
+			assertEquals("Response header 'Content-Type'=[application/json;charset=UTF-8] " +
+					"does not match [.*ISO-8859-1.*]", cause.getMessage());
+		}
 	}
 
 	@Test
-	void valuesMatch() {
+	public void exists() {
 		HttpHeaders headers = new HttpHeaders();
-		headers.add("foo", "value1");
-		headers.add("foo", "value2");
-		headers.add("foo", "value3");
-		HeaderAssertions assertions = headerAssertions(headers);
-
-		assertions.valuesMatch("foo", "val.*1", "val.*2", "val.*3");
-
-		assertThatExceptionOfType(AssertionError.class)
-				.isThrownBy(() -> assertions.valuesMatch("foo", ".*", "val.*5"))
-				.satisfies(ex -> assertThat(ex.getCause()).hasMessage(
-						"Response header 'foo' has fewer or more values [value1, value2, value3] " +
-								"than number of patterns to match with [.*, val.*5]"));
-
-		assertThatExceptionOfType(AssertionError.class)
-				.isThrownBy(() -> assertions.valuesMatch("foo", ".*", "val.*5", ".*"))
-				.satisfies(ex -> assertThat(ex.getCause()).hasMessage(
-						"Response header 'foo'[1]='value2' does not match 'val.*5'"));
-	}
-
-	@Test
-	void valueMatcher() {
-		HttpHeaders headers = new HttpHeaders();
-		headers.add("foo", "bar");
-		HeaderAssertions assertions = headerAssertions(headers);
-
-		assertions.value("foo", containsString("a"));
-	}
-
-	@Test
-	void valuesMatcher() {
-		HttpHeaders headers = new HttpHeaders();
-		headers.add("foo", "bar");
-		headers.add("foo", "baz");
-		HeaderAssertions assertions = headerAssertions(headers);
-
-		assertions.values("foo", hasItems("bar", "baz"));
-	}
-
-	@Test
-	void exists() {
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
 		HeaderAssertions assertions = headerAssertions(headers);
 
 		// Success
 		assertions.exists("Content-Type");
 
-		// Header should not exist
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.exists("Framework"))
-			.satisfies(ex -> assertThat(ex.getCause()).hasMessage("Response header 'Framework' does not exist"));
+		try {
+			assertions.exists("Framework");
+			fail("Header should not exist");
+		}
+		catch (AssertionError error) {
+			Throwable cause = error.getCause();
+			assertNotNull(cause);
+			assertEquals("Response header 'Framework' does not exist", cause.getMessage());
+		}
 	}
 
 	@Test
-	void doesNotExist() {
+	public void doesNotExist() {
 		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.parseMediaType("application/json;charset=UTF-8"));
+		headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
 		HeaderAssertions assertions = headerAssertions(headers);
 
 		// Success
 		assertions.doesNotExist("Framework");
 
-		// Existing header
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.doesNotExist("Content-Type"))
-			.satisfies(ex -> assertThat(ex.getCause()).hasMessage("Response header " +
-					"'Content-Type' exists with value=[application/json;charset=UTF-8]"));
+		try {
+			assertions.doesNotExist("Content-Type");
+			fail("Existing header expected");
+		}
+		catch (AssertionError error) {
+			Throwable cause = error.getCause();
+			assertNotNull(cause);
+			assertEquals("Response header 'Content-Type' exists with " +
+					"value=[application/json;charset=UTF-8]", cause.getMessage());
+		}
 	}
 
 	@Test
-	void contentTypeCompatibleWith() {
+	public void contentTypeCompatibleWith() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_XML);
 		HeaderAssertions assertions = headerAssertions(headers);
@@ -186,15 +177,20 @@ class HeaderAssertionTests {
 		// Success
 		assertions.contentTypeCompatibleWith(MediaType.parseMediaType("application/*"));
 
-		// MediaTypes not compatible
-		assertThatExceptionOfType(AssertionError.class)
-			.isThrownBy(() -> assertions.contentTypeCompatibleWith(MediaType.TEXT_XML))
-			.havingCause()
-			.withMessage("Response header 'Content-Type'=[application/xml] is not compatible with [text/xml]");
+		try {
+			assertions.contentTypeCompatibleWith(MediaType.TEXT_XML);
+			fail("MediaTypes not compatible expected");
+		}
+		catch (AssertionError error) {
+			Throwable cause = error.getCause();
+			assertNotNull(cause);
+			assertEquals("Response header 'Content-Type'=[application/xml] " +
+					"is not compatible with [text/xml]", cause.getMessage());
+		}
 	}
 
 	@Test
-	void cacheControl() {
+	public void cacheControl() {
 		CacheControl control = CacheControl.maxAge(1, TimeUnit.HOURS).noTransform();
 
 		HttpHeaders headers = new HttpHeaders();
@@ -204,35 +200,45 @@ class HeaderAssertionTests {
 		// Success
 		assertions.cacheControl(control);
 
-		// Wrong value
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.cacheControl(CacheControl.noStore()));
+		try {
+			assertions.cacheControl(CacheControl.noStore());
+			fail("Wrong value expected");
+		}
+		catch (AssertionError error) {
+			// Expected
+		}
 	}
 
 	@Test
-	void expires() {
+	public void expires() {
 		HttpHeaders headers = new HttpHeaders();
 		ZonedDateTime expires = ZonedDateTime.of(2018, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"));
 		headers.setExpires(expires);
 		HeaderAssertions assertions = headerAssertions(headers);
 		assertions.expires(expires.toInstant().toEpochMilli());
-
-		// Wrong value
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.expires(expires.toInstant().toEpochMilli() + 1));
+		try {
+			assertions.expires(expires.toInstant().toEpochMilli() + 1);
+			fail("Wrong value expected");
+		}
+		catch (AssertionError error) {
+			// Expected
+		}
 	}
 
 	@Test
-	void lastModified() {
+	public void lastModified() {
 		HttpHeaders headers = new HttpHeaders();
 		ZonedDateTime lastModified = ZonedDateTime.of(2018, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"));
 		headers.setLastModified(lastModified.toInstant().toEpochMilli());
 		HeaderAssertions assertions = headerAssertions(headers);
 		assertions.lastModified(lastModified.toInstant().toEpochMilli());
-
-		// Wrong value
-		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
-				assertions.lastModified(lastModified.toInstant().toEpochMilli() + 1));
+		try {
+			assertions.lastModified(lastModified.toInstant().toEpochMilli() + 1);
+			fail("Wrong value expected");
+		}
+		catch (AssertionError error) {
+			// Expected
+		}
 	}
 
 	private HeaderAssertions headerAssertions(HttpHeaders responseHeaders) {
@@ -240,9 +246,10 @@ class HeaderAssertionTests {
 		MockClientHttpResponse response = new MockClientHttpResponse(HttpStatus.OK);
 		response.getHeaders().putAll(responseHeaders);
 
-		ExchangeResult result = new ExchangeResult(
-				request, response, Mono.empty(), Mono.empty(), Duration.ZERO, null, null);
+		MonoProcessor<byte[]> emptyContent = MonoProcessor.create();
+		emptyContent.onComplete();
 
+		ExchangeResult result = new ExchangeResult(request, response, emptyContent, emptyContent, null);
 		return new HeaderAssertions(result, mock(WebTestClient.ResponseSpec.class));
 	}
 

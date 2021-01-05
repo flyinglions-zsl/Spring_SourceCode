@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package org.springframework.remoting.httpinvoker;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,51 +33,51 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncAnnotationBeanPostProcessor;
 import org.springframework.stereotype.Component;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Stephane Nicoll
  */
-class HttpInvokerFactoryBeanIntegrationTests {
+public class HttpInvokerFactoryBeanIntegrationTests {
 
 	@Test
 	@SuppressWarnings("resource")
-	void testLoadedConfigClass() {
+	public void testLoadedConfigClass() {
 		ApplicationContext context = new AnnotationConfigApplicationContext(InvokerAutowiringConfig.class);
 		MyBean myBean = context.getBean("myBean", MyBean.class);
-		assertThat(myBean.myService).isSameAs(context.getBean("myService"));
+		assertSame(context.getBean("myService"), myBean.myService);
 		myBean.myService.handle();
 		myBean.myService.handleAsync();
 	}
 
 	@Test
 	@SuppressWarnings("resource")
-	void testNonLoadedConfigClass() {
+	public void testNonLoadedConfigClass() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.registerBeanDefinition("config", new RootBeanDefinition(InvokerAutowiringConfig.class.getName()));
 		context.refresh();
 		MyBean myBean = context.getBean("myBean", MyBean.class);
-		assertThat(myBean.myService).isSameAs(context.getBean("myService"));
+		assertSame(context.getBean("myService"), myBean.myService);
 		myBean.myService.handle();
 		myBean.myService.handleAsync();
 	}
 
 	@Test
 	@SuppressWarnings("resource")
-	void withConfigurationClassWithPlainFactoryBean() {
+	public void withConfigurationClassWithPlainFactoryBean() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(ConfigWithPlainFactoryBean.class);
 		context.refresh();
 		MyBean myBean = context.getBean("myBean", MyBean.class);
-		assertThat(myBean.myService).isSameAs(context.getBean("myService"));
+		assertSame(context.getBean("myService"), myBean.myService);
 		myBean.myService.handle();
 		myBean.myService.handleAsync();
 	}
 
 
-	interface MyService {
+	public interface MyService {
 
-		void handle();
+		public void handle();
 
 		@Async
 		public void handleAsync();
@@ -85,26 +85,25 @@ class HttpInvokerFactoryBeanIntegrationTests {
 
 
 	@Component("myBean")
-	static class MyBean {
+	public static class MyBean {
 
 		@Autowired
-		MyService myService;
+		public MyService myService;
 	}
 
 
 	@Configuration
 	@ComponentScan
 	@Lazy
-	static class InvokerAutowiringConfig {
+	public static class InvokerAutowiringConfig {
 
 		@Bean
-		AsyncAnnotationBeanPostProcessor aabpp() {
+		public AsyncAnnotationBeanPostProcessor aabpp() {
 			return new AsyncAnnotationBeanPostProcessor();
 		}
 
 		@Bean
-		@SuppressWarnings("deprecation")
-		HttpInvokerProxyFactoryBean myService() {
+		public HttpInvokerProxyFactoryBean myService() {
 			HttpInvokerProxyFactoryBean factory = new HttpInvokerProxyFactoryBean();
 			factory.setServiceUrl("/svc/dummy");
 			factory.setServiceInterface(MyService.class);
@@ -113,7 +112,7 @@ class HttpInvokerFactoryBeanIntegrationTests {
 		}
 
 		@Bean
-		FactoryBean<String> myOtherService() {
+		public FactoryBean<String> myOtherService() {
 			throw new IllegalStateException("Don't ever call me");
 		}
 	}
@@ -126,13 +125,12 @@ class HttpInvokerFactoryBeanIntegrationTests {
 		Environment env;
 
 		@Bean
-		MyBean myBean() {
+		public MyBean myBean() {
 			return new MyBean();
 		}
 
 		@Bean
-		@SuppressWarnings("deprecation")
-		HttpInvokerProxyFactoryBean myService() {
+		public HttpInvokerProxyFactoryBean myService() {
 			String name = env.getProperty("testbean.name");
 			HttpInvokerProxyFactoryBean factory = new HttpInvokerProxyFactoryBean();
 			factory.setServiceUrl("/svc/" + name);

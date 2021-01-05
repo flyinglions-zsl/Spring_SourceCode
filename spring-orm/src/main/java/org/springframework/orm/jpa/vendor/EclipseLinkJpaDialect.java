@@ -18,7 +18,6 @@ package org.springframework.orm.jpa.vendor;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 
@@ -131,6 +130,10 @@ public class EclipseLinkJpaDialect extends DefaultJpaDialect {
 				this.connection = this.entityManager.unwrap(Connection.class);
 			}
 			return this.connection;
+		}
+
+		@Override
+		public void releaseConnection(Connection con) {
 		}
 	}
 

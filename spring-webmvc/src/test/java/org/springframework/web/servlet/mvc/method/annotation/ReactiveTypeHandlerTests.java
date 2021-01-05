@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.servlet.mvc.method.annotation;
 
 import java.io.IOException;
@@ -26,13 +25,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.core.SingleEmitter;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.MonoProcessor;
+import rx.Single;
+import rx.SingleEmitter;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ReactiveAdapterRegistry;
@@ -41,6 +41,8 @@ import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.server.ServletServerHttpResponse;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.accept.ContentNegotiationManagerFactoryBean;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -50,12 +52,13 @@ import org.springframework.web.context.request.async.StandardServletAsyncWebRequ
 import org.springframework.web.context.request.async.WebAsyncUtils;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static junit.framework.TestCase.assertNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.springframework.core.ResolvableType.forClass;
-import static org.springframework.web.testfixture.method.ResolvableMethod.on;
+import static org.springframework.web.method.ResolvableMethod.on;
 
 /**
  * Unit tests for {@link ReactiveTypeHandler}.
@@ -72,7 +75,7 @@ public class ReactiveTypeHandlerTests {
 	private NativeWebRequest webRequest;
 
 
-	@BeforeEach
+	@Before
 	public void setup() throws Exception {
 		ContentNegotiationManagerFactoryBean factoryBean = new ContentNegotiationManagerFactoryBean();
 		factoryBean.afterPropertiesSet();
@@ -95,45 +98,44 @@ public class ReactiveTypeHandlerTests {
 
 	@Test
 	public void supportsType() throws Exception {
-		assertThat(this.handler.isReactiveType(Mono.class)).isTrue();
-		assertThat(this.handler.isReactiveType(Single.class)).isTrue();
+		assertTrue(this.handler.isReactiveType(Mono.class));
+		assertTrue(this.handler.isReactiveType(Single.class));
+		assertTrue(this.handler.isReactiveType(io.reactivex.Single.class));
 	}
 
 	@Test
 	public void doesNotSupportType() throws Exception {
-		assertThat(this.handler.isReactiveType(String.class)).isFalse();
+		assertFalse(this.handler.isReactiveType(String.class));
 	}
 
 	@Test
 	public void deferredResultSubscriberWithOneValue() throws Exception {
 
 		// Mono
-		Sinks.One<String> sink = Sinks.one();
-		testDeferredResultSubscriber(
-				sink.asMono(), Mono.class, forClass(String.class),
-				() -> sink.emitValue("foo", Sinks.EmitFailureHandler.FAIL_FAST),
-				"foo");
+		MonoProcessor<String> mono = MonoProcessor.create();
+		testDeferredResultSubscriber(mono, Mono.class, forClass(String.class), () -> mono.onNext("foo"), "foo");
 
 		// Mono empty
-		Sinks.One<String> emptySink = Sinks.one();
-		testDeferredResultSubscriber(
-				emptySink.asMono(), Mono.class, forClass(String.class),
-				() -> emptySink.emitEmpty(Sinks.EmitFailureHandler.FAIL_FAST),
-				null);
+		MonoProcessor<String> monoEmpty = MonoProcessor.create();
+		testDeferredResultSubscriber(monoEmpty, Mono.class, forClass(String.class), monoEmpty::onComplete, null);
 
-		// RxJava Single
-		AtomicReference<SingleEmitter<String>> ref2 = new AtomicReference<>();
-		Single<String> single2 = Single.create(ref2::set);
-		testDeferredResultSubscriber(single2, Single.class, forClass(String.class),
+		// RxJava 1 Single
+		AtomicReference<SingleEmitter<String>> ref = new AtomicReference<>();
+		Single<String> single = Single.fromEmitter(ref::set);
+		testDeferredResultSubscriber(single, Single.class, forClass(String.class),
+				() -> ref.get().onSuccess("foo"), "foo");
+
+		// RxJava 2 Single
+		AtomicReference<io.reactivex.SingleEmitter<String>> ref2 = new AtomicReference<>();
+		io.reactivex.Single<String> single2 = io.reactivex.Single.create(ref2::set);
+		testDeferredResultSubscriber(single2, io.reactivex.Single.class, forClass(String.class),
 				() -> ref2.get().onSuccess("foo"), "foo");
 	}
 
 	@Test
 	public void deferredResultSubscriberWithNoValues() throws Exception {
-		Sinks.One<String> sink = Sinks.one();
-		testDeferredResultSubscriber(sink.asMono(), Mono.class, forClass(String.class),
-				() -> sink.emitEmpty(Sinks.EmitFailureHandler.FAIL_FAST),
-				null);
+		MonoProcessor<String> monoEmpty = MonoProcessor.create();
+		testDeferredResultSubscriber(monoEmpty, Mono.class, forClass(String.class), monoEmpty::onComplete, null);
 	}
 
 	@Test
@@ -145,11 +147,11 @@ public class ReactiveTypeHandlerTests {
 		Bar bar1 = new Bar("foo");
 		Bar bar2 = new Bar("bar");
 
-		Sinks.Many<Bar> sink = Sinks.many().unicast().onBackpressureBuffer();
-		testDeferredResultSubscriber(sink.asFlux(), Flux.class, forClass(Bar.class), () -> {
-			sink.tryEmitNext(bar1);
-			sink.tryEmitNext(bar2);
-			sink.tryEmitComplete();
+		EmitterProcessor<Bar> emitter = EmitterProcessor.create();
+		testDeferredResultSubscriber(emitter, Flux.class, forClass(Bar.class), () -> {
+			emitter.onNext(bar1);
+			emitter.onNext(bar2);
+			emitter.onComplete();
 		}, Arrays.asList(bar1, bar2));
 	}
 
@@ -159,14 +161,18 @@ public class ReactiveTypeHandlerTests {
 		IllegalStateException ex = new IllegalStateException();
 
 		// Mono
-		Sinks.One<String> sink = Sinks.one();
-		testDeferredResultSubscriber(sink.asMono(), Mono.class, forClass(String.class),
-				() -> sink.emitError(ex, Sinks.EmitFailureHandler.FAIL_FAST), ex);
+		MonoProcessor<String> mono = MonoProcessor.create();
+		testDeferredResultSubscriber(mono, Mono.class, forClass(String.class), () -> mono.onError(ex), ex);
 
-		// RxJava Single
-		AtomicReference<SingleEmitter<String>> ref2 = new AtomicReference<>();
-		Single<String> single2 = Single.create(ref2::set);
-		testDeferredResultSubscriber(single2, Single.class, forClass(String.class),
+		// RxJava 1 Single
+		AtomicReference<SingleEmitter<String>> ref = new AtomicReference<>();
+		Single<String> single = Single.fromEmitter(ref::set);
+		testDeferredResultSubscriber(single, Single.class, forClass(String.class), () -> ref.get().onError(ex), ex);
+
+		// RxJava 2 Single
+		AtomicReference<io.reactivex.SingleEmitter<String>> ref2 = new AtomicReference<>();
+		io.reactivex.Single<String> single2 = io.reactivex.Single.create(ref2::set);
+		testDeferredResultSubscriber(single2, io.reactivex.Single.class, forClass(String.class),
 				() -> ref2.get().onError(ex), ex);
 	}
 
@@ -186,10 +192,9 @@ public class ReactiveTypeHandlerTests {
 		testSseResponse(false);
 	}
 
-	private void testSseResponse(boolean expectSseEmitter) throws Exception {
+	private void testSseResponse(boolean expectSseEimtter) throws Exception {
 		ResponseBodyEmitter emitter = handleValue(Flux.empty(), Flux.class, forClass(String.class));
-		Object actual = emitter instanceof SseEmitter;
-		assertThat(actual).isEqualTo(expectSseEmitter);
+		assertEquals(expectSseEimtter, emitter instanceof SseEmitter);
 		resetRequest();
 	}
 
@@ -197,18 +202,18 @@ public class ReactiveTypeHandlerTests {
 	public void writeServerSentEvents() throws Exception {
 
 		this.servletRequest.addHeader("Accept", "text/event-stream");
-		Sinks.Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
-		SseEmitter sseEmitter = (SseEmitter) handleValue(sink.asFlux(), Flux.class, forClass(String.class));
+		EmitterProcessor<String> processor = EmitterProcessor.create();
+		SseEmitter sseEmitter = (SseEmitter) handleValue(processor, Flux.class, forClass(String.class));
 
 		EmitterHandler emitterHandler = new EmitterHandler();
 		sseEmitter.initialize(emitterHandler);
 
-		sink.tryEmitNext("foo");
-		sink.tryEmitNext("bar");
-		sink.tryEmitNext("baz");
-		sink.tryEmitComplete();
+		processor.onNext("foo");
+		processor.onNext("bar");
+		processor.onNext("baz");
+		processor.onComplete();
 
-		assertThat(emitterHandler.getValuesAsText()).isEqualTo("data:foo\n\ndata:bar\n\ndata:baz\n\n");
+		assertEquals("data:foo\n\ndata:bar\n\ndata:baz\n\n", emitterHandler.getValuesAsText());
 	}
 
 	@Test
@@ -216,27 +221,28 @@ public class ReactiveTypeHandlerTests {
 
 		ResolvableType type = ResolvableType.forClassWithGenerics(ServerSentEvent.class, String.class);
 
-		Sinks.Many<ServerSentEvent<?>> sink = Sinks.many().unicast().onBackpressureBuffer();
-		SseEmitter sseEmitter = (SseEmitter) handleValue(sink.asFlux(), Flux.class, type);
+		EmitterProcessor<ServerSentEvent<?>> processor = EmitterProcessor.create();
+		SseEmitter sseEmitter = (SseEmitter) handleValue(processor, Flux.class, type);
 
 		EmitterHandler emitterHandler = new EmitterHandler();
 		sseEmitter.initialize(emitterHandler);
 
-		sink.tryEmitNext(ServerSentEvent.builder("foo").id("1").build());
-		sink.tryEmitNext(ServerSentEvent.builder("bar").id("2").build());
-		sink.tryEmitNext(ServerSentEvent.builder("baz").id("3").build());
-		sink.tryEmitComplete();
+		processor.onNext(ServerSentEvent.builder("foo").id("1").build());
+		processor.onNext(ServerSentEvent.builder("bar").id("2").build());
+		processor.onNext(ServerSentEvent.builder("baz").id("3").build());
+		processor.onComplete();
 
-		assertThat(emitterHandler.getValuesAsText()).isEqualTo("id:1\ndata:foo\n\nid:2\ndata:bar\n\nid:3\ndata:baz\n\n");
+		assertEquals("id:1\ndata:foo\n\nid:2\ndata:bar\n\nid:3\ndata:baz\n\n",
+				emitterHandler.getValuesAsText());
 	}
 
 	@Test
 	public void writeStreamJson() throws Exception {
 
-		this.servletRequest.addHeader("Accept", "application/x-ndjson");
+		this.servletRequest.addHeader("Accept", "application/stream+json");
 
-		Sinks.Many<Bar> sink = Sinks.many().unicast().onBackpressureBuffer();
-		ResponseBodyEmitter emitter = handleValue(sink.asFlux(), Flux.class, forClass(Bar.class));
+		EmitterProcessor<Bar> processor = EmitterProcessor.create();
+		ResponseBodyEmitter emitter = handleValue(processor, Flux.class, forClass(Bar.class));
 
 		EmitterHandler emitterHandler = new EmitterHandler();
 		emitter.initialize(emitterHandler);
@@ -247,29 +253,29 @@ public class ReactiveTypeHandlerTests {
 		Bar bar1 = new Bar("foo");
 		Bar bar2 = new Bar("bar");
 
-		sink.tryEmitNext(bar1);
-		sink.tryEmitNext(bar2);
-		sink.tryEmitComplete();
+		processor.onNext(bar1);
+		processor.onNext(bar2);
+		processor.onComplete();
 
-		assertThat(message.getHeaders().getContentType().toString()).isEqualTo("application/x-ndjson");
-		assertThat(emitterHandler.getValues()).isEqualTo(Arrays.asList(bar1, "\n", bar2, "\n"));
+		assertEquals("application/stream+json", message.getHeaders().getContentType().toString());
+		assertEquals(Arrays.asList(bar1, "\n", bar2, "\n"), emitterHandler.getValues());
 	}
 
 	@Test
 	public void writeText() throws Exception {
 
-		Sinks.Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
-		ResponseBodyEmitter emitter = handleValue(sink.asFlux(), Flux.class, forClass(String.class));
+		EmitterProcessor<String> processor = EmitterProcessor.create();
+		ResponseBodyEmitter emitter = handleValue(processor, Flux.class, forClass(String.class));
 
 		EmitterHandler emitterHandler = new EmitterHandler();
 		emitter.initialize(emitterHandler);
 
-		sink.tryEmitNext("The quick");
-		sink.tryEmitNext(" brown fox jumps over ");
-		sink.tryEmitNext("the lazy dog");
-		sink.tryEmitComplete();
+		processor.onNext("The quick");
+		processor.onNext(" brown fox jumps over ");
+		processor.onNext("the lazy dog");
+		processor.onComplete();
 
-		assertThat(emitterHandler.getValuesAsText()).isEqualTo("The quick brown fox jumps over the lazy dog");
+		assertEquals("The quick brown fox jumps over the lazy dog", emitterHandler.getValuesAsText());
 	}
 
 	@Test
@@ -299,7 +305,7 @@ public class ReactiveTypeHandlerTests {
 		ServletServerHttpResponse message = new ServletServerHttpResponse(this.servletResponse);
 		ResponseBodyEmitter emitter = handleValue(Flux.empty(), Flux.class, forClass(String.class));
 		emitter.extendResponse(message);
-		assertThat(message.getHeaders().getContentType().toString()).isEqualTo(expected);
+		assertEquals(expected, message.getHeaders().getContentType().toString());
 		resetRequest();
 	}
 
@@ -308,15 +314,15 @@ public class ReactiveTypeHandlerTests {
 			ResolvableType elementType, Runnable produceTask, Object expected) throws Exception {
 
 		ResponseBodyEmitter emitter = handleValue(returnValue, asyncType, elementType);
-		assertThat(emitter).isNull();
+		assertNull(emitter);
 
-		assertThat(this.servletRequest.isAsyncStarted()).isTrue();
-		assertThat(WebAsyncUtils.getAsyncManager(this.webRequest).hasConcurrentResult()).isFalse();
+		assertTrue(this.servletRequest.isAsyncStarted());
+		assertFalse(WebAsyncUtils.getAsyncManager(this.webRequest).hasConcurrentResult());
 
 		produceTask.run();
 
-		assertThat(WebAsyncUtils.getAsyncManager(this.webRequest).hasConcurrentResult()).isTrue();
-		assertThat(WebAsyncUtils.getAsyncManager(this.webRequest).getConcurrentResult()).isEqualTo(expected);
+		assertTrue(WebAsyncUtils.getAsyncManager(this.webRequest).hasConcurrentResult());
+		assertEquals(expected, WebAsyncUtils.getAsyncManager(this.webRequest).getConcurrentResult());
 
 		resetRequest();
 	}
@@ -338,6 +344,8 @@ public class ReactiveTypeHandlerTests {
 		Mono<String> handleMono() { return null; }
 
 		Single<String> handleSingle() { return null; }
+
+		io.reactivex.Single<String> handleSingleRxJava2() { return null; }
 
 		Flux<Bar> handleFlux() { return null; }
 
@@ -394,10 +402,8 @@ public class ReactiveTypeHandlerTests {
 			this.value = value;
 		}
 
-		@SuppressWarnings("unused")
 		public String getValue() {
 			return this.value;
 		}
 	}
-
 }

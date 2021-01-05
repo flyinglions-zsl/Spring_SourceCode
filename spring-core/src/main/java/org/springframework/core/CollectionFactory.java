@@ -53,7 +53,7 @@ import org.springframework.util.ReflectionUtils;
  * @author Sam Brannen
  * @since 1.1.1
  */
-public final class CollectionFactory {
+public abstract class CollectionFactory {
 
 	private static final Set<Class<?>> approximableCollectionTypes = new HashSet<>();
 
@@ -82,10 +82,6 @@ public final class CollectionFactory {
 		approximableMapTypes.add(LinkedHashMap.class);
 		approximableMapTypes.add(TreeMap.class);
 		approximableMapTypes.add(EnumMap.class);
-	}
-
-
-	private CollectionFactory() {
 	}
 
 
@@ -329,18 +325,14 @@ public final class CollectionFactory {
 	}
 
 	/**
-	 * Create a variant of {@link java.util.Properties} that automatically adapts
-	 * non-String values to String representations in {@link Properties#getProperty}.
-	 * <p>In addition, the returned {@code Properties} instance sorts properties
-	 * alphanumerically based on their keys.
+	 * Create a variant of {@code java.util.Properties} that automatically adapts
+	 * non-String values to String representations on {@link Properties#getProperty}.
 	 * @return a new {@code Properties} instance
 	 * @since 4.3.4
-	 * @see #createSortedProperties(boolean)
-	 * @see #createSortedProperties(Properties, boolean)
 	 */
 	@SuppressWarnings("serial")
 	public static Properties createStringAdaptingProperties() {
-		return new SortedProperties(false) {
+		return new Properties() {
 			@Override
 			@Nullable
 			public String getProperty(String key) {
@@ -348,47 +340,6 @@ public final class CollectionFactory {
 				return (value != null ? value.toString() : null);
 			}
 		};
-	}
-
-	/**
-	 * Create a variant of {@link java.util.Properties} that sorts properties
-	 * alphanumerically based on their keys.
-	 * <p>This can be useful when storing the {@link Properties} instance in a
-	 * properties file, since it allows such files to be generated in a repeatable
-	 * manner with consistent ordering of properties. Comments in generated
-	 * properties files can also be optionally omitted.
-	 * @param omitComments {@code true} if comments should be omitted when
-	 * storing properties in a file
-	 * @return a new {@code Properties} instance
-	 * @since 5.2
-	 * @see #createStringAdaptingProperties()
-	 * @see #createSortedProperties(Properties, boolean)
-	 */
-	public static Properties createSortedProperties(boolean omitComments) {
-		return new SortedProperties(omitComments);
-	}
-
-	/**
-	 * Create a variant of {@link java.util.Properties} that sorts properties
-	 * alphanumerically based on their keys.
-	 * <p>This can be useful when storing the {@code Properties} instance in a
-	 * properties file, since it allows such files to be generated in a repeatable
-	 * manner with consistent ordering of properties. Comments in generated
-	 * properties files can also be optionally omitted.
-	 * <p>The returned {@code Properties} instance will be populated with
-	 * properties from the supplied {@code properties} object, but default
-	 * properties from the supplied {@code properties} object will not be copied.
-	 * @param properties the {@code Properties} object from which to copy the
-	 * initial properties
-	 * @param omitComments {@code true} if comments should be omitted when
-	 * storing properties in a file
-	 * @return a new {@code Properties} instance
-	 * @since 5.2
-	 * @see #createStringAdaptingProperties()
-	 * @see #createSortedProperties(boolean)
-	 */
-	public static Properties createSortedProperties(Properties properties, boolean omitComments) {
-		return new SortedProperties(properties, omitComments);
 	}
 
 	/**

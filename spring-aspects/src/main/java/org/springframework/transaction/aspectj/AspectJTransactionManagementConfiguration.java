@@ -27,15 +27,12 @@ import org.springframework.transaction.config.TransactionManagementConfigUtils;
 
 /**
  * {@code @Configuration} class that registers the Spring infrastructure beans necessary
- * to enable AspectJ-based annotation-driven transaction management for Spring's own
- * {@link org.springframework.transaction.annotation.Transactional} annotation.
+ * to enable AspectJ-based annotation-driven transaction management.
  *
  * @author Chris Beams
- * @author Juergen Hoeller
  * @since 3.1
  * @see EnableTransactionManagement
  * @see TransactionManagementConfigurationSelector
- * @see AspectJJtaTransactionManagementConfiguration
  */
 @Configuration
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)

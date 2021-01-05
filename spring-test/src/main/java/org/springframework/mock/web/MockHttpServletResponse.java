@@ -23,12 +23,9 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
-import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,7 +34,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
@@ -58,9 +54,6 @@ import org.springframework.web.util.WebUtils;
  * @author Juergen Hoeller
  * @author Rod Johnson
  * @author Brian Clozel
- * @author Vedran Pavic
- * @author Sebastien Deleuze
- * @author Sam Brannen
  * @since 1.0.2
  */
 public class MockHttpServletResponse implements HttpServletResponse {
@@ -169,15 +162,14 @@ public class MockHttpServletResponse implements HttpServletResponse {
 	public void setCharacterEncoding(String characterEncoding) {
 		this.characterEncoding = characterEncoding;
 		this.charset = true;
-		updateContentTypePropertyAndHeader();
+		updateContentTypeHeader();
 	}
 
-	private void updateContentTypePropertyAndHeader() {
+	private void updateContentTypeHeader() {
 		if (this.contentType != null) {
 			String value = this.contentType;
 			if (this.charset && !this.contentType.toLowerCase().contains(CHARSET_PREFIX)) {
 				value = value + ';' + CHARSET_PREFIX + this.characterEncoding;
-				this.contentType = value;
 			}
 			doAddHeaderValue(HttpHeaders.CONTENT_TYPE, value, true);
 		}
@@ -211,35 +203,9 @@ public class MockHttpServletResponse implements HttpServletResponse {
 		return this.content.toByteArray();
 	}
 
-	/**
-	 * Get the content of the response body as a {@code String}, using the charset
-	 * specified for the response by the application, either through
-	 * {@link HttpServletResponse} methods or through a charset parameter on the
-	 * {@code Content-Type}.
-	 * @return the content as a {@code String}
-	 * @throws UnsupportedEncodingException if the character encoding is not supported
-	 * @see #getContentAsString(Charset)
-	 */
 	public String getContentAsString() throws UnsupportedEncodingException {
 		return (this.characterEncoding != null ?
 				this.content.toString(this.characterEncoding) : this.content.toString());
-	}
-
-	/**
-	 * Get the content of the response body as a {@code String}, using the provided
-	 * {@code fallbackCharset} if no charset has been explicitly defined and otherwise
-	 * using the charset specified for the response by the application, either
-	 * through {@link HttpServletResponse} methods or through a charset parameter on the
-	 * {@code Content-Type}.
-	 * @return the content as a {@code String}
-	 * @throws UnsupportedEncodingException if the character encoding is not supported
-	 * @since 5.2
-	 * @see #getContentAsString()
-	 */
-	public String getContentAsString(Charset fallbackCharset) throws UnsupportedEncodingException {
-		return (isCharset() && this.characterEncoding != null ?
-				this.content.toString(this.characterEncoding) :
-				this.content.toString(fallbackCharset.name()));
 	}
 
 	@Override
@@ -281,7 +247,7 @@ public class MockHttpServletResponse implements HttpServletResponse {
 					this.charset = true;
 				}
 			}
-			updateContentTypePropertyAndHeader();
+			updateContentTypeHeader();
 		}
 	}
 
@@ -378,15 +344,9 @@ public class MockHttpServletResponse implements HttpServletResponse {
 		if (maxAge >= 0) {
 			buf.append("; Max-Age=").append(maxAge);
 			buf.append("; Expires=");
-			ZonedDateTime expires = (cookie instanceof MockCookie ? ((MockCookie) cookie).getExpires() : null);
-			if (expires != null) {
-				buf.append(expires.format(DateTimeFormatter.RFC_1123_DATE_TIME));
-			}
-			else {
-				HttpHeaders headers = new HttpHeaders();
-				headers.setExpires(maxAge > 0 ? System.currentTimeMillis() + 1000L * maxAge : 0);
-				buf.append(headers.getFirst(HttpHeaders.EXPIRES));
-			}
+			HttpHeaders headers = new HttpHeaders();
+			headers.setExpires(maxAge > 0 ? System.currentTimeMillis() + 1000L * maxAge : 0);
+			buf.append(headers.getFirst(HttpHeaders.EXPIRES));
 		}
 
 		if (cookie.getSecure()) {
@@ -394,12 +354,6 @@ public class MockHttpServletResponse implements HttpServletResponse {
 		}
 		if (cookie.isHttpOnly()) {
 			buf.append("; HttpOnly");
-		}
-		if (cookie instanceof MockCookie) {
-			MockCookie mockCookie = (MockCookie) cookie;
-			if (StringUtils.hasText(mockCookie.getSameSite())) {
-				buf.append("; SameSite=").append(mockCookie.getSameSite());
-			}
 		}
 		return buf.toString();
 	}
@@ -421,7 +375,7 @@ public class MockHttpServletResponse implements HttpServletResponse {
 
 	@Override
 	public boolean containsHeader(String name) {
-		return (this.headers.get(name) != null);
+		return (HeaderValueHolder.getByName(this.headers, name) != null);
 	}
 
 	/**
@@ -446,7 +400,7 @@ public class MockHttpServletResponse implements HttpServletResponse {
 	@Override
 	@Nullable
 	public String getHeader(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		return (header != null ? header.getStringValue() : null);
 	}
 
@@ -460,7 +414,7 @@ public class MockHttpServletResponse implements HttpServletResponse {
 	 */
 	@Override
 	public List<String> getHeaders(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		if (header != null) {
 			return header.getStringValues();
 		}
@@ -477,7 +431,7 @@ public class MockHttpServletResponse implements HttpServletResponse {
 	 */
 	@Nullable
 	public Object getHeaderValue(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		return (header != null ? header.getValue() : null);
 	}
 
@@ -487,7 +441,7 @@ public class MockHttpServletResponse implements HttpServletResponse {
 	 * @return the associated header values, or an empty List if none
 	 */
 	public List<Object> getHeaderValues(String name) {
-		HeaderValueHolder header = this.headers.get(name);
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		if (header != null) {
 			return header.getValues();
 		}
@@ -614,22 +568,20 @@ public class MockHttpServletResponse implements HttpServletResponse {
 	}
 
 	private void setHeaderValue(String name, Object value) {
-		boolean replaceHeader = true;
-		if (setSpecialHeader(name, value, replaceHeader)) {
+		if (setSpecialHeader(name, value)) {
 			return;
 		}
-		doAddHeaderValue(name, value, replaceHeader);
+		doAddHeaderValue(name, value, true);
 	}
 
 	private void addHeaderValue(String name, Object value) {
-		boolean replaceHeader = false;
-		if (setSpecialHeader(name, value, replaceHeader)) {
+		if (setSpecialHeader(name, value)) {
 			return;
 		}
-		doAddHeaderValue(name, value, replaceHeader);
+		doAddHeaderValue(name, value, false);
 	}
 
-	private boolean setSpecialHeader(String name, Object value, boolean replaceHeader) {
+	private boolean setSpecialHeader(String name, Object value) {
 		if (HttpHeaders.CONTENT_TYPE.equalsIgnoreCase(name)) {
 			setContentType(value.toString());
 			return true;
@@ -640,25 +592,10 @@ public class MockHttpServletResponse implements HttpServletResponse {
 			return true;
 		}
 		else if (HttpHeaders.CONTENT_LANGUAGE.equalsIgnoreCase(name)) {
-			String contentLanguages = value.toString();
 			HttpHeaders headers = new HttpHeaders();
-			headers.add(HttpHeaders.CONTENT_LANGUAGE, contentLanguages);
+			headers.add(HttpHeaders.CONTENT_LANGUAGE, value.toString());
 			Locale language = headers.getContentLanguage();
 			setLocale(language != null ? language : Locale.getDefault());
-			// Since setLocale() sets the Content-Language header to the given
-			// single Locale, we have to explicitly set the Content-Language header
-			// to the user-provided value.
-			doAddHeaderValue(HttpHeaders.CONTENT_LANGUAGE, contentLanguages, true);
-			return true;
-		}
-		else if (HttpHeaders.SET_COOKIE.equalsIgnoreCase(name)) {
-			MockCookie cookie = MockCookie.parse(value.toString());
-			if (replaceHeader) {
-				setCookie(cookie);
-			}
-			else {
-				addCookie(cookie);
-			}
 			return true;
 		}
 		else {
@@ -667,28 +604,18 @@ public class MockHttpServletResponse implements HttpServletResponse {
 	}
 
 	private void doAddHeaderValue(String name, Object value, boolean replace) {
+		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
 		Assert.notNull(value, "Header value must not be null");
-		HeaderValueHolder header = this.headers.computeIfAbsent(name, key -> new HeaderValueHolder());
+		if (header == null) {
+			header = new HeaderValueHolder();
+			this.headers.put(name, header);
+		}
 		if (replace) {
 			header.setValue(value);
 		}
 		else {
 			header.addValue(value);
 		}
-	}
-
-	/**
-	 * Set the {@code Set-Cookie} header to the supplied {@link Cookie},
-	 * overwriting any previous cookies.
-	 * @param cookie the {@code Cookie} to set
-	 * @since 5.1.10
-	 * @see #addCookie(Cookie)
-	 */
-	private void setCookie(Cookie cookie) {
-		Assert.notNull(cookie, "Cookie must not be null");
-		this.cookies.clear();
-		this.cookies.add(cookie);
-		doAddHeaderValue(HttpHeaders.SET_COOKIE, getCookieHeader(cookie), true);
 	}
 
 	@Override
@@ -815,13 +742,6 @@ public class MockHttpServletResponse implements HttpServletResponse {
 		@Override
 		public void flush() {
 			super.flush();
-			setCommitted(true);
-		}
-
-		@Override
-		public void close() {
-			super.flush();
-			super.close();
 			setCommitted(true);
 		}
 	}

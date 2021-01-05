@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,8 +44,7 @@ import org.springframework.util.Assert;
  * @author Stephane Nicoll
  * @since 4.0
  * @see HttpAsyncClient
- * @deprecated as of Spring 5.0, in favor of
- * {@link org.springframework.http.client.reactive.HttpComponentsClientHttpConnector}
+ * @deprecated as of Spring 5.0, with no direct replacement
  */
 @Deprecated
 public class HttpComponentsAsyncClientHttpRequestFactory extends HttpComponentsClientHttpRequestFactory
@@ -160,9 +159,8 @@ public class HttpComponentsAsyncClientHttpRequestFactory extends HttpComponentsC
 	}
 
 	private HttpAsyncClient startAsyncClient() {
-		HttpAsyncClient client = getAsyncClient();
+        HttpAsyncClient client = getAsyncClient();
 		if (client instanceof CloseableHttpAsyncClient) {
-			@SuppressWarnings("resource")
 			CloseableHttpAsyncClient closeableAsyncClient = (CloseableHttpAsyncClient) client;
 			if (!closeableAsyncClient.isRunning()) {
 				closeableAsyncClient.start();
@@ -177,10 +175,10 @@ public class HttpComponentsAsyncClientHttpRequestFactory extends HttpComponentsC
 
 		HttpUriRequest httpRequest = createHttpUriRequest(httpMethod, uri);
 		postProcessHttpRequest(httpRequest);
-		HttpContext context = createHttpContext(httpMethod, uri);
-		if (context == null) {
-			context = HttpClientContext.create();
-		}
+        HttpContext context = createHttpContext(httpMethod, uri);
+        if (context == null) {
+            context = HttpClientContext.create();
+        }
 
 		// Request configuration not set in the context
 		if (context.getAttribute(HttpClientContext.REQUEST_CONFIG) == null) {

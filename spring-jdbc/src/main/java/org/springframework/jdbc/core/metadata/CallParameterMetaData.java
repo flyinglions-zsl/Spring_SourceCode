@@ -30,8 +30,6 @@ import org.springframework.lang.Nullable;
  */
 public class CallParameterMetaData {
 
-	private final boolean function;
-
 	@Nullable
 	private final String parameterName;
 
@@ -46,23 +44,11 @@ public class CallParameterMetaData {
 
 
 	/**
-	 * Constructor taking all the properties except the function marker.
+	 * Constructor taking all the properties.
 	 */
-	@Deprecated
 	public CallParameterMetaData(
 			@Nullable String columnName, int columnType, int sqlType, @Nullable String typeName, boolean nullable) {
 
-		this(false, columnName, columnType, sqlType, typeName, nullable);
-	}
-
-	/**
-	 * Constructor taking all the properties including the function marker.
-	 * @since 5.2.9
-	 */
-	public CallParameterMetaData(boolean function, @Nullable String columnName, int columnType,
-			int sqlType, @Nullable String typeName, boolean nullable) {
-
-		this.function = function;
 		this.parameterName = columnName;
 		this.parameterType = columnType;
 		this.sqlType = sqlType;
@@ -70,14 +56,6 @@ public class CallParameterMetaData {
 		this.nullable = nullable;
 	}
 
-
-	/**
-	 * Return whether this parameter is declared in a function.
-	 * @since 5.2.9
-	 */
-	public boolean isFunction() {
-		return this.function;
-	}
 
 	/**
 	 * Return the parameter name.
@@ -97,14 +75,12 @@ public class CallParameterMetaData {
 	/**
 	 * Determine whether the declared parameter qualifies as a 'return' parameter
 	 * for our purposes: type {@link DatabaseMetaData#procedureColumnReturn} or
-	 * {@link DatabaseMetaData#procedureColumnResult}, or in case of a function,
-	 * {@link DatabaseMetaData#functionReturn}.
+	 * {@link DatabaseMetaData#procedureColumnResult}.
 	 * @since 4.3.15
 	 */
 	public boolean isReturnParameter() {
-		return (this.function ? this.parameterType == DatabaseMetaData.functionReturn :
-				(this.parameterType == DatabaseMetaData.procedureColumnReturn ||
-						this.parameterType == DatabaseMetaData.procedureColumnResult));
+		return (this.parameterType == DatabaseMetaData.procedureColumnReturn ||
+				this.parameterType == DatabaseMetaData.procedureColumnResult);
 	}
 
 	/**

@@ -21,7 +21,7 @@ import org.springframework.lang.Nullable;
 /**
  * Normal superclass when we can't distinguish anything more specific
  * than "something went wrong with the underlying resource": for example,
- * an SQLException from JDBC we can't pinpoint more precisely.
+ * a SQLException from JDBC we can't pinpoint more precisely.
  *
  * @author Rod Johnson
  */

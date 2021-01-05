@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import java.util.List;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
@@ -35,7 +34,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.junit4.aci.annotation.InitializerConfiguredViaMetaAnnotationTests.ComposedContextConfiguration;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Integration test that demonstrates how to register one or more {@code @Configuration}
@@ -67,9 +66,9 @@ public class InitializerConfiguredViaMetaAnnotationTests {
 
 	@Test
 	public void beansFromInitializerAndComposedAnnotation() {
-		assertThat(strings.size()).isEqualTo(2);
-		assertThat(foo).isEqualTo("foo");
-		assertThat(bar).isEqualTo("bar");
+		assertEquals(2, strings.size());
+		assertEquals("foo", foo);
+		assertEquals("bar", bar);
 	}
 
 

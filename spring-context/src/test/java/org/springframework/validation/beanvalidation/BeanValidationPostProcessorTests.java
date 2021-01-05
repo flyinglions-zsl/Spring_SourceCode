@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,15 @@ import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.AsyncAnnotationAdvisor;
+import org.springframework.tests.sample.beans.TestBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.Assert.*;
 
 /**
  * @author Juergen Hoeller
@@ -45,10 +41,14 @@ public class BeanValidationPostProcessorTests {
 		ac.registerBeanDefinition("bvpp", new RootBeanDefinition(BeanValidationPostProcessor.class));
 		ac.registerBeanDefinition("capp", new RootBeanDefinition(CommonAnnotationBeanPostProcessor.class));
 		ac.registerBeanDefinition("bean", new RootBeanDefinition(NotNullConstrainedBean.class));
-		assertThatExceptionOfType(BeanCreationException.class)
-			.isThrownBy(ac::refresh)
-			.havingRootCause()
-			.withMessageContainingAll("testBean", "invalid");
+		try {
+			ac.refresh();
+			fail("Should have thrown BeanCreationException");
+		}
+		catch (BeanCreationException ex) {
+			assertTrue(ex.getRootCause().getMessage().contains("testBean"));
+			assertTrue(ex.getRootCause().getMessage().contains("invalid"));
+		}
 		ac.close();
 	}
 
@@ -77,20 +77,6 @@ public class BeanValidationPostProcessorTests {
 	}
 
 	@Test
-	public void testNotNullConstraintAfterInitializationWithProxy() {
-		GenericApplicationContext ac = new GenericApplicationContext();
-		RootBeanDefinition bvpp = new RootBeanDefinition(BeanValidationPostProcessor.class);
-		bvpp.getPropertyValues().add("afterInitialization", true);
-		ac.registerBeanDefinition("bvpp", bvpp);
-		ac.registerBeanDefinition("capp", new RootBeanDefinition(CommonAnnotationBeanPostProcessor.class));
-		ac.registerBeanDefinition("bean", new RootBeanDefinition(AfterInitConstraintBean.class));
-		ac.registerBeanDefinition("autoProxyCreator", new RootBeanDefinition(DefaultAdvisorAutoProxyCreator.class));
-		ac.registerBeanDefinition("asyncAdvisor", new RootBeanDefinition(AsyncAnnotationAdvisor.class));
-		ac.refresh();
-		ac.close();
-	}
-
-	@Test
 	public void testSizeConstraint() {
 		GenericApplicationContext ac = new GenericApplicationContext();
 		ac.registerBeanDefinition("bvpp", new RootBeanDefinition(BeanValidationPostProcessor.class));
@@ -98,10 +84,14 @@ public class BeanValidationPostProcessorTests {
 		bd.getPropertyValues().add("testBean", new TestBean());
 		bd.getPropertyValues().add("stringValue", "s");
 		ac.registerBeanDefinition("bean", bd);
-		assertThatExceptionOfType(BeanCreationException.class)
-			.isThrownBy(() -> ac.refresh())
-			.havingRootCause()
-			.withMessageContainingAll("stringValue", "invalid");
+		try {
+			ac.refresh();
+			fail("Should have thrown BeanCreationException");
+		}
+		catch (BeanCreationException ex) {
+			assertTrue(ex.getRootCause().getMessage().contains("stringValue"));
+			assertTrue(ex.getRootCause().getMessage().contains("invalid"));
+		}
 		ac.close();
 	}
 
@@ -144,7 +134,7 @@ public class BeanValidationPostProcessorTests {
 
 		@PostConstruct
 		public void init() {
-			assertThat(this.testBean).as("Shouldn't be here after constraint checking").isNotNull();
+			assertNotNull("Shouldn't be here after constraint checking", this.testBean);
 		}
 	}
 
@@ -165,10 +155,6 @@ public class BeanValidationPostProcessorTests {
 		@PostConstruct
 		public void init() {
 			this.testBean = new TestBean();
-		}
-
-		@Async
-		void asyncMethod() {
 		}
 	}
 

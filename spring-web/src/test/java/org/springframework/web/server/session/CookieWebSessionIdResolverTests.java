@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,15 @@
  */
 package org.springframework.web.server.session;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.http.ResponseCookie;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Unit tests for {@link CookieWebSessionIdResolver}.
@@ -34,33 +35,15 @@ public class CookieWebSessionIdResolverTests {
 
 
 	@Test
-	public void setSessionId() {
+	public void setSessionId() throws Exception {
 		MockServerHttpRequest request = MockServerHttpRequest.get("https://example.org/path").build();
 		MockServerWebExchange exchange = MockServerWebExchange.from(request);
 		this.resolver.setSessionId(exchange, "123");
 
 		MultiValueMap<String, ResponseCookie> cookies = exchange.getResponse().getCookies();
-		assertThat(cookies.size()).isEqualTo(1);
+		assertEquals(1, cookies.size());
 		ResponseCookie cookie = cookies.getFirst(this.resolver.getCookieName());
-		assertThat(cookie).isNotNull();
-		assertThat(cookie.toString()).isEqualTo("SESSION=123; Path=/; Secure; HttpOnly; SameSite=Lax");
+		assertNotNull(cookie);
+		assertEquals("SESSION=123; Path=/; Secure; HttpOnly", cookie.toString());
 	}
-
-	@Test
-	public void cookieInitializer() {
-		this.resolver.addCookieInitializer(builder -> builder.domain("example.org"));
-		this.resolver.addCookieInitializer(builder -> builder.sameSite("Strict"));
-		this.resolver.addCookieInitializer(builder -> builder.secure(false));
-
-		MockServerHttpRequest request = MockServerHttpRequest.get("https://example.org/path").build();
-		MockServerWebExchange exchange = MockServerWebExchange.from(request);
-		this.resolver.setSessionId(exchange, "123");
-
-		MultiValueMap<String, ResponseCookie> cookies = exchange.getResponse().getCookies();
-		assertThat(cookies.size()).isEqualTo(1);
-		ResponseCookie cookie = cookies.getFirst(this.resolver.getCookieName());
-		assertThat(cookie).isNotNull();
-		assertThat(cookie.toString()).isEqualTo("SESSION=123; Path=/; Domain=example.org; HttpOnly; SameSite=Strict");
-	}
-
 }

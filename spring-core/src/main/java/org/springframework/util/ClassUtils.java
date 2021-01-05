@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringJoiner;
 
 import org.springframework.lang.Nullable;
 
@@ -56,31 +55,28 @@ import org.springframework.lang.Nullable;
  */
 public abstract class ClassUtils {
 
-	/** Suffix for array class names: {@code "[]"}. */
+	/** Suffix for array class names: "[]" */
 	public static final String ARRAY_SUFFIX = "[]";
 
-	/** Prefix for internal array class names: {@code "["}. */
+	/** Prefix for internal array class names: "[" */
 	private static final String INTERNAL_ARRAY_PREFIX = "[";
 
-	/** Prefix for internal non-primitive array class names: {@code "[L"}. */
+	/** Prefix for internal non-primitive array class names: "[L" */
 	private static final String NON_PRIMITIVE_ARRAY_PREFIX = "[L";
 
-	/** A reusable empty class array constant. */
-	private static final Class<?>[] EMPTY_CLASS_ARRAY = {};
-
-	/** The package separator character: {@code '.'}. */
+	/** The package separator character: '.' */
 	private static final char PACKAGE_SEPARATOR = '.';
 
-	/** The path separator character: {@code '/'}. */
+	/** The path separator character: '/' */
 	private static final char PATH_SEPARATOR = '/';
 
-	/** The inner class separator character: {@code '$'}. */
+	/** The inner class separator character: '$' */
 	private static final char INNER_CLASS_SEPARATOR = '$';
 
-	/** The CGLIB class separator: {@code "$$"}. */
+	/** The CGLIB class separator: "$$" */
 	public static final String CGLIB_CLASS_SEPARATOR = "$$";
 
-	/** The ".class" file suffix. */
+	/** The ".class" file suffix */
 	public static final String CLASS_FILE_SUFFIX = ".class";
 
 
@@ -114,11 +110,6 @@ public abstract class ClassUtils {
 	 */
 	private static final Set<Class<?>> javaLanguageInterfaces;
 
-	/**
-	 * Cache for equivalent methods on an interface implemented by the declaring class.
-	 */
-	private static final Map<Method, Method> interfaceMethodCache = new ConcurrentReferenceHashMap<>(256);
-
 
 	static {
 		primitiveWrapperTypeMap.put(Boolean.class, boolean.class);
@@ -129,7 +120,6 @@ public abstract class ClassUtils {
 		primitiveWrapperTypeMap.put(Integer.class, int.class);
 		primitiveWrapperTypeMap.put(Long.class, long.class);
 		primitiveWrapperTypeMap.put(Short.class, short.class);
-		primitiveWrapperTypeMap.put(Void.class, void.class);
 
 		// Map entry iteration is less expensive to initialize than forEach with lambdas
 		for (Map.Entry<Class<?>, Class<?>> entry : primitiveWrapperTypeMap.entrySet()) {
@@ -141,6 +131,7 @@ public abstract class ClassUtils {
 		primitiveTypes.addAll(primitiveWrapperTypeMap.values());
 		Collections.addAll(primitiveTypes, boolean[].class, byte[].class, char[].class,
 				double[].class, float[].class, int[].class, long[].class, short[].class);
+		primitiveTypes.add(void.class);
 		for (Class<?> primitiveType : primitiveTypes) {
 			primitiveTypeNameMap.put(primitiveType.getName(), primitiveType);
 		}
@@ -281,7 +272,7 @@ public abstract class ClassUtils {
 			clToUse = getDefaultClassLoader();
 		}
 		try {
-			return Class.forName(name, false, clToUse);
+			return (clToUse != null ? clToUse.loadClass(name) : Class.forName(name));
 		}
 		catch (ClassNotFoundException ex) {
 			int lastDotIndex = name.lastIndexOf(PACKAGE_SEPARATOR);
@@ -289,7 +280,7 @@ public abstract class ClassUtils {
 				String innerClassName =
 						name.substring(0, lastDotIndex) + INNER_CLASS_SEPARATOR + name.substring(lastDotIndex + 1);
 				try {
-					return Class.forName(innerClassName, false, clToUse);
+					return (clToUse != null ? clToUse.loadClass(innerClassName) : Class.forName(innerClassName));
 				}
 				catch (ClassNotFoundException ex2) {
 					// Swallow - let original exception get through
@@ -311,10 +302,6 @@ public abstract class ClassUtils {
 	 * @return a class instance for the supplied name
 	 * @throws IllegalArgumentException if the class name was not resolvable
 	 * (that is, the class could not be found or the class file could not be loaded)
-	 * @throws IllegalStateException if the corresponding class is resolvable but
-	 * there was a readability mismatch in the inheritance hierarchy of the class
-	 * (typically a missing dependency declaration in a Jigsaw module definition
-	 * for a superclass or interface implemented by the class to be loaded here)
 	 * @see #forName(String, ClassLoader)
 	 */
 	public static Class<?> resolveClassName(String className, @Nullable ClassLoader classLoader)
@@ -323,15 +310,11 @@ public abstract class ClassUtils {
 		try {
 			return forName(className, classLoader);
 		}
-		catch (IllegalAccessError err) {
-			throw new IllegalStateException("Readability mismatch in inheritance hierarchy of class [" +
-					className + "]: " + err.getMessage(), err);
+		catch (ClassNotFoundException ex) {
+			throw new IllegalArgumentException("Could not find class [" + className + "]", ex);
 		}
 		catch (LinkageError err) {
 			throw new IllegalArgumentException("Unresolvable class definition for class [" + className + "]", err);
-		}
-		catch (ClassNotFoundException ex) {
-			throw new IllegalArgumentException("Could not find class [" + className + "]", ex);
 		}
 	}
 
@@ -342,24 +325,15 @@ public abstract class ClassUtils {
 	 * @param className the name of the class to check
 	 * @param classLoader the class loader to use
 	 * (may be {@code null} which indicates the default class loader)
-	 * @return whether the specified class is present (including all of its
-	 * superclasses and interfaces)
-	 * @throws IllegalStateException if the corresponding class is resolvable but
-	 * there was a readability mismatch in the inheritance hierarchy of the class
-	 * (typically a missing dependency declaration in a Jigsaw module definition
-	 * for a superclass or interface implemented by the class to be checked here)
+	 * @return whether the specified class is present
 	 */
 	public static boolean isPresent(String className, @Nullable ClassLoader classLoader) {
 		try {
 			forName(className, classLoader);
 			return true;
 		}
-		catch (IllegalAccessError err) {
-			throw new IllegalStateException("Readability mismatch in inheritance hierarchy of class [" +
-					className + "]: " + err.getMessage(), err);
-		}
 		catch (Throwable ex) {
-			// Typically ClassNotFoundException or NoClassDefFoundError...
+			// Class or one of its dependencies is not present...
 			return false;
 		}
 	}
@@ -462,7 +436,7 @@ public abstract class ClassUtils {
 		Class<?> result = null;
 		// Most class names will be quite long, considering that they
 		// SHOULD sit in a package, so a length check is worthwhile.
-		if (name != null && name.length() <= 7) {
+		if (name != null && name.length() <= 8) {
 			// Could be a primitive - likely.
 			result = primitiveTypeNameMap.get(name);
 		}
@@ -471,8 +445,7 @@ public abstract class ClassUtils {
 
 	/**
 	 * Check if the given class represents a primitive wrapper,
-	 * i.e. Boolean, Byte, Character, Short, Integer, Long, Float, Double, or
-	 * Void.
+	 * i.e. Boolean, Byte, Character, Short, Integer, Long, Float, or Double.
 	 * @param clazz the class to check
 	 * @return whether the given class is a primitive wrapper class
 	 */
@@ -483,12 +456,10 @@ public abstract class ClassUtils {
 
 	/**
 	 * Check if the given class represents a primitive (i.e. boolean, byte,
-	 * char, short, int, long, float, or double), {@code void}, or a wrapper for
-	 * those types (i.e. Boolean, Byte, Character, Short, Integer, Long, Float,
-	 * Double, or Void).
+	 * char, short, int, long, float, or double) or a primitive wrapper
+	 * (i.e. Boolean, Byte, Character, Short, Integer, Long, Float, or Double).
 	 * @param clazz the class to check
-	 * @return {@code true} if the given class represents a primitive, void, or
-	 * a wrapper class
+	 * @return whether the given class is a primitive or primitive wrapper class
 	 */
 	public static boolean isPrimitiveOrWrapper(Class<?> clazz) {
 		Assert.notNull(clazz, "Class must not be null");
@@ -663,11 +634,16 @@ public abstract class ClassUtils {
 		if (CollectionUtils.isEmpty(classes)) {
 			return "[]";
 		}
-		StringJoiner stringJoiner = new StringJoiner(", ", "[", "]");
-		for (Class<?> clazz : classes) {
-			stringJoiner.add(clazz.getName());
+		StringBuilder sb = new StringBuilder("[");
+		for (Iterator<Class<?>> it = classes.iterator(); it.hasNext(); ) {
+			Class<?> clazz = it.next();
+			sb.append(clazz.getName());
+			if (it.hasNext()) {
+				sb.append(", ");
+			}
 		}
-		return stringJoiner.toString();
+		sb.append("]");
+		return sb.toString();
 	}
 
 	/**
@@ -678,8 +654,8 @@ public abstract class ClassUtils {
 	 * @since 3.1
 	 * @see StringUtils#toStringArray
 	 */
-	public static Class<?>[] toClassArray(@Nullable Collection<Class<?>> collection) {
-		return (!CollectionUtils.isEmpty(collection) ? collection.toArray(EMPTY_CLASS_ARRAY) : EMPTY_CLASS_ARRAY);
+	public static Class<?>[] toClassArray(Collection<Class<?>> collection) {
+		return collection.toArray(new Class<?>[0]);
 	}
 
 	/**
@@ -847,9 +823,7 @@ public abstract class ClassUtils {
 	 * @param object the object to check
 	 * @see #isCglibProxyClass(Class)
 	 * @see org.springframework.aop.support.AopUtils#isCglibProxy(Object)
-	 * @deprecated as of 5.2, in favor of custom (possibly narrower) checks
 	 */
-	@Deprecated
 	public static boolean isCglibProxy(Object object) {
 		return isCglibProxyClass(object.getClass());
 	}
@@ -858,9 +832,7 @@ public abstract class ClassUtils {
 	 * Check whether the specified class is a CGLIB-generated class.
 	 * @param clazz the class to check
 	 * @see #isCglibProxyClassName(String)
-	 * @deprecated as of 5.2, in favor of custom (possibly narrower) checks
 	 */
-	@Deprecated
 	public static boolean isCglibProxyClass(@Nullable Class<?> clazz) {
 		return (clazz != null && isCglibProxyClassName(clazz.getName()));
 	}
@@ -868,9 +840,7 @@ public abstract class ClassUtils {
 	/**
 	 * Check whether the specified class name is a CGLIB-generated class.
 	 * @param className the class name to check
-	 * @deprecated as of 5.2, in favor of custom (possibly narrower) checks
 	 */
-	@Deprecated
 	public static boolean isCglibProxyClassName(@Nullable String className) {
 		return (className != null && className.contains(CGLIB_CLASS_SEPARATOR));
 	}
@@ -917,10 +887,14 @@ public abstract class ClassUtils {
 		}
 		Class<?> clazz = value.getClass();
 		if (Proxy.isProxyClass(clazz)) {
-			String prefix = clazz.getName() + " implementing ";
-			StringJoiner result = new StringJoiner(",", prefix, "");
-			for (Class<?> ifc : clazz.getInterfaces()) {
-				result.add(ifc.getName());
+			StringBuilder result = new StringBuilder(clazz.getName());
+			result.append(" implementing ");
+			Class<?>[] ifcs = clazz.getInterfaces();
+			for (int i = 0; i < ifcs.length; i++) {
+				result.append(ifcs[i].getName());
+				if (i < ifcs.length - 1) {
+					result.append(',');
+				}
 			}
 			return result.toString();
 		}
@@ -1087,24 +1061,6 @@ public abstract class ClassUtils {
 
 	/**
 	 * Determine whether the given class has a public method with the given signature.
-	 * @param clazz the clazz to analyze
-	 * @param method the method to look for
-	 * @return whether the class has a corresponding method
-	 * @since 5.2.3
-	 */
-	public static boolean hasMethod(Class<?> clazz, Method method) {
-		Assert.notNull(clazz, "Class must not be null");
-		Assert.notNull(method, "Method must not be null");
-		if (clazz == method.getDeclaringClass()) {
-			return true;
-		}
-		String methodName = method.getName();
-		Class<?>[] paramTypes = method.getParameterTypes();
-		return getMethodOrNull(clazz, methodName, paramTypes) != null;
-	}
-
-	/**
-	 * Determine whether the given class has a public method with the given signature.
 	 * <p>Essentially translates {@code NoSuchMethodException} to "false".
 	 * @param clazz the clazz to analyze
 	 * @param methodName the name of the method
@@ -1142,7 +1098,13 @@ public abstract class ClassUtils {
 			}
 		}
 		else {
-			Set<Method> candidates = findMethodCandidatesByName(clazz, methodName);
+			Set<Method> candidates = new HashSet<>(1);
+			Method[] methods = clazz.getMethods();
+			for (Method method : methods) {
+				if (methodName.equals(method.getName())) {
+					candidates.add(method);
+				}
+			}
 			if (candidates.size() == 1) {
 				return candidates.iterator().next();
 			}
@@ -1173,10 +1135,21 @@ public abstract class ClassUtils {
 		Assert.notNull(clazz, "Class must not be null");
 		Assert.notNull(methodName, "Method name must not be null");
 		if (paramTypes != null) {
-			return getMethodOrNull(clazz, methodName, paramTypes);
+			try {
+				return clazz.getMethod(methodName, paramTypes);
+			}
+			catch (NoSuchMethodException ex) {
+				return null;
+			}
 		}
 		else {
-			Set<Method> candidates = findMethodCandidatesByName(clazz, methodName);
+			Set<Method> candidates = new HashSet<>(1);
+			Method[] methods = clazz.getMethods();
+			for (Method method : methods) {
+				if (methodName.equals(method.getName())) {
+					candidates.add(method);
+				}
+			}
 			if (candidates.size() == 1) {
 				return candidates.iterator().next();
 			}
@@ -1256,7 +1229,6 @@ public abstract class ClassUtils {
 	 * (may be {@code null} or may not even implement the method)
 	 * @return the specific target method, or the original method if the
 	 * {@code targetClass} does not implement it
-	 * @see #getInterfaceMethodIfPossible
 	 */
 	public static Method getMostSpecificMethod(Method method, @Nullable Class<?> targetClass) {
 		if (targetClass != null && targetClass != method.getDeclaringClass() && isOverridable(method, targetClass)) {
@@ -1280,37 +1252,6 @@ public abstract class ClassUtils {
 			}
 		}
 		return method;
-	}
-
-	/**
-	 * Determine a corresponding interface method for the given method handle, if possible.
-	 * <p>This is particularly useful for arriving at a public exported type on Jigsaw
-	 * which can be reflectively invoked without an illegal access warning.
-	 * @param method the method to be invoked, potentially from an implementation class
-	 * @return the corresponding interface method, or the original method if none found
-	 * @since 5.1
-	 * @see #getMostSpecificMethod
-	 */
-	public static Method getInterfaceMethodIfPossible(Method method) {
-		if (!Modifier.isPublic(method.getModifiers()) || method.getDeclaringClass().isInterface()) {
-			return method;
-		}
-		return interfaceMethodCache.computeIfAbsent(method, key -> {
-			Class<?> current = key.getDeclaringClass();
-			while (current != null && current != Object.class) {
-				Class<?>[] ifcs = current.getInterfaces();
-				for (Class<?> ifc : ifcs) {
-					try {
-						return ifc.getMethod(key.getName(), key.getParameterTypes());
-					}
-					catch (NoSuchMethodException ex) {
-						// ignore
-					}
-				}
-				current = current.getSuperclass();
-			}
-			return key;
-		});
 	}
 
 	/**
@@ -1368,28 +1309,6 @@ public abstract class ClassUtils {
 		catch (NoSuchMethodException ex) {
 			return null;
 		}
-	}
-
-
-	@Nullable
-	private static Method getMethodOrNull(Class<?> clazz, String methodName, Class<?>[] paramTypes) {
-		try {
-			return clazz.getMethod(methodName, paramTypes);
-		}
-		catch (NoSuchMethodException ex) {
-			return null;
-		}
-	}
-
-	private static Set<Method> findMethodCandidatesByName(Class<?> clazz, String methodName) {
-		Set<Method> candidates = new HashSet<>(1);
-		Method[] methods = clazz.getMethods();
-		for (Method method : methods) {
-			if (methodName.equals(method.getName())) {
-				candidates.add(method);
-			}
-		}
-		return candidates;
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,33 +22,6 @@ import org.springframework.core.codec.Encoder;
  * Extension of {@link CodecConfigurer} for HTTP message reader and writer
  * options relevant on the server side.
  *
- * <p>HTTP message readers for the following are registered by default:
- * <ul>{@code byte[]}
- * <li>{@link java.nio.ByteBuffer}
- * <li>{@link org.springframework.core.io.buffer.DataBuffer DataBuffer}
- * <li>{@link org.springframework.core.io.Resource Resource}
- * <li>{@link String}
- * <li>{@link org.springframework.util.MultiValueMap
- * MultiValueMap&lt;String,String&gt;} for form data
- * <li>{@link org.springframework.util.MultiValueMap
- * MultiValueMap&lt;String,Object&gt;} for multipart data
- * <li>JSON and Smile, if Jackson is present
- * <li>XML, if JAXB2 is present
- * </ul>
- *
- * <p>HTTP message writers registered by default:
- * <ul>{@code byte[]}
- * <li>{@link java.nio.ByteBuffer}
- * <li>{@link org.springframework.core.io.buffer.DataBuffer DataBuffer}
- * <li>{@link org.springframework.core.io.Resource Resource}
- * <li>{@link String}
- * <li>{@link org.springframework.util.MultiValueMap
- * MultiValueMap&lt;String,String&gt;} for form data
- * <li>JSON and Smile, if Jackson is present
- * <li>XML, if JAXB2 is present
- * <li>Server-Sent Events
- * </ul>
- *
  * @author Rossen Stoyanchev
  * @since 5.0
  */
@@ -61,12 +34,6 @@ public interface ServerCodecConfigurer extends CodecConfigurer {
 	 */
 	@Override
 	ServerDefaultCodecs defaultCodecs();
-
-	/**
-	 * {@inheritDoc}.
-	 */
-	@Override
-	ServerCodecConfigurer clone();
 
 
 	/**
@@ -83,27 +50,10 @@ public interface ServerCodecConfigurer extends CodecConfigurer {
 	interface ServerDefaultCodecs extends DefaultCodecs {
 
 		/**
-		 * Configure the {@code HttpMessageReader} to use for multipart requests.
-		 * <p>By default, if
-		 * <a href="https://github.com/synchronoss/nio-multipart">Synchronoss NIO Multipart</a>
-		 * is present, this is set to
-		 * {@link org.springframework.http.codec.multipart.MultipartHttpMessageReader
-		 * MultipartHttpMessageReader} created with an instance of
-		 * {@link org.springframework.http.codec.multipart.SynchronossPartHttpMessageReader
-		 * SynchronossPartHttpMessageReader}.
-		 * <p>Note that {@link #maxInMemorySize(int)} and/or
-		 * {@link #enableLoggingRequestDetails(boolean)}, if configured, will be
-		 * applied to the given reader, if applicable.
-		 * @param reader the message reader to use for multipart requests.
-		 * @since 5.1.11
-		 */
-		void multipartReader(HttpMessageReader<?> reader);
-
-		/**
 		 * Configure the {@code Encoder} to use for Server-Sent Events.
 		 * <p>By default if this is not set, and Jackson is available, the
-		 * {@link #jackson2JsonEncoder} override is used instead. Use this method
-		 * to customize the SSE encoder.
+		 * {@link #jackson2JsonEncoder} override is used instead. Use this property
+		 * if you want to further customize the SSE encoder.
 		 */
 		void serverSentEventEncoder(Encoder<?> encoder);
 	}

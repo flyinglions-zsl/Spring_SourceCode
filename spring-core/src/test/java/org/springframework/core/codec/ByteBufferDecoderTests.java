@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,76 +17,66 @@
 package org.springframework.core.codec;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
+import java.util.Collections;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import org.springframework.core.ResolvableType;
+import org.springframework.core.io.buffer.AbstractDataBufferAllocatingTestCase;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.testfixture.codec.AbstractDecoderTests;
 import org.springframework.util.MimeTypeUtils;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Sebastien Deleuze
  */
-class ByteBufferDecoderTests extends AbstractDecoderTests<ByteBufferDecoder> {
+public class ByteBufferDecoderTests extends AbstractDataBufferAllocatingTestCase {
 
-	private final byte[] fooBytes = "foo".getBytes(StandardCharsets.UTF_8);
+	private final ByteBufferDecoder decoder = new ByteBufferDecoder();
 
-	private final byte[] barBytes = "bar".getBytes(StandardCharsets.UTF_8);
-
-
-	ByteBufferDecoderTests() {
-		super(new ByteBufferDecoder());
-	}
-
-	@Override
 	@Test
 	public void canDecode() {
-		assertThat(this.decoder.canDecode(ResolvableType.forClass(ByteBuffer.class),
-				MimeTypeUtils.TEXT_PLAIN)).isTrue();
-		assertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class),
-				MimeTypeUtils.TEXT_PLAIN)).isFalse();
-		assertThat(this.decoder.canDecode(ResolvableType.forClass(ByteBuffer.class),
-				MimeTypeUtils.APPLICATION_JSON)).isTrue();
+		assertTrue(this.decoder.canDecode(ResolvableType.forClass(ByteBuffer.class),
+				MimeTypeUtils.TEXT_PLAIN));
+		assertFalse(this.decoder.canDecode(ResolvableType.forClass(Integer.class),
+				MimeTypeUtils.TEXT_PLAIN));
+		assertTrue(this.decoder.canDecode(ResolvableType.forClass(ByteBuffer.class),
+				MimeTypeUtils.APPLICATION_JSON));
 	}
 
-	@Override
 	@Test
 	public void decode() {
-		Flux<DataBuffer> input = Flux.concat(
-				dataBuffer(this.fooBytes),
-				dataBuffer(this.barBytes));
+		DataBuffer fooBuffer = stringBuffer("foo");
+		DataBuffer barBuffer = stringBuffer("bar");
+		Flux<DataBuffer> source = Flux.just(fooBuffer, barBuffer);
+		Flux<ByteBuffer> output = this.decoder.decode(source,
+				ResolvableType.forClassWithGenerics(Publisher.class, ByteBuffer.class),
+				null, Collections.emptyMap());
 
-		testDecodeAll(input, ByteBuffer.class, step -> step
-				.consumeNextWith(expectByteBuffer(ByteBuffer.wrap(this.fooBytes)))
-				.consumeNextWith(expectByteBuffer(ByteBuffer.wrap(this.barBytes)))
-				.verifyComplete());
-
-
+		StepVerifier.create(output)
+				.expectNext(ByteBuffer.wrap("foo".getBytes()), ByteBuffer.wrap("bar".getBytes()))
+				.expectComplete()
+				.verify();
 	}
 
-	@Override
 	@Test
 	public void decodeToMono() {
-		Flux<DataBuffer> input = Flux.concat(
-				dataBuffer(this.fooBytes),
-				dataBuffer(this.barBytes));
-		ByteBuffer expected = ByteBuffer.allocate(this.fooBytes.length + this.barBytes.length);
-		expected.put(this.fooBytes).put(this.barBytes).flip();
+		DataBuffer fooBuffer = stringBuffer("foo");
+		DataBuffer barBuffer = stringBuffer("bar");
+		Flux<DataBuffer> source = Flux.just(fooBuffer, barBuffer);
+		Mono<ByteBuffer> output = this.decoder.decodeToMono(source,
+				ResolvableType.forClassWithGenerics(Publisher.class, ByteBuffer.class),
+				null, Collections.emptyMap());
 
-		testDecodeToMonoAll(input, ByteBuffer.class, step -> step
-				.consumeNextWith(expectByteBuffer(expected))
-				.verifyComplete());
-
+		StepVerifier.create(output)
+				.expectNext(ByteBuffer.wrap("foobar".getBytes()))
+				.expectComplete()
+				.verify();
 	}
-
-	private Consumer<ByteBuffer> expectByteBuffer(ByteBuffer expected) {
-		return actual -> assertThat(actual).isEqualTo(expected);
-	}
-
 }

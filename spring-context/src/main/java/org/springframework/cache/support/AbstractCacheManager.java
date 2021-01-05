@@ -87,26 +87,25 @@ public abstract class AbstractCacheManager implements CacheManager, Initializing
 	@Override
 	@Nullable
 	public Cache getCache(String name) {
-		// Quick check for existing cache...
 		Cache cache = this.cacheMap.get(name);
 		if (cache != null) {
 			return cache;
 		}
-
-		// The provider may support on-demand cache creation...
-		Cache missingCache = getMissingCache(name);
-		if (missingCache != null) {
-			// Fully synchronize now for missing cache registration
+		else {
+			// Fully synchronize now for missing cache creation...
 			synchronized (this.cacheMap) {
 				cache = this.cacheMap.get(name);
 				if (cache == null) {
-					cache = decorateCache(missingCache);
-					this.cacheMap.put(name, cache);
-					updateCacheNames(name);
+					cache = getMissingCache(name);
+					if (cache != null) {
+						cache = decorateCache(cache);
+						this.cacheMap.put(name, cache);
+						updateCacheNames(name);
+					}
 				}
+				return cache;
 			}
 		}
-		return cache;
 	}
 
 	@Override
@@ -155,7 +154,8 @@ public abstract class AbstractCacheManager implements CacheManager, Initializing
 	 * @param name the name of the cache to be added
 	 */
 	private void updateCacheNames(String name) {
-		Set<String> cacheNames = new LinkedHashSet<>(this.cacheNames);
+		Set<String> cacheNames = new LinkedHashSet<>(this.cacheNames.size() + 1);
+		cacheNames.addAll(this.cacheNames);
 		cacheNames.add(name);
 		this.cacheNames = Collections.unmodifiableSet(cacheNames);
 	}

@@ -30,15 +30,15 @@ import org.springframework.core.codec.CodecException;
 import org.springframework.core.codec.Decoder;
 import org.springframework.core.codec.StringDecoder;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferLimitException;
+import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpInputMessage;
 import org.springframework.lang.Nullable;
 
 /**
- * Reader that supports a stream of {@link ServerSentEvent ServerSentEvents} and also plain
- * {@link Object Objects} which is the same as an {@link ServerSentEvent} with data only.
+ * Reader that supports a stream of {@link ServerSentEvent}s and also plain
+ * {@link Object}s which is the same as an {@link ServerSentEvent} with data only.
  *
  * @author Sebastien Deleuze
  * @author Rossen Stoyanchev
@@ -48,11 +48,13 @@ public class ServerSentEventHttpMessageReader implements HttpMessageReader<Objec
 
 	private static final ResolvableType STRING_TYPE = ResolvableType.forClass(String.class);
 
+	private static final DataBufferFactory bufferFactory = new DefaultDataBufferFactory();
+
+	private static final StringDecoder stringDecoder = StringDecoder.textPlainOnly();
+
 
 	@Nullable
 	private final Decoder<?> decoder;
-
-	private final StringDecoder lineDecoder = StringDecoder.textPlainOnly();
 
 
 	/**
@@ -80,29 +82,6 @@ public class ServerSentEventHttpMessageReader implements HttpMessageReader<Objec
 		return this.decoder;
 	}
 
-	/**
-	 * Configure a limit on the maximum number of bytes per SSE event which are
-	 * buffered before the event is parsed.
-	 * <p>Note that the {@link #getDecoder() data decoder}, if provided, must
-	 * also be customized accordingly to raise the limit if necessary in order
-	 * to be able to parse the data portion of the event.
-	 * <p>By default this is set to 256K.
-	 * @param byteCount the max number of bytes to buffer, or -1 for unlimited
-	 * @since 5.1.13
-	 */
-	public void setMaxInMemorySize(int byteCount) {
-		this.lineDecoder.setMaxInMemorySize(byteCount);
-	}
-
-	/**
-	 * Return the {@link #setMaxInMemorySize configured} byte count limit.
-	 * @since 5.1.13
-	 */
-	public int getMaxInMemorySize() {
-		return this.lineDecoder.getMaxInMemorySize();
-	}
-
-
 	@Override
 	public List<MediaType> getReadableMediaTypes() {
 		return Collections.singletonList(MediaType.TEXT_EVENT_STREAM);
@@ -114,30 +93,24 @@ public class ServerSentEventHttpMessageReader implements HttpMessageReader<Objec
 	}
 
 	private boolean isServerSentEvent(ResolvableType elementType) {
-		return ServerSentEvent.class.isAssignableFrom(elementType.toClass());
+		Class<?> rawClass = elementType.getRawClass();
+		return (rawClass != null && ServerSentEvent.class.isAssignableFrom(rawClass));
 	}
 
 
 	@Override
-	public Flux<Object> read(
-			ResolvableType elementType, ReactiveHttpInputMessage message, Map<String, Object> hints) {
-
-		LimitTracker limitTracker = new LimitTracker();
+	public Flux<Object> read(ResolvableType elementType, ReactiveHttpInputMessage message,
+			Map<String, Object> hints) {
 
 		boolean shouldWrap = isServerSentEvent(elementType);
 		ResolvableType valueType = (shouldWrap ? elementType.getGeneric() : elementType);
 
-		return this.lineDecoder.decode(message.getBody(), STRING_TYPE, null, hints)
-				.doOnNext(limitTracker::afterLineParsed)
-				.bufferUntil(String::isEmpty)
-				.concatMap(lines -> {
-					Object event = buildEvent(lines, valueType, shouldWrap, hints);
-					return (event != null ? Mono.just(event) : Mono.empty());
-				});
+		return stringDecoder.decode(message.getBody(), STRING_TYPE, null, Collections.emptyMap())
+				.bufferUntil(line -> line.equals(""))
+				.concatMap(lines -> buildEvent(lines, valueType, shouldWrap, hints));
 	}
 
-	@Nullable
-	private Object buildEvent(List<String> lines, ResolvableType valueType, boolean shouldWrap,
+	private Mono<?> buildEvent(List<String> lines, ResolvableType valueType, boolean shouldWrap,
 			Map<String, Object> hints) {
 
 		ServerSentEvent.Builder<Object> sseBuilder = shouldWrap ? ServerSentEvent.builder() : null;
@@ -147,97 +120,69 @@ public class ServerSentEventHttpMessageReader implements HttpMessageReader<Objec
 		for (String line : lines) {
 			if (line.startsWith("data:")) {
 				data = (data != null ? data : new StringBuilder());
-				data.append(line.substring(5).trim()).append("\n");
+				data.append(line.substring(5)).append("\n");
 			}
 			if (shouldWrap) {
 				if (line.startsWith("id:")) {
-					sseBuilder.id(line.substring(3).trim());
+					sseBuilder.id(line.substring(3));
 				}
 				else if (line.startsWith("event:")) {
-					sseBuilder.event(line.substring(6).trim());
+					sseBuilder.event(line.substring(6));
 				}
 				else if (line.startsWith("retry:")) {
-					sseBuilder.retry(Duration.ofMillis(Long.parseLong(line.substring(6).trim())));
+					sseBuilder.retry(Duration.ofMillis(Long.parseLong(line.substring(6))));
 				}
 				else if (line.startsWith(":")) {
 					comment = (comment != null ? comment : new StringBuilder());
-					comment.append(line.substring(1).trim()).append("\n");
+					comment.append(line.substring(1)).append("\n");
 				}
 			}
 		}
 
-		Object decodedData = (data != null ? decodeData(data, valueType, hints) : null);
+		Mono<?> decodedData = (data != null ? decodeData(data.toString(), valueType, hints) : Mono.empty());
 
 		if (shouldWrap) {
 			if (comment != null) {
 				sseBuilder.comment(comment.substring(0, comment.length() - 1));
 			}
-			if (decodedData != null) {
-				sseBuilder.data(decodedData);
-			}
-			return sseBuilder.build();
+			return decodedData.map(o -> {
+				sseBuilder.data(o);
+				return sseBuilder.build();
+			});
 		}
 		else {
 			return decodedData;
 		}
 	}
 
-	@Nullable
-	private Object decodeData(StringBuilder data, ResolvableType dataType, Map<String, Object> hints) {
+	private Mono<?> decodeData(String data, ResolvableType dataType, Map<String, Object> hints) {
 		if (String.class == dataType.resolve()) {
-			return data.substring(0, data.length() - 1);
+			return Mono.just(data.substring(0, data.length() - 1));
 		}
+
 		if (this.decoder == null) {
-			throw new CodecException("No SSE decoder configured and the data is not String.");
+			return Mono.error(new CodecException("No SSE decoder configured and the data is not String."));
 		}
-		byte[] bytes = data.toString().getBytes(StandardCharsets.UTF_8);
-		DataBuffer buffer = DefaultDataBufferFactory.sharedInstance.wrap(bytes);  // wrapping only, no allocation
-		return this.decoder.decode(buffer, dataType, MediaType.TEXT_EVENT_STREAM, hints);
+
+		byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
+		Mono<DataBuffer> input = Mono.just(bufferFactory.wrap(bytes));
+		return this.decoder.decodeToMono(input, dataType, MediaType.TEXT_EVENT_STREAM, hints);
 	}
 
 	@Override
-	public Mono<Object> readMono(
-			ResolvableType elementType, ReactiveHttpInputMessage message, Map<String, Object> hints) {
+	public Mono<Object> readMono(ResolvableType elementType, ReactiveHttpInputMessage message,
+			Map<String, Object> hints) {
 
-		// In order of readers, we're ahead of String + "*/*"
-		// If this is called, simply delegate to StringDecoder
+		// We're ahead of String + "*/*"
+		// Let's see if we can aggregate the output (lest we time out)...
 
-		if (elementType.resolve() == String.class) {
+		if (String.class.equals(elementType.getRawClass())) {
 			Flux<DataBuffer> body = message.getBody();
-			return this.lineDecoder.decodeToMono(body, elementType, null, null).cast(Object.class);
+			return stringDecoder.decodeToMono(body, elementType, null, null).cast(Object.class);
 		}
 
 		return Mono.error(new UnsupportedOperationException(
 				"ServerSentEventHttpMessageReader only supports reading stream of events as a Flux"));
-	}
-
-
-	private class LimitTracker {
-
-		private int accumulated = 0;
-
-		public void afterLineParsed(String line) {
-			if (getMaxInMemorySize() < 0) {
-				return;
-			}
-			if (line.isEmpty()) {
-				this.accumulated = 0;
-			}
-			if (line.length() > Integer.MAX_VALUE - this.accumulated) {
-				raiseLimitException();
-			}
-			else {
-				this.accumulated += line.length();
-				if (this.accumulated > getMaxInMemorySize()) {
-					raiseLimitException();
-				}
-			}
-		}
-
-		private void raiseLimitException() {
-			// Do not release here, it's likely down via doOnDiscard..
-			throw new DataBufferLimitException("Exceeded limit on max bytes to buffer : " + getMaxInMemorySize());
-		}
 	}
 
 }

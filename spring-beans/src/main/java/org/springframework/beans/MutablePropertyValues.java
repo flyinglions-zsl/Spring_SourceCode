@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,10 @@ package org.springframework.beans;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
@@ -49,7 +44,7 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 	@Nullable
 	private Set<String> processedProperties;
 
-	private volatile boolean converted;
+	private volatile boolean converted = false;
 
 
 	/**
@@ -250,21 +245,6 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 
 
 	@Override
-	public Iterator<PropertyValue> iterator() {
-		return Collections.unmodifiableList(this.propertyValueList).iterator();
-	}
-
-	@Override
-	public Spliterator<PropertyValue> spliterator() {
-		return Spliterators.spliterator(this.propertyValueList, 0);
-	}
-
-	@Override
-	public Stream<PropertyValue> stream() {
-		return this.propertyValueList.stream();
-	}
-
-	@Override
 	public PropertyValue[] getPropertyValues() {
 		return this.propertyValueList.toArray(new PropertyValue[0]);
 	}
@@ -367,7 +347,7 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		return (this == other || (other instanceof MutablePropertyValues &&
 				this.propertyValueList.equals(((MutablePropertyValues) other).propertyValueList)));
 	}
@@ -380,10 +360,11 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 	@Override
 	public String toString() {
 		PropertyValue[] pvs = getPropertyValues();
+		StringBuilder sb = new StringBuilder("PropertyValues: length=").append(pvs.length);
 		if (pvs.length > 0) {
-			return "PropertyValues: length=" + pvs.length + "; " + StringUtils.arrayToDelimitedString(pvs, "; ");
+			sb.append("; ").append(StringUtils.arrayToDelimitedString(pvs, "; "));
 		}
-		return "PropertyValues: length=0";
+		return sb.toString();
 	}
 
 }

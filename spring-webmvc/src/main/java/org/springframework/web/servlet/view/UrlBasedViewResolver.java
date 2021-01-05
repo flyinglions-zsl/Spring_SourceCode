@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.BeanUtils;
@@ -35,7 +34,7 @@ import org.springframework.web.servlet.View;
 /**
  * Simple implementation of the {@link org.springframework.web.servlet.ViewResolver}
  * interface, allowing for direct resolution of symbolic view names to URLs,
- * without explicit mapping definitions. This is useful if your symbolic names
+ * without explicit mapping definition. This is useful if your symbolic names
  * match the names of your view resources in a straightforward manner
  * (i.e. the symbolic name is the unique part of the resource's filename),
  * without the need for a dedicated mapping to be defined for each view.
@@ -66,15 +65,14 @@ import org.springframework.web.servlet.View;
  * a symbolic view name to different resources depending on the current locale.
  *
  * <p><b>Note:</b> When chaining ViewResolvers, a UrlBasedViewResolver will check whether
- * the {@linkplain AbstractUrlBasedView#checkResource specified resource actually exists}.
+ * the {@link AbstractUrlBasedView#checkResource specified resource actually exists}.
  * However, with {@link InternalResourceView}, it is not generally possible to
  * determine the existence of the target resource upfront. In such a scenario,
- * a UrlBasedViewResolver will always return a View for any given view name;
+ * a UrlBasedViewResolver will always return View for any given view name;
  * as a consequence, it should be configured as the last ViewResolver in the chain.
  *
  * @author Juergen Hoeller
  * @author Rob Harrop
- * @author Sam Brannen
  * @since 13.12.2003
  * @see #setViewClass
  * @see #setPrefix
@@ -124,7 +122,7 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 	@Nullable
 	private String requestContextAttribute;
 
-	/** Map of static attributes, keyed by attribute name (String). */
+	/** Map of static attributes, keyed by attribute name (String) */
 	private final Map<String, Object> staticAttributes = new HashMap<>();
 
 	@Nullable
@@ -144,10 +142,8 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 
 	/**
 	 * Set the view class that should be used to create views.
-	 * @param viewClass a class that is assignable to the required view class
-	 * (by default: AbstractUrlBasedView)
-	 * @see #requiredViewClass()
-	 * @see #instantiateView()
+	 * @param viewClass class that is assignable to the required view class
+	 * (by default, AbstractUrlBasedView)
 	 * @see AbstractUrlBasedView
 	 */
 	public void setViewClass(@Nullable Class<?> viewClass) {
@@ -160,11 +156,19 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 
 	/**
 	 * Return the view class to be used to create views.
-	 * @see #setViewClass
 	 */
 	@Nullable
 	protected Class<?> getViewClass() {
 		return this.viewClass;
+	}
+
+	/**
+	 * Return the required type of view for this resolver.
+	 * This implementation returns AbstractUrlBasedView.
+	 * @see AbstractUrlBasedView
+	 */
+	protected Class<?> requiredViewClass() {
+		return AbstractUrlBasedView.class;
 	}
 
 	/**
@@ -321,7 +325,7 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 	 * Set static attributes from a Map, for all views returned by this resolver.
 	 * This allows to set any kind of attribute values, for example bean references.
 	 * <p>Can be populated with a "map" or "props" element in XML bean definitions.
-	 * @param attributes a Map with name Strings as keys and attribute objects as values
+	 * @param attributes Map with name Strings as keys and attribute objects as values
 	 * @see AbstractView#setAttributesMap
 	 */
 	public void setAttributesMap(@Nullable Map<String, ?> attributes) {
@@ -481,8 +485,7 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 		// Check for special "forward:" prefix.
 		if (viewName.startsWith(FORWARD_URL_PREFIX)) {
 			String forwardUrl = viewName.substring(FORWARD_URL_PREFIX.length());
-			InternalResourceView view = new InternalResourceView(forwardUrl);
-			return applyLifecycleMethods(FORWARD_URL_PREFIX, view);
+			return new InternalResourceView(forwardUrl);
 		}
 
 		// Else fall back to superclass implementation: calling loadView.
@@ -502,29 +505,6 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 	protected boolean canHandle(String viewName, Locale locale) {
 		String[] viewNames = getViewNames();
 		return (viewNames == null || PatternMatchUtils.simpleMatch(viewNames, viewName));
-	}
-
-	/**
-	 * Return the required type of view for this resolver.
-	 * This implementation returns {@link AbstractUrlBasedView}.
-	 * @see #instantiateView()
-	 * @see AbstractUrlBasedView
-	 */
-	protected Class<?> requiredViewClass() {
-		return AbstractUrlBasedView.class;
-	}
-
-	/**
-	 * Instantiate the specified view class.
-	 * <p>The default implementation uses reflection to instantiate the class.
-	 * @return a new instance of the view class
-	 * @since 5.3
-	 * @see #setViewClass
-	 */
-	protected AbstractUrlBasedView instantiateView() {
-		Class<?> viewClass = getViewClass();
-		Assert.state(viewClass != null, "No view class");
-		return (AbstractUrlBasedView) BeanUtils.instantiateClass(viewClass);
 	}
 
 	/**
@@ -564,19 +544,19 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 	 * @see #loadView(String, java.util.Locale)
 	 */
 	protected AbstractUrlBasedView buildView(String viewName) throws Exception {
-		AbstractUrlBasedView view = instantiateView();
+		Class<?> viewClass = getViewClass();
+		Assert.state(viewClass != null, "No view class");
+
+		AbstractUrlBasedView view = (AbstractUrlBasedView) BeanUtils.instantiateClass(viewClass);
 		view.setUrl(getPrefix() + viewName + getSuffix());
-		view.setAttributesMap(getAttributesMap());
 
 		String contentType = getContentType();
 		if (contentType != null) {
 			view.setContentType(contentType);
 		}
 
-		String requestContextAttribute = getRequestContextAttribute();
-		if (requestContextAttribute != null) {
-			view.setRequestContextAttribute(requestContextAttribute);
-		}
+		view.setRequestContextAttribute(getRequestContextAttribute());
+		view.setAttributesMap(getAttributesMap());
 
 		Boolean exposePathVariables = getExposePathVariables();
 		if (exposePathVariables != null) {

@@ -74,7 +74,6 @@ public class StubSockJsServiceConfig implements SockJsServiceConfig {
 		this.messageCodec = messageCodec;
 	}
 
-	@Override
 	public int getHttpMessageCacheSize() {
 		return this.httpMessageCacheSize;
 	}

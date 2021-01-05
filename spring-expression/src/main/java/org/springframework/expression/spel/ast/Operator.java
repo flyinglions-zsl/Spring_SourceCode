@@ -54,8 +54,8 @@ public abstract class Operator extends SpelNodeImpl {
 	protected String rightActualDescriptor;
 
 
-	public Operator(String payload, int startPos, int endPos, SpelNodeImpl... operands) {
-		super(startPos, endPos, operands);
+	public Operator(String payload, int pos, SpelNodeImpl... operands) {
+		super(pos, operands);
 		this.operatorName = payload;
 	}
 
@@ -326,7 +326,7 @@ public abstract class Operator extends SpelNodeImpl {
 	 * A descriptor comparison encapsulates the result of comparing descriptor
 	 * for two operands and describes at what level they are compatible.
 	 */
-	protected static final class DescriptorComparison {
+	protected static class DescriptorComparison {
 
 		static final DescriptorComparison NOT_NUMBERS = new DescriptorComparison(false, false, ' ');
 

@@ -65,17 +65,6 @@ import org.springframework.lang.Nullable;
 public interface FactoryBean<T> {
 
 	/**
-	 * The name of an attribute that can be
-	 * {@link org.springframework.core.AttributeAccessor#setAttribute set} on a
-	 * {@link org.springframework.beans.factory.config.BeanDefinition} so that
-	 * factory beans can signal their object type when it can't be deduced from
-	 * the factory bean class.
-	 * @since 5.2
-	 */
-	String OBJECT_TYPE_ATTRIBUTE = "factoryBeanObjectType";
-
-
-	/**
 	 * Return an instance (possibly shared or independent) of the object
 	 * managed by this factory.
 	 * <p>As with a {@link BeanFactory}, this allows support for both the

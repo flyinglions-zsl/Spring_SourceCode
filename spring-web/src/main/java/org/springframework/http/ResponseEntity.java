@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,9 @@
 package org.springframework.http;
 
 import java.net.URI;
-import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -70,10 +66,6 @@ import org.springframework.util.ObjectUtils;
  * @since 3.0.2
  * @param <T> the body type
  * @see #getStatusCode()
- * @see org.springframework.web.client.RestOperations#getForEntity(String, Class, Object...)
- * @see org.springframework.web.client.RestOperations#getForEntity(String, Class, java.util.Map)
- * @see org.springframework.web.client.RestOperations#getForEntity(URI, Class)
- * @see RequestEntity
  */
 public class ResponseEntity<T> extends HttpEntity<T> {
 
@@ -113,18 +105,9 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 	 * @param status the status code
 	 */
 	public ResponseEntity(@Nullable T body, @Nullable MultiValueMap<String, String> headers, HttpStatus status) {
-		this(body, headers, (Object) status);
-	}
-
-	/**
-	 * Create a new {@code HttpEntity} with the given body, headers, and status code.
-	 * @param body the entity body
-	 * @param headers the entity headers
-	 * @param rawStatus the status code value
-	 * @since 5.3.2
-	 */
-	public ResponseEntity(@Nullable T body, @Nullable MultiValueMap<String, String> headers, int rawStatus) {
-		this(body, headers, (Object) rawStatus);
+		super(body, headers);
+		Assert.notNull(status, "HttpStatus must not be null");
+		this.status = status;
 	}
 
 	/**
@@ -246,20 +229,8 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 	 * @since 4.1
 	 */
 	public static <T> ResponseEntity<T> ok(T body) {
-		return ok().body(body);
-	}
-
-	/**
-	 * A shortcut for creating a {@code ResponseEntity} with the given body
-	 * and the {@linkplain HttpStatus#OK OK} status, or an empty body and a
-	 * {@linkplain HttpStatus#NOT_FOUND NOT FOUND} status in case of an
-	 * {@linkplain Optional#empty()} parameter.
-	 * @return the created {@code ResponseEntity}
-	 * @since 5.1
-	 */
-	public static <T> ResponseEntity<T> of(Optional<T> body) {
-		Assert.notNull(body, "Body must not be null");
-		return body.map(ResponseEntity::ok).orElseGet(() -> notFound().build());
+		BodyBuilder builder = ok();
+		return builder.body(body);
 	}
 
 	/**
@@ -270,7 +241,8 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 	 * @since 4.1
 	 */
 	public static BodyBuilder created(URI location) {
-		return status(HttpStatus.CREATED).location(location);
+		BodyBuilder builder = status(HttpStatus.CREATED);
+		return builder.location(location);
 	}
 
 	/**
@@ -346,18 +318,6 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 		B headers(@Nullable HttpHeaders headers);
 
 		/**
-		 * Manipulate this entity's headers with the given consumer. The
-		 * headers provided to the consumer are "live", so that the consumer can be used to
-		 * {@linkplain HttpHeaders#set(String, String) overwrite} existing header values,
-		 * {@linkplain HttpHeaders#remove(Object) remove} values, or use any of the other
-		 * {@link HttpHeaders} methods.
-		 * @param headersConsumer a function that consumes the {@code HttpHeaders}
-		 * @return this builder
-		 * @since 5.2
-		 */
-		B headers(Consumer<HttpHeaders> headersConsumer);
-
-		/**
 		 * Set the set of allowed {@link HttpMethod HTTP methods}, as specified
 		 * by the {@code Allow} header.
 		 * @param allowedMethods the allowed methods
@@ -373,26 +333,6 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 		 * @see HttpHeaders#setETag(String)
 		 */
 		B eTag(String etag);
-
-		/**
-		 * Set the time the resource was last changed, as specified by the
-		 * {@code Last-Modified} header.
-		 * @param lastModified the last modified date
-		 * @return this builder
-		 * @since 5.1.4
-		 * @see HttpHeaders#setLastModified(ZonedDateTime)
-		 */
-		B lastModified(ZonedDateTime lastModified);
-
-		/**
-		 * Set the time the resource was last changed, as specified by the
-		 * {@code Last-Modified} header.
-		 * @param lastModified the last modified date
-		 * @return this builder
-		 * @since 5.1.4
-		 * @see HttpHeaders#setLastModified(Instant)
-		 */
-		B lastModified(Instant lastModified);
 
 		/**
 		 * Set the time the resource was last changed, as specified by the
@@ -506,12 +446,6 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 		}
 
 		@Override
-		public BodyBuilder headers(Consumer<HttpHeaders> headersConsumer) {
-			headersConsumer.accept(this.headers);
-			return this;
-		}
-
-		@Override
 		public BodyBuilder allow(HttpMethod... allowedMethods) {
 			this.headers.setAllow(new LinkedHashSet<>(Arrays.asList(allowedMethods)));
 			return this;
@@ -542,18 +476,6 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 		}
 
 		@Override
-		public BodyBuilder lastModified(ZonedDateTime date) {
-			this.headers.setLastModified(date);
-			return this;
-		}
-
-		@Override
-		public BodyBuilder lastModified(Instant date) {
-			this.headers.setLastModified(date);
-			return this;
-		}
-
-		@Override
 		public BodyBuilder lastModified(long date) {
 			this.headers.setLastModified(date);
 			return this;
@@ -567,7 +489,10 @@ public class ResponseEntity<T> extends HttpEntity<T> {
 
 		@Override
 		public BodyBuilder cacheControl(CacheControl cacheControl) {
-			this.headers.setCacheControl(cacheControl);
+			String ccValue = cacheControl.getHeaderValue();
+			if (ccValue != null) {
+				this.headers.setCacheControl(ccValue);
+			}
 			return this;
 		}
 

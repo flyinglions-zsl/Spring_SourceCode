@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Integration tests that investigate the applicability of JSR-250 lifecycle
@@ -107,13 +107,13 @@ public class Jsr250LifecycleTests {
 	@Test
 	public void test1() {
 		logger.info("test1()");
-		assertThat(lifecycleBean).isNotNull();
+		assertNotNull(lifecycleBean);
 	}
 
 	@Test
 	public void test2() {
 		logger.info("test2()");
-		assertThat(lifecycleBean).isNotNull();
+		assertNotNull(lifecycleBean);
 	}
 
 }

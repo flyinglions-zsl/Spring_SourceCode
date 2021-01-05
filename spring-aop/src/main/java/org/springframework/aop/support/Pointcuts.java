@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
+import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -35,10 +36,10 @@ import org.springframework.util.Assert;
  */
 public abstract class Pointcuts {
 
-	/** Pointcut matching all bean property setters, in any class. */
+	/** Pointcut matching all bean property setters, in any class */
 	public static final Pointcut SETTERS = SetterPointcut.INSTANCE;
 
-	/** Pointcut matching all bean property getters, in any class. */
+	/** Pointcut matching all bean property getters, in any class */
 	public static final Pointcut GETTERS = GetterPointcut.INSTANCE;
 
 
@@ -98,7 +99,7 @@ public abstract class Pointcuts {
 		public static final SetterPointcut INSTANCE = new SetterPointcut();
 
 		@Override
-		public boolean matches(Method method, Class<?> targetClass) {
+		public boolean matches(Method method, @Nullable Class<?> targetClass) {
 			return (method.getName().startsWith("set") &&
 					method.getParameterCount() == 1 &&
 					method.getReturnType() == Void.TYPE);
@@ -106,11 +107,6 @@ public abstract class Pointcuts {
 
 		private Object readResolve() {
 			return INSTANCE;
-		}
-
-		@Override
-		public String toString() {
-			return "Pointcuts.SETTERS";
 		}
 	}
 
@@ -124,18 +120,13 @@ public abstract class Pointcuts {
 		public static final GetterPointcut INSTANCE = new GetterPointcut();
 
 		@Override
-		public boolean matches(Method method, Class<?> targetClass) {
+		public boolean matches(Method method, @Nullable Class<?> targetClass) {
 			return (method.getName().startsWith("get") &&
 					method.getParameterCount() == 0);
 		}
 
 		private Object readResolve() {
 			return INSTANCE;
-		}
-
-		@Override
-		public String toString() {
-			return "Pointcuts.GETTERS";
 		}
 	}
 

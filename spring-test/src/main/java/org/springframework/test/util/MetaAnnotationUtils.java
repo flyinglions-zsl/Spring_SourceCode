@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,10 +53,7 @@ import org.springframework.util.ObjectUtils;
  * @since 4.0
  * @see AnnotationUtils
  * @see AnnotationDescriptor
- * @deprecated as of Spring Framework 5.3 in favor of
- * {@link org.springframework.test.context.TestContextAnnotationUtils}
  */
-@Deprecated
 public abstract class MetaAnnotationUtils {
 
 	/**
@@ -81,6 +78,7 @@ public abstract class MetaAnnotationUtils {
 	 * @param annotationType the type of annotation to look for
 	 * @return the corresponding annotation descriptor if the annotation was found;
 	 * otherwise {@code null}
+	 * @see AnnotationUtils#findAnnotationDeclaringClass(Class, Class)
 	 * @see #findAnnotationDescriptorForTypes(Class, Class...)
 	 */
 	@Nullable
@@ -126,7 +124,7 @@ public abstract class MetaAnnotationUtils {
 			}
 		}
 
-		// Declared on an interface?
+		// Declared on interface?
 		for (Class<?> ifc : clazz.getInterfaces()) {
 			AnnotationDescriptor<T> descriptor = findAnnotationDescriptor(ifc, visited, annotationType);
 			if (descriptor != null) {
@@ -166,6 +164,7 @@ public abstract class MetaAnnotationUtils {
 	 * @param annotationTypes the types of annotations to look for
 	 * @return the corresponding annotation descriptor if one of the annotations
 	 * was found; otherwise {@code null}
+	 * @see AnnotationUtils#findAnnotationDeclaringClassForTypes(java.util.List, Class)
 	 * @see #findAnnotationDescriptor(Class, Class)
 	 */
 	@SuppressWarnings("unchecked")
@@ -215,7 +214,7 @@ public abstract class MetaAnnotationUtils {
 			}
 		}
 
-		// Declared on an interface?
+		// Declared on interface?
 		for (Class<?> ifc : clazz.getInterfaces()) {
 			UntypedAnnotationDescriptor descriptor = findAnnotationDescriptorForTypes(ifc, visited, annotationTypes);
 			if (descriptor != null) {
@@ -258,7 +257,7 @@ public abstract class MetaAnnotationUtils {
 	 * <li>composedAnnotation: {@code null}</li>
 	 * <li>annotation: instance of the {@code Transactional} annotation</li>
 	 * </ul>
-	 * <p><pre style="code">
+	 * <pre style="code">
 	 * &#064;Transactional
 	 * &#064;ContextConfiguration({"/test-datasource.xml", "/repository-config.xml"})
 	 * public class TransactionalTests { }
@@ -272,7 +271,7 @@ public abstract class MetaAnnotationUtils {
 	 * <li>composedAnnotation: instance of the {@code RepositoryTests} annotation</li>
 	 * <li>annotation: instance of the {@code Transactional} annotation</li>
 	 * </ul>
-	 * <p><pre style="code">
+	 * <pre style="code">
 	 * &#064;Transactional
 	 * &#064;ContextConfiguration({"/test-datasource.xml", "/repository-config.xml"})
 	 * &#064;Retention(RetentionPolicy.RUNTIME)
@@ -281,8 +280,6 @@ public abstract class MetaAnnotationUtils {
 	 * &#064;RepositoryTests
 	 * public class UserRepositoryTests { }
 	 * </pre>
-	 *
-	 * @param <T> the annotation type
 	 */
 	public static class AnnotationDescriptor<T extends Annotation> {
 
@@ -377,7 +374,7 @@ public abstract class MetaAnnotationUtils {
 
 
 	/**
-	 * <em>Untyped</em> extension of {@link AnnotationDescriptor} that is used
+	 * <em>Untyped</em> extension of {@code AnnotationDescriptor} that is used
 	 * to describe the declaration of one of several candidate annotation types
 	 * where the actual annotation type cannot be predetermined.
 	 */
@@ -402,7 +399,7 @@ public abstract class MetaAnnotationUtils {
 		@Override
 		public Annotation synthesizeAnnotation() {
 			throw new UnsupportedOperationException(
-					"synthesizeAnnotation() is unsupported in UntypedAnnotationDescriptor");
+					"getMergedAnnotation() is unsupported in UntypedAnnotationDescriptor");
 		}
 	}
 

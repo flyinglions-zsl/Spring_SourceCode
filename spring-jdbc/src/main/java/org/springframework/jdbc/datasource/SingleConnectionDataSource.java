@@ -54,22 +54,22 @@ import org.springframework.util.ObjectUtils;
  */
 public class SingleConnectionDataSource extends DriverManagerDataSource implements SmartDataSource, DisposableBean {
 
-	/** Create a close-suppressing proxy?. */
+	/** Create a close-suppressing proxy? */
 	private boolean suppressClose;
 
-	/** Override auto-commit state?. */
+	/** Override auto-commit state? */
 	@Nullable
 	private Boolean autoCommit;
 
-	/** Wrapped Connection. */
+	/** Wrapped Connection */
 	@Nullable
 	private Connection target;
 
-	/** Proxy Connection. */
+	/** Proxy Connection */
 	@Nullable
 	private Connection connection;
 
-	/** Synchronization monitor for the shared Connection. */
+	/** Synchronization monitor for the shared Connection */
 	private final Object connectionMonitor = new Object();
 
 
@@ -175,7 +175,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource implemen
 	/**
 	 * Specifying a custom username and password doesn't make sense
 	 * with a single Connection. Returns the single Connection if given
-	 * the same username and password; throws an SQLException else.
+	 * the same username and password; throws a SQLException else.
 	 */
 	@Override
 	public Connection getConnection(String username, String password) throws SQLException {
@@ -223,8 +223,8 @@ public class SingleConnectionDataSource extends DriverManagerDataSource implemen
 			closeConnection();
 			this.target = getConnectionFromDriver(getUsername(), getPassword());
 			prepareConnection(this.target);
-			if (logger.isDebugEnabled()) {
-				logger.debug("Established shared JDBC Connection: " + this.target);
+			if (logger.isInfoEnabled()) {
+				logger.info("Established shared JDBC Connection: " + this.target);
 			}
 			this.connection = (isSuppressClose() ? getCloseSuppressingConnectionProxy(this.target) : this.target);
 		}
@@ -264,7 +264,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource implemen
 				this.target.close();
 			}
 			catch (Throwable ex) {
-				logger.info("Could not close shared JDBC Connection", ex);
+				logger.warn("Could not close shared JDBC Connection", ex);
 			}
 		}
 	}
@@ -299,25 +299,34 @@ public class SingleConnectionDataSource extends DriverManagerDataSource implemen
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			// Invocation on ConnectionProxy interface coming in...
 
-			switch (method.getName()) {
-				case "equals":
-					// Only consider equal when proxies are identical.
-					return (proxy == args[0]);
-				case "hashCode":
-					// Use hashCode of Connection proxy.
-					return System.identityHashCode(proxy);
-				case "close":
-					// Handle close method: don't pass the call on.
-					return null;
-				case "isClosed":
-					return this.target.isClosed();
-				case "getTargetConnection":
-					// Handle getTargetConnection method: return underlying Connection.
-					return this.target;
-				case "unwrap":
-					return (((Class<?>) args[0]).isInstance(proxy) ? proxy : this.target.unwrap((Class<?>) args[0]));
-				case "isWrapperFor":
-					return (((Class<?>) args[0]).isInstance(proxy) || this.target.isWrapperFor((Class<?>) args[0]));
+			if (method.getName().equals("equals")) {
+				// Only consider equal when proxies are identical.
+				return (proxy == args[0]);
+			}
+			else if (method.getName().equals("hashCode")) {
+				// Use hashCode of Connection proxy.
+				return System.identityHashCode(proxy);
+			}
+			else if (method.getName().equals("unwrap")) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
+					return proxy;
+				}
+			}
+			else if (method.getName().equals("isWrapperFor")) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
+					return true;
+				}
+			}
+			else if (method.getName().equals("close")) {
+				// Handle close method: don't pass the call on.
+				return null;
+			}
+			else if (method.getName().equals("isClosed")) {
+				return this.target.isClosed();
+			}
+			else if (method.getName().equals("getTargetConnection")) {
+				// Handle getTargetConnection method: return underlying Connection.
+				return this.target;
 			}
 
 			// Invoke method on target Connection.

@@ -26,7 +26,7 @@ import org.springframework.lang.Nullable;
  *
  * <p>Implementations can also extend the {@link org.springframework.core.Ordered}
  * interface or use the {@link org.springframework.core.annotation.Order} annotation to
- * indicate a precedence against other {@link DeferredImportSelector DeferredImportSelectors}.
+ * indicate a precedence against other {@link DeferredImportSelector}s.
  *
  * <p>Implementations may also provide an {@link #getImportGroup() import group} which
  * can provide additional sorting and filtering logic across different selectors.
@@ -99,7 +99,7 @@ public interface DeferredImportSelector extends ImportSelector {
 			}
 
 			@Override
-			public boolean equals(@Nullable Object other) {
+			public boolean equals(Object other) {
 				if (this == other) {
 					return true;
 				}

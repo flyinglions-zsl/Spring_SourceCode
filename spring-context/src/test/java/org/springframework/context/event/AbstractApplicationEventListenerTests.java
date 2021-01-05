@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.springframework.context.event;
 
+import java.io.IOException;
+
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.ResolvableType;
@@ -31,13 +33,13 @@ public abstract class AbstractApplicationEventListenerTests {
 		try {
 			return ResolvableType.forField(TestEvents.class.getField(fieldName));
 		}
-		catch (NoSuchFieldException ex) {
+		catch (NoSuchFieldException e) {
 			throw new IllegalStateException("No such field on Events '" + fieldName + "'");
 		}
 	}
 
-
-	protected static class GenericTestEvent<T> extends ApplicationEvent {
+	protected static class GenericTestEvent<T>
+			extends ApplicationEvent {
 
 		private final T payload;
 
@@ -49,9 +51,11 @@ public abstract class AbstractApplicationEventListenerTests {
 		public T getPayload() {
 			return this.payload;
 		}
+
 	}
 
-	protected static class SmartGenericTestEvent<T> extends GenericTestEvent<T> implements ResolvableTypeProvider {
+	protected static class SmartGenericTestEvent<T>
+			extends GenericTestEvent<T> implements ResolvableTypeProvider {
 
 		private final ResolvableType resolvableType;
 
@@ -115,7 +119,6 @@ public abstract class AbstractApplicationEventListenerTests {
 
 	@SuppressWarnings("rawtypes")
 	static class RawApplicationListener implements ApplicationListener {
-
 		@Override
 		public void onApplicationEvent(ApplicationEvent event) {
 		}
@@ -123,7 +126,17 @@ public abstract class AbstractApplicationEventListenerTests {
 
 	static class TestEvents {
 
+		public ApplicationEvent applicationEvent;
+
 		public GenericTestEvent<?> wildcardEvent;
+
+		public GenericTestEvent<String> stringEvent;
+
+		public GenericTestEvent<Long> longEvent;
+
+		public GenericTestEvent<IllegalStateException> illegalStateExceptionEvent;
+
+		public GenericTestEvent<IOException> ioExceptionEvent;
 
 	}
 

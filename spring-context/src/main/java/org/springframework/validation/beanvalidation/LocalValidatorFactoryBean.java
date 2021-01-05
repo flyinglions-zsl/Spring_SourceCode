@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.validation.Configuration;
 import javax.validation.ConstraintValidatorFactory;
 import javax.validation.MessageInterpolator;
@@ -415,7 +414,6 @@ public class LocalValidatorFactoryBean extends SpringValidatorAdapter
 		throw new ValidationException("Cannot unwrap to " + type);
 	}
 
-	@Override
 	public void close() {
 		if (this.validatorFactory != null) {
 			this.validatorFactory.close();

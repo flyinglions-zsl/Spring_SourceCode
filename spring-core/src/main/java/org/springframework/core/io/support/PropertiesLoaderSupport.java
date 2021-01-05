@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.DefaultPropertiesPersister;
 import org.springframework.util.PropertiesPersister;
 
 /**
@@ -40,7 +41,7 @@ import org.springframework.util.PropertiesPersister;
  */
 public abstract class PropertiesLoaderSupport {
 
-	/** Logger available to subclasses. */
+	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	@Nullable
@@ -56,7 +57,7 @@ public abstract class PropertiesLoaderSupport {
 	@Nullable
 	private String fileEncoding;
 
-	private PropertiesPersister propertiesPersister = ResourcePropertiesPersister.INSTANCE;
+	private PropertiesPersister propertiesPersister = new DefaultPropertiesPersister();
 
 
 	/**
@@ -130,12 +131,12 @@ public abstract class PropertiesLoaderSupport {
 
 	/**
 	 * Set the PropertiesPersister to use for parsing properties files.
-	 * The default is ResourcePropertiesPersister.
-	 * @see ResourcePropertiesPersister#INSTANCE
+	 * The default is DefaultPropertiesPersister.
+	 * @see org.springframework.util.DefaultPropertiesPersister
 	 */
 	public void setPropertiesPersister(@Nullable PropertiesPersister propertiesPersister) {
 		this.propertiesPersister =
-				(propertiesPersister != null ? propertiesPersister : ResourcePropertiesPersister.INSTANCE);
+				(propertiesPersister != null ? propertiesPersister : new DefaultPropertiesPersister());
 	}
 
 
@@ -174,8 +175,8 @@ public abstract class PropertiesLoaderSupport {
 	protected void loadProperties(Properties props) throws IOException {
 		if (this.locations != null) {
 			for (Resource location : this.locations) {
-				if (logger.isTraceEnabled()) {
-					logger.trace("Loading properties file from " + location);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Loading properties file from " + location);
 				}
 				try {
 					PropertiesLoaderUtils.fillProperties(
@@ -183,8 +184,8 @@ public abstract class PropertiesLoaderSupport {
 				}
 				catch (FileNotFoundException | UnknownHostException | SocketException ex) {
 					if (this.ignoreResourceNotFound) {
-						if (logger.isDebugEnabled()) {
-							logger.debug("Properties resource not found: " + ex.getMessage());
+						if (logger.isInfoEnabled()) {
+							logger.info("Properties resource not found: " + ex.getMessage());
 						}
 					}
 					else {

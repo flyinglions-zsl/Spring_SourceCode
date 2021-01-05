@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@ package org.springframework.beans.propertyeditors;
 import java.beans.PropertyEditor;
 import java.net.URI;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.util.ClassUtils;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Juergen Hoeller
@@ -56,10 +56,9 @@ public class URIEditorTests {
 		PropertyEditor uriEditor = new URIEditor();
 		uriEditor.setAsText("  https://www.springframework.org  ");
 		Object value = uriEditor.getValue();
-		boolean condition = value instanceof URI;
-		assertThat(condition).isTrue();
+		assertTrue(value instanceof URI);
 		URI uri = (URI) value;
-		assertThat(uri.toString()).isEqualTo("https://www.springframework.org");
+		assertEquals("https://www.springframework.org", uri.toString());
 	}
 
 	@Test
@@ -68,12 +67,10 @@ public class URIEditorTests {
 		uriEditor.setAsText("classpath:" + ClassUtils.classPackageAsResourcePath(getClass()) +
 				"/" + ClassUtils.getShortName(getClass()) + ".class");
 		Object value = uriEditor.getValue();
-		boolean condition1 = value instanceof URI;
-		assertThat(condition1).isTrue();
+		assertTrue(value instanceof URI);
 		URI uri = (URI) value;
-		assertThat(uriEditor.getAsText()).isEqualTo(uri.toString());
-		boolean condition = !uri.getScheme().startsWith("classpath");
-		assertThat(condition).isTrue();
+		assertEquals(uri.toString(), uriEditor.getAsText());
+		assertTrue(!uri.getScheme().startsWith("classpath"));
 	}
 
 	@Test
@@ -82,12 +79,10 @@ public class URIEditorTests {
 		uriEditor.setAsText("  classpath:" + ClassUtils.classPackageAsResourcePath(getClass()) +
 				"/" + ClassUtils.getShortName(getClass()) + ".class  ");
 		Object value = uriEditor.getValue();
-		boolean condition1 = value instanceof URI;
-		assertThat(condition1).isTrue();
+		assertTrue(value instanceof URI);
 		URI uri = (URI) value;
-		assertThat(uriEditor.getAsText()).isEqualTo(uri.toString());
-		boolean condition = !uri.getScheme().startsWith("classpath");
-		assertThat(condition).isTrue();
+		assertEquals(uri.toString(), uriEditor.getAsText());
+		assertTrue(!uri.getScheme().startsWith("classpath"));
 	}
 
 	@Test
@@ -95,25 +90,24 @@ public class URIEditorTests {
 		PropertyEditor uriEditor = new URIEditor();
 		uriEditor.setAsText("classpath:test.txt");
 		Object value = uriEditor.getValue();
-		boolean condition = value instanceof URI;
-		assertThat(condition).isTrue();
+		assertTrue(value instanceof URI);
 		URI uri = (URI) value;
-		assertThat(uriEditor.getAsText()).isEqualTo(uri.toString());
-		assertThat(uri.getScheme().startsWith("classpath")).isTrue();
+		assertEquals(uri.toString(), uriEditor.getAsText());
+		assertTrue(uri.getScheme().startsWith("classpath"));
 	}
 
 	@Test
 	public void setAsTextWithNull() throws Exception {
 		PropertyEditor uriEditor = new URIEditor();
 		uriEditor.setAsText(null);
-		assertThat(uriEditor.getValue()).isNull();
-		assertThat(uriEditor.getAsText()).isEqualTo("");
+		assertNull(uriEditor.getValue());
+		assertEquals("", uriEditor.getAsText());
 	}
 
 	@Test
 	public void getAsTextReturnsEmptyStringIfValueNotSet() throws Exception {
 		PropertyEditor uriEditor = new URIEditor();
-		assertThat(uriEditor.getAsText()).isEqualTo("");
+		assertEquals("", uriEditor.getAsText());
 	}
 
 	@Test
@@ -121,11 +115,10 @@ public class URIEditorTests {
 		PropertyEditor uriEditor = new URIEditor();
 		uriEditor.setAsText("https://example.com/spaces and \u20AC");
 		Object value = uriEditor.getValue();
-		boolean condition = value instanceof URI;
-		assertThat(condition).isTrue();
+		assertTrue(value instanceof URI);
 		URI uri = (URI) value;
-		assertThat(uriEditor.getAsText()).isEqualTo(uri.toString());
-		assertThat(uri.toASCIIString()).isEqualTo("https://example.com/spaces%20and%20%E2%82%AC");
+		assertEquals(uri.toString(), uriEditor.getAsText());
+		assertEquals("https://example.com/spaces%20and%20%E2%82%AC", uri.toASCIIString());
 	}
 
 	@Test
@@ -133,11 +126,10 @@ public class URIEditorTests {
 		PropertyEditor uriEditor = new URIEditor(false);
 		uriEditor.setAsText("https://example.com/spaces%20and%20%E2%82%AC");
 		Object value = uriEditor.getValue();
-		boolean condition = value instanceof URI;
-		assertThat(condition).isTrue();
+		assertTrue(value instanceof URI);
 		URI uri = (URI) value;
-		assertThat(uriEditor.getAsText()).isEqualTo(uri.toString());
-		assertThat(uri.toASCIIString()).isEqualTo("https://example.com/spaces%20and%20%E2%82%AC");
+		assertEquals(uri.toString(), uriEditor.getAsText());
+		assertEquals("https://example.com/spaces%20and%20%E2%82%AC", uri.toASCIIString());
 	}
 
 
@@ -145,10 +137,9 @@ public class URIEditorTests {
 		PropertyEditor uriEditor = new URIEditor();
 		uriEditor.setAsText(uriSpec);
 		Object value = uriEditor.getValue();
-		boolean condition = value instanceof URI;
-		assertThat(condition).isTrue();
+		assertTrue(value instanceof URI);
 		URI uri = (URI) value;
-		assertThat(uri.toString()).isEqualTo(uriSpec);
+		assertEquals(uriSpec, uri.toString());
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.ResourcePropertiesPersister;
 import org.springframework.lang.Nullable;
+import org.springframework.util.DefaultPropertiesPersister;
 import org.springframework.util.PropertiesPersister;
 import org.springframework.util.StringUtils;
 
@@ -80,7 +80,7 @@ import org.springframework.util.StringUtils;
  * @see #setFileEncodings
  * @see #setPropertiesPersister
  * @see #setResourceLoader
- * @see ResourcePropertiesPersister
+ * @see org.springframework.util.DefaultPropertiesPersister
  * @see org.springframework.core.io.DefaultResourceLoader
  * @see ResourceBundleMessageSource
  * @see java.util.ResourceBundle
@@ -98,7 +98,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractResourceBased
 
 	private boolean concurrentRefresh = true;
 
-	private PropertiesPersister propertiesPersister = ResourcePropertiesPersister.INSTANCE;
+	private PropertiesPersister propertiesPersister = new DefaultPropertiesPersister();
 
 	private ResourceLoader resourceLoader = new DefaultResourceLoader();
 
@@ -115,7 +115,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractResourceBased
 	/**
 	 * Set per-file charsets to use for parsing properties files.
 	 * <p>Only applies to classic properties files, not to XML files.
-	 * @param fileEncodings a Properties with filenames as keys and charset
+	 * @param fileEncodings Properties with filenames as keys and charset
 	 * names as values. Filenames have to match the basename syntax,
 	 * with optional locale-specific components: e.g. "WEB-INF/messages"
 	 * or "WEB-INF/messages_en".
@@ -143,12 +143,12 @@ public class ReloadableResourceBundleMessageSource extends AbstractResourceBased
 
 	/**
 	 * Set the PropertiesPersister to use for parsing properties files.
-	 * <p>The default is ResourcePropertiesPersister.
-	 * @see ResourcePropertiesPersister#INSTANCE
+	 * <p>The default is a DefaultPropertiesPersister.
+	 * @see org.springframework.util.DefaultPropertiesPersister
 	 */
 	public void setPropertiesPersister(@Nullable PropertiesPersister propertiesPersister) {
 		this.propertiesPersister =
-				(propertiesPersister != null ? propertiesPersister : ResourcePropertiesPersister.INSTANCE);
+				(propertiesPersister != null ? propertiesPersister : new DefaultPropertiesPersister());
 	}
 
 	/**
@@ -287,13 +287,15 @@ public class ReloadableResourceBundleMessageSource extends AbstractResourceBased
 		filenames.addAll(calculateFilenamesForLocale(basename, locale));
 
 		// Filenames for default Locale, if any
-		Locale defaultLocale = getDefaultLocale();
-		if (defaultLocale != null && !defaultLocale.equals(locale)) {
-			List<String> fallbackFilenames = calculateFilenamesForLocale(basename, defaultLocale);
-			for (String fallbackFilename : fallbackFilenames) {
-				if (!filenames.contains(fallbackFilename)) {
-					// Entry for fallback locale that isn't already in filenames list.
-					filenames.add(fallbackFilename);
+		if (isFallbackToSystemLocale()) {
+			Locale defaultLocale = Locale.getDefault();
+			if (!locale.equals(defaultLocale)) {
+				List<String> fallbackFilenames = calculateFilenamesForLocale(basename, defaultLocale);
+				for (String fallbackFilename : fallbackFilenames) {
+					if (!filenames.contains(fallbackFilename)) {
+						// Entry for fallback locale that isn't already in filenames list.
+						filenames.add(fallbackFilename);
+					}
 				}
 			}
 		}
@@ -564,7 +566,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractResourceBased
 
 		private final ReentrantLock refreshLock = new ReentrantLock();
 
-		/** Cache to hold already generated MessageFormats per message code. */
+		/** Cache to hold already generated MessageFormats per message code */
 		private final ConcurrentMap<String, Map<Locale, MessageFormat>> cachedMessageFormats =
 				new ConcurrentHashMap<>();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.oxm.support;
 
 import java.io.IOException;
-
 import javax.xml.transform.Source;
 import javax.xml.transform.sax.SAXResult;
 import javax.xml.transform.sax.SAXSource;
@@ -103,7 +102,7 @@ public class MarshallingSource extends SAXSource {
 	}
 
 
-	private static final class MarshallingXMLReader implements XMLReader {
+	private static class MarshallingXMLReader implements XMLReader {
 
 		private final Marshaller marshaller;
 
@@ -194,7 +193,7 @@ public class MarshallingSource extends SAXSource {
 		@Nullable
 		public Object getProperty(String name) throws SAXNotRecognizedException {
 			if ("http://xml.org/sax/properties/lexical-handler".equals(name)) {
-				return this.lexicalHandler;
+				return lexicalHandler;
 			}
 			else {
 				throw new SAXNotRecognizedException(name);

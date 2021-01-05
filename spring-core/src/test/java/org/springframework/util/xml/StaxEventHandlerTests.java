@@ -24,7 +24,7 @@ import javax.xml.transform.Result;
 /**
  * @author Arjen Poutsma
  */
-class StaxEventHandlerTests extends AbstractStaxHandlerTests {
+public class StaxEventHandlerTests extends AbstractStaxHandlerTestCase {
 
 	@Override
 	protected AbstractStaxHandler createStaxHandler(Result result) throws XMLStreamException {

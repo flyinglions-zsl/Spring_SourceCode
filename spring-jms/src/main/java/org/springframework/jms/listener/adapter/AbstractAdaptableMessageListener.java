@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ import org.springframework.util.Assert;
 public abstract class AbstractAdaptableMessageListener
 		implements MessageListener, SessionAwareMessageListener<Message> {
 
-	/** Logger available to subclasses. */
+	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	@Nullable
@@ -357,7 +357,7 @@ public abstract class AbstractAdaptableMessageListener
 			throws JMSException {
 
 		if (result instanceof JmsResponse) {
-			JmsResponse<?> jmsResponse = (JmsResponse<?>) result;
+			JmsResponse<?> jmsResponse = (JmsResponse) result;
 			Destination destination = jmsResponse.resolveDestination(getDestinationResolver(), session);
 			if (destination != null) {
 				return destination;
@@ -459,12 +459,13 @@ public abstract class AbstractAdaptableMessageListener
 
 
 	/**
-	 * A {@link MessagingMessageConverter} that lazily invokes payload extraction and
-	 * delegates it to {@link #extractMessage(javax.jms.Message)} in order to enforce
+	 * A {@link MessagingMessageConverter} that lazily invoke payload extraction and
+	 * delegate it to {@link #extractMessage(javax.jms.Message)} in order to enforce
 	 * backward compatibility.
 	 */
 	private class MessagingMessageConverterAdapter extends MessagingMessageConverter {
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public Object fromMessage(javax.jms.Message message) throws JMSException, MessageConversionException {
 			return new LazyResolutionMessage(message);
@@ -537,7 +538,6 @@ public abstract class AbstractAdaptableMessageListener
 			 * this case, its payload is returned.
 			 * @return the payload of the message
 			 */
-			@SuppressWarnings("rawtypes")
 			private Object unwrapPayload() throws JMSException {
 				Object payload = extractPayload(this.message);
 				if (payload instanceof org.springframework.messaging.Message) {

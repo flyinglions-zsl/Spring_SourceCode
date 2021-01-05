@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,22 @@
 package org.springframework.messaging.tcp.reactor;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelPipeline;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
-import reactor.netty.NettyInbound;
-import reactor.netty.NettyOutbound;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 
 import org.springframework.messaging.Message;
 import org.springframework.messaging.tcp.TcpConnection;
 import org.springframework.util.concurrent.ListenableFuture;
-import org.springframework.util.concurrent.MonoToListenableFutureAdapter;
 
 /**
  * Reactor Netty based implementation of {@link TcpConnection}.
  *
  * @author Rossen Stoyanchev
  * @since 5.0
- * @param <P> the type of payload for outbound messages
  */
 public class ReactorNettyTcpConnection<P> implements TcpConnection<P> {
 
@@ -42,16 +42,16 @@ public class ReactorNettyTcpConnection<P> implements TcpConnection<P> {
 
 	private final ReactorNettyCodec<P> codec;
 
-	private final Sinks.Empty<Void> completionSink;
+	private final DirectProcessor<Void> closeProcessor;
 
 
 	public ReactorNettyTcpConnection(NettyInbound inbound, NettyOutbound outbound,
-			ReactorNettyCodec<P> codec, Sinks.Empty<Void> completionSink) {
+			ReactorNettyCodec<P> codec, DirectProcessor<Void> closeProcessor) {
 
 		this.inbound = inbound;
 		this.outbound = outbound;
 		this.codec = codec;
-		this.completionSink = completionSink;
+		this.closeProcessor = closeProcessor;
 	}
 
 
@@ -64,19 +64,27 @@ public class ReactorNettyTcpConnection<P> implements TcpConnection<P> {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public void onReadInactivity(Runnable runnable, long inactivityDuration) {
-		this.inbound.withConnection(conn -> conn.onReadIdle(inactivityDuration, runnable));
+		// TODO: workaround for https://github.com/reactor/reactor-netty/issues/22
+		ChannelPipeline pipeline = this.inbound.context().channel().pipeline();
+		String name = NettyPipeline.OnChannelReadIdle;
+		if (pipeline.context(name) != null) {
+			pipeline.remove(name);
+		}
+
+		this.inbound.onReadIdle(inactivityDuration, runnable);
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public void onWriteInactivity(Runnable runnable, long inactivityDuration) {
-		this.inbound.withConnection(conn -> conn.onWriteIdle(inactivityDuration, runnable));
+		this.outbound.onWriteIdle(inactivityDuration, runnable);
 	}
 
 	@Override
 	public void close() {
-		// Ignore result: concurrent attempts to complete are ok
-		this.completionSink.tryEmitEmpty();
+		this.closeProcessor.onComplete();
 	}
 
 }

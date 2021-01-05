@@ -18,7 +18,6 @@ package org.springframework.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +37,6 @@ import org.springframework.lang.Nullable;
  * <p>Mainly for use within the framework, but also useful for application code.
  *
  * @author Juergen Hoeller
- * @author Hyunjin Choi
  * @since 06.10.2003
  * @see StreamUtils
  * @see FileSystemUtils
@@ -112,8 +110,16 @@ public abstract class FileCopyUtils {
 			return StreamUtils.copy(in, out);
 		}
 		finally {
-			close(in);
-			close(out);
+			try {
+				in.close();
+			}
+			catch (IOException ex) {
+			}
+			try {
+				out.close();
+			}
+			catch (IOException ex) {
+			}
 		}
 	}
 
@@ -132,7 +138,11 @@ public abstract class FileCopyUtils {
 			out.write(in);
 		}
 		finally {
-			close(out);
+			try {
+				out.close();
+			}
+			catch (IOException ex) {
+			}
 		}
 	}
 
@@ -182,8 +192,16 @@ public abstract class FileCopyUtils {
 			return charCount;
 		}
 		finally {
-			close(in);
-			close(out);
+			try {
+				in.close();
+			}
+			catch (IOException ex) {
+			}
+			try {
+				out.close();
+			}
+			catch (IOException ex) {
+			}
 		}
 	}
 
@@ -202,7 +220,11 @@ public abstract class FileCopyUtils {
 			out.write(in);
 		}
 		finally {
-			close(out);
+			try {
+				out.close();
+			}
+			catch (IOException ex) {
+			}
 		}
 	}
 
@@ -221,20 +243,6 @@ public abstract class FileCopyUtils {
 		StringWriter out = new StringWriter(BUFFER_SIZE);
 		copy(in, out);
 		return out.toString();
-	}
-
-	/**
-	 * Attempt to close the supplied {@link Closeable}, silently swallowing any
-	 * exceptions.
-	 * @param closeable the {@code Closeable} to close
-	 */
-	private static void close(Closeable closeable) {
-		try {
-			closeable.close();
-		}
-		catch (IOException ex) {
-			// ignore
-		}
 	}
 
 }

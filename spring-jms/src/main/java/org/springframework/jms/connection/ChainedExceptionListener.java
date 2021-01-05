@@ -18,7 +18,6 @@ package org.springframework.jms.connection;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.jms.ExceptionListener;
 import javax.jms.JMSException;
 
@@ -33,7 +32,7 @@ import org.springframework.util.Assert;
  */
 public class ChainedExceptionListener implements ExceptionListener {
 
-	/** List of ExceptionListeners. */
+	/** List of ExceptionListeners */
 	private final List<ExceptionListener> delegates = new ArrayList<>(2);
 
 

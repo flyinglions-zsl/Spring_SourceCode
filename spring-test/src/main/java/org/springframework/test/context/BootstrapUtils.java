@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
 
 package org.springframework.test.context;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.lang.Nullable;
-import org.springframework.test.context.TestContextAnnotationUtils.AnnotationDescriptor;
+import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -56,8 +56,6 @@ abstract class BootstrapUtils {
 
 	private static final String WEB_APP_CONFIGURATION_ANNOTATION_CLASS_NAME =
 			"org.springframework.test.context.web.WebAppConfiguration";
-
-	private static final Class<? extends Annotation> webAppConfigurationClass = loadWebAppConfigurationClass();
 
 	private static final Log logger = LogFactory.getLog(BootstrapUtils.class);
 
@@ -152,49 +150,24 @@ abstract class BootstrapUtils {
 
 	@Nullable
 	private static Class<?> resolveExplicitTestContextBootstrapper(Class<?> testClass) {
-		Set<BootstrapWith> annotations = new LinkedHashSet<>();
-		AnnotationDescriptor<BootstrapWith> descriptor =
-				TestContextAnnotationUtils.findAnnotationDescriptor(testClass, BootstrapWith.class);
-		while (descriptor != null) {
-			annotations.addAll(descriptor.findAllLocalMergedAnnotations());
-			descriptor = descriptor.next();
-		}
-
+		Set<BootstrapWith> annotations = AnnotatedElementUtils.findAllMergedAnnotations(testClass, BootstrapWith.class);
 		if (annotations.isEmpty()) {
 			return null;
 		}
-		if (annotations.size() == 1) {
-			return annotations.iterator().next().value();
-		}
-
-		// Allow directly-present annotation to override annotations that are meta-present.
-		BootstrapWith bootstrapWith = testClass.getDeclaredAnnotation(BootstrapWith.class);
-		if (bootstrapWith != null) {
-			return bootstrapWith.value();
-		}
-
-		throw new IllegalStateException(String.format(
+		Assert.state(annotations.size() <= 1, () -> String.format(
 				"Configuration error: found multiple declarations of @BootstrapWith for test class [%s]: %s",
 				testClass.getName(), annotations));
+		return annotations.iterator().next().value();
 	}
 
 	private static Class<?> resolveDefaultTestContextBootstrapper(Class<?> testClass) throws Exception {
-		boolean webApp = TestContextAnnotationUtils.hasAnnotation(testClass, webAppConfigurationClass);
-		String bootstrapperClassName = (webApp ? DEFAULT_WEB_TEST_CONTEXT_BOOTSTRAPPER_CLASS_NAME :
-				DEFAULT_TEST_CONTEXT_BOOTSTRAPPER_CLASS_NAME);
-		return ClassUtils.forName(bootstrapperClassName, BootstrapUtils.class.getClassLoader());
-	}
-
-	@SuppressWarnings("unchecked")
-	private static Class<? extends Annotation> loadWebAppConfigurationClass() {
-		try {
-			return (Class<? extends Annotation>) ClassUtils.forName(WEB_APP_CONFIGURATION_ANNOTATION_CLASS_NAME,
-				BootstrapUtils.class.getClassLoader());
+		ClassLoader classLoader = BootstrapUtils.class.getClassLoader();
+		AnnotationAttributes attributes = AnnotatedElementUtils.findMergedAnnotationAttributes(testClass,
+			WEB_APP_CONFIGURATION_ANNOTATION_CLASS_NAME, false, false);
+		if (attributes != null) {
+			return ClassUtils.forName(DEFAULT_WEB_TEST_CONTEXT_BOOTSTRAPPER_CLASS_NAME, classLoader);
 		}
-		catch (ClassNotFoundException | LinkageError ex) {
-			throw new IllegalStateException(
-				"Failed to load class for @" + WEB_APP_CONFIGURATION_ANNOTATION_CLASS_NAME, ex);
-		}
+		return ClassUtils.forName(DEFAULT_TEST_CONTEXT_BOOTSTRAPPER_CLASS_NAME, classLoader);
 	}
 
 }

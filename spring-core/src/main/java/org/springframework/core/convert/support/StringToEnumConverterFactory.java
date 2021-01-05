@@ -40,7 +40,7 @@ final class StringToEnumConverterFactory implements ConverterFactory<String, Enu
 
 		private final Class<T> enumType;
 
-		StringToEnum(Class<T> enumType) {
+		public StringToEnum(Class<T> enumType) {
 			this.enumType = enumType;
 		}
 

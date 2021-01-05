@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
@@ -101,8 +100,7 @@ public class MBeanServerConnectionFactoryBean
 	}
 
 	/**
-	 * Set whether to connect to the server on startup.
-	 * <p>Default is {@code true}.
+	 * Set whether to connect to the server on startup. Default is "true".
 	 * <p>Can be turned off to allow for late start of the JMX server.
 	 * In this case, the JMX connector will be fetched on first access.
 	 */
@@ -145,7 +143,7 @@ public class MBeanServerConnectionFactoryBean
 	}
 
 	/**
-	 * Creates lazy proxies for the {@code JMXConnector} and {@code MBeanServerConnection}.
+	 * Creates lazy proxies for the {@code JMXConnector} and {@code MBeanServerConnection}
 	 */
 	private void createLazyConnection() {
 		this.connectorTargetSource = new JMXConnectorLazyInitTargetSource();

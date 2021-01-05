@@ -47,24 +47,15 @@ public interface ExchangeStrategies {
 	 */
 	List<HttpMessageWriter<?>> messageWriters();
 
-	/**
-	 * Return a builder to create a new {@link ExchangeStrategies} instance
-	 * replicated from the current instance.
-	 * @since 5.1.12
-	 */
-	default Builder mutate() {
-		throw new UnsupportedOperationException();
-	}
-
 
 	// Static builder methods
 
 	/**
-	 * Return an {@code ExchangeStrategies} instance with default configuration
+	 * Return a new {@code ExchangeStrategies} instance with default configuration
 	 * provided by {@link ClientCodecConfigurer}.
 	 */
 	static ExchangeStrategies withDefaults() {
-		return DefaultExchangeStrategiesBuilder.DEFAULT_EXCHANGE_STRATEGIES;
+		return builder().build();
 	}
 
 	/**

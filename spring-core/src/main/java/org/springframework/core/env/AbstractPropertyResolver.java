@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.core.env;
 
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -137,7 +136,9 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 
 	@Override
 	public void setRequiredProperties(String... requiredProperties) {
-		Collections.addAll(this.requiredProperties, requiredProperties);
+		for (String key : requiredProperties) {
+			this.requiredProperties.add(key);
+		}
 	}
 
 	@Override
@@ -216,16 +217,13 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	 * unresolvable placeholders should raise an exception or be ignored.
 	 * <p>Invoked from {@link #getProperty} and its variants, implicitly resolving
 	 * nested placeholders. In contrast, {@link #resolvePlaceholders} and
-	 * {@link #resolveRequiredPlaceholders} do <i>not</i> delegate
+	 * {@link #resolveRequiredPlaceholders} do <emphasis>not</emphasis> delegate
 	 * to this method but rather perform their own handling of unresolvable
 	 * placeholders, as specified by each of those methods.
 	 * @since 3.2
 	 * @see #setIgnoreUnresolvableNestedPlaceholders
 	 */
 	protected String resolveNestedPlaceholders(String value) {
-		if (value.isEmpty()) {
-			return value;
-		}
 		return (this.ignoreUnresolvableNestedPlaceholders ?
 				resolvePlaceholders(value) : resolveRequiredPlaceholders(value));
 	}

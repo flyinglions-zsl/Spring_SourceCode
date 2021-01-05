@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.web.socket.adapter.standard;
 
 import java.nio.ByteBuffer;
-
 import javax.websocket.DecodeException;
 import javax.websocket.Decoder;
 import javax.websocket.EncodeException;
@@ -66,12 +65,12 @@ import org.springframework.web.context.ContextLoader;
  *
  * @author Phillip Webb
  * @since 4.0
- * @param <T> the type being converted to (for Encoder) or from (for Decoder)
- * @param <M> the WebSocket message type ({@link String} or {@link ByteBuffer})
  * @see ConvertingEncoderDecoderSupport.BinaryEncoder
  * @see ConvertingEncoderDecoderSupport.BinaryDecoder
  * @see ConvertingEncoderDecoderSupport.TextEncoder
  * @see ConvertingEncoderDecoderSupport.TextDecoder
+ * @param <T> the type being converted to (for Encoder) or from (for Decoder)
+ * @param <M> the WebSocket message type ({@link String} or {@link ByteBuffer})
  */
 public abstract class ConvertingEncoderDecoderSupport<T, M> {
 
@@ -79,13 +78,12 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 
 
 	/**
-	 * Called to initialize the encoder/decoder.
 	 * @see javax.websocket.Encoder#init(EndpointConfig)
 	 * @see javax.websocket.Decoder#init(EndpointConfig)
 	 */
 	public void init(EndpointConfig config) {
 		ApplicationContext applicationContext = getApplicationContext();
-		if (applicationContext instanceof ConfigurableApplicationContext) {
+		if (applicationContext != null && applicationContext instanceof ConfigurableApplicationContext) {
 			ConfigurableListableBeanFactory beanFactory =
 					((ConfigurableApplicationContext) applicationContext).getBeanFactory();
 			beanFactory.autowireBean(this);
@@ -93,7 +91,6 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Called to destroy the encoder/decoder.
 	 * @see javax.websocket.Encoder#destroy()
 	 * @see javax.websocket.Decoder#destroy()
 	 */
@@ -157,7 +154,6 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Encode an object to a message.
 	 * @see javax.websocket.Encoder.Text#encode(Object)
 	 * @see javax.websocket.Encoder.Binary#encode(Object)
 	 */
@@ -173,8 +169,6 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Determine if a given message can be decoded.
-	 * @see #decode(Object)
 	 * @see javax.websocket.Decoder.Text#willDecode(String)
 	 * @see javax.websocket.Decoder.Binary#willDecode(ByteBuffer)
 	 */
@@ -183,7 +177,6 @@ public abstract class ConvertingEncoderDecoderSupport<T, M> {
 	}
 
 	/**
-	 * Decode the a message into an object.
 	 * @see javax.websocket.Decoder.Text#decode(String)
 	 * @see javax.websocket.Decoder.Binary#decode(ByteBuffer)
 	 */

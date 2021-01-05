@@ -17,7 +17,6 @@
 package org.springframework.cache.jcache;
 
 import java.util.concurrent.Callable;
-
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -108,20 +107,8 @@ public class JCacheCache extends AbstractValueAdaptingCache {
 	}
 
 	@Override
-	public boolean evictIfPresent(Object key) {
-		return this.cache.remove(key);
-	}
-
-	@Override
 	public void clear() {
 		this.cache.removeAll();
-	}
-
-	@Override
-	public boolean invalidate() {
-		boolean notEmpty = this.cache.iterator().hasNext();
-		this.cache.removeAll();
-		return notEmpty;
 	}
 
 

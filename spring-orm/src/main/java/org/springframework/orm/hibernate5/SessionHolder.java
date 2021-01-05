@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 
 import org.springframework.lang.Nullable;
-import org.springframework.orm.jpa.EntityManagerHolder;
+import org.springframework.transaction.support.ResourceHolderSupport;
+import org.springframework.util.Assert;
 
 /**
  * Resource holder wrapping a Hibernate {@link Session} (plus an optional {@link Transaction}).
  * {@link HibernateTransactionManager} binds instances of this class to the thread,
- * for a given {@link org.hibernate.SessionFactory}. Extends {@link EntityManagerHolder}
- * as of 5.1, automatically exposing an {@code EntityManager} handle on Hibernate 5.2+.
+ * for a given {@link org.hibernate.SessionFactory}.
  *
  * <p>Note: This is an SPI class, not intended to be used by applications.
  *
@@ -36,7 +36,9 @@ import org.springframework.orm.jpa.EntityManagerHolder;
  * @see HibernateTransactionManager
  * @see SessionFactoryUtils
  */
-public class SessionHolder extends EntityManagerHolder {
+public class SessionHolder extends ResourceHolderSupport {
+
+	private final Session session;
 
 	@Nullable
 	private Transaction transaction;
@@ -46,17 +48,17 @@ public class SessionHolder extends EntityManagerHolder {
 
 
 	public SessionHolder(Session session) {
-		super(session);
+		Assert.notNull(session, "Session must not be null");
+		this.session = session;
 	}
 
 
 	public Session getSession() {
-		return (Session) getEntityManager();
+		return this.session;
 	}
 
 	public void setTransaction(@Nullable Transaction transaction) {
 		this.transaction = transaction;
-		setTransactionActive(transaction != null);
 	}
 
 	@Nullable

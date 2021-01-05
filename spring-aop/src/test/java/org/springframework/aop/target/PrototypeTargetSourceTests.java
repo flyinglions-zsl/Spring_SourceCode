@@ -16,15 +16,15 @@
 
 package org.springframework.aop.target;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.SideEffectBean;
+import org.springframework.tests.sample.beans.SideEffectBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.junit.Assert.*;
+import static org.springframework.tests.TestResourceUtils.*;
 
 /**
  * @author Rod Johnson
@@ -38,7 +38,7 @@ public class PrototypeTargetSourceTests {
 	private DefaultListableBeanFactory beanFactory;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		this.beanFactory = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(this.beanFactory).loadBeanDefinitions(
@@ -54,14 +54,14 @@ public class PrototypeTargetSourceTests {
 	@Test
 	public void testPrototypeAndSingletonBehaveDifferently() {
 		SideEffectBean singleton = (SideEffectBean) beanFactory.getBean("singleton");
-		assertThat(singleton.getCount()).isEqualTo(INITIAL_COUNT);
+		assertEquals(INITIAL_COUNT, singleton.getCount());
 		singleton.doWork();
-		assertThat(singleton.getCount()).isEqualTo((INITIAL_COUNT + 1));
+		assertEquals(INITIAL_COUNT + 1, singleton.getCount());
 
 		SideEffectBean prototype = (SideEffectBean) beanFactory.getBean("prototype");
-		assertThat(prototype.getCount()).isEqualTo(INITIAL_COUNT);
+		assertEquals(INITIAL_COUNT, prototype.getCount());
 		prototype.doWork();
-		assertThat(prototype.getCount()).isEqualTo(INITIAL_COUNT);
+		assertEquals(INITIAL_COUNT, prototype.getCount());
 	}
 
 }

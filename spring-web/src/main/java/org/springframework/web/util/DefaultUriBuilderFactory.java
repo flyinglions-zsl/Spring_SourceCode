@@ -17,11 +17,9 @@
 package org.springframework.web.util;
 
 import java.net.URI;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.MultiValueMap;
@@ -44,7 +42,7 @@ public class DefaultUriBuilderFactory implements UriBuilderFactory {
 	@Nullable
 	private final UriComponentsBuilder baseUri;
 
-	private EncodingMode encodingMode = EncodingMode.TEMPLATE_AND_VALUES;
+	private EncodingMode encodingMode = EncodingMode.URI_COMPONENT;
 
 	private final Map<String, Object> defaultUriVariables = new HashMap<>();
 
@@ -82,13 +80,16 @@ public class DefaultUriBuilderFactory implements UriBuilderFactory {
 
 
 	/**
-	 * Set the {@link EncodingMode encoding mode} to use.
+	 * Set the encoding mode to use.
 	 * <p>By default this is set to {@link EncodingMode#TEMPLATE_AND_VALUES
 	 * EncodingMode.TEMPLATE_AND_VALUES}.
-	 * <p><strong>Note:</strong> Prior to 5.1 the default was
-	 * {@link EncodingMode#URI_COMPONENT EncodingMode.URI_COMPONENT}
-	 * therefore the {@code WebClient} {@code RestTemplate} have switched their
-	 * default behavior.
+	 * <p><strong>Note:</strong> In 5.1 the default was changed from
+	 * {@link EncodingMode#URI_COMPONENT EncodingMode.URI_COMPONENT}.
+	 * Consequently the {@code WebClient}, which relies on the built-in default
+	 * has also been switched to the new default. The {@code RestTemplate}
+	 * however sets this explicitly to {@link EncodingMode#URI_COMPONENT
+	 * EncodingMode.URI_COMPONENT} explicitly for historic and backwards
+	 * compatibility reasons.
 	 * @param encodingMode the encoding mode to use
 	 */
 	public void setEncodingMode(EncodingMode encodingMode) {
@@ -168,14 +169,7 @@ public class DefaultUriBuilderFactory implements UriBuilderFactory {
 
 
 	/**
-	 * Enum to represent multiple URI encoding strategies. The following are
-	 * available:
-	 * <ul>
-	 * <li>{@link #TEMPLATE_AND_VALUES}
-	 * <li>{@link #VALUES_ONLY}
-	 * <li>{@link #URI_COMPONENT}
-	 * <li>{@link #NONE}
-	 * </ul>
+	 * Enum to represent multiple URI encoding strategies.
 	 * @see #setEncodingMode
 	 */
 	public enum EncodingMode {
@@ -336,32 +330,14 @@ public class DefaultUriBuilderFactory implements UriBuilderFactory {
 		}
 
 		@Override
-		public DefaultUriBuilder queryParam(String name, @Nullable Collection<?> values) {
-			this.uriComponentsBuilder.queryParam(name, values);
-			return this;
-		}
-
-		@Override
-		public DefaultUriBuilder queryParamIfPresent(String name, Optional<?> value) {
-			this.uriComponentsBuilder.queryParamIfPresent(name, value);
-			return this;
-		}
-
-		@Override
-		public DefaultUriBuilder queryParams(MultiValueMap<String, String> params) {
-			this.uriComponentsBuilder.queryParams(params);
-			return this;
-		}
-
-		@Override
 		public DefaultUriBuilder replaceQueryParam(String name, Object... values) {
 			this.uriComponentsBuilder.replaceQueryParam(name, values);
 			return this;
 		}
 
 		@Override
-		public DefaultUriBuilder replaceQueryParam(String name, @Nullable Collection<?> values) {
-			this.uriComponentsBuilder.replaceQueryParam(name, values);
+		public DefaultUriBuilder queryParams(MultiValueMap<String, String> params) {
+			this.uriComponentsBuilder.queryParams(params);
 			return this;
 		}
 

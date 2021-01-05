@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.concurrent.Callable;
-
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.springframework.core.KotlinDetector;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -95,7 +91,7 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 
 	/**
 	 * Invoke the method and handle the return value through one of the
-	 * configured {@link HandlerMethodReturnValueHandler HandlerMethodReturnValueHandlers}.
+	 * configured {@link HandlerMethodReturnValueHandler}s.
 	 * @param webRequest the current request
 	 * @param mavContainer the ModelAndViewContainer for this request
 	 * @param providedArgs "given" arguments matched by type (not resolved)
@@ -108,7 +104,6 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 
 		if (returnValue == null) {
 			if (isRequestNotModified(webRequest) || getResponseStatus() != null || mavContainer.isRequestHandled()) {
-				disableContentCachingIfNecessary(webRequest);
 				mavContainer.setRequestHandled(true);
 				return;
 			}
@@ -126,7 +121,7 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 		}
 		catch (Exception ex) {
 			if (logger.isTraceEnabled()) {
-				logger.trace(formatErrorForReturnValue(returnValue), ex);
+				logger.trace(getReturnValueHandlingErrorMessage("Error handling return value", returnValue), ex);
 			}
 			throw ex;
 		}
@@ -165,21 +160,13 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 		return webRequest.isNotModified();
 	}
 
-	private void disableContentCachingIfNecessary(ServletWebRequest webRequest) {
-		if (isRequestNotModified(webRequest)) {
-			HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
-			Assert.notNull(response, "Expected HttpServletResponse");
-			if (StringUtils.hasText(response.getHeader(HttpHeaders.ETAG))) {
-				HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
-				Assert.notNull(request, "Expected HttpServletRequest");
-			}
+	private String getReturnValueHandlingErrorMessage(String message, @Nullable Object returnValue) {
+		StringBuilder sb = new StringBuilder(message);
+		if (returnValue != null) {
+			sb.append(" [type=").append(returnValue.getClass().getName()).append("]");
 		}
-	}
-
-	private String formatErrorForReturnValue(@Nullable Object returnValue) {
-		return "Error handling return value=[" + returnValue + "]" +
-				(returnValue != null ? ", type=" + returnValue.getClass().getName() : "") +
-				" in " + toString();
+		sb.append(" [value=").append(returnValue).append("]");
+		return getDetailedErrorMessage(sb.toString());
 	}
 
 	/**
@@ -272,8 +259,6 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 			this.returnValue = returnValue;
 			this.returnType = (returnValue instanceof ReactiveTypeHandler.CollectedValuesList ?
 					((ReactiveTypeHandler.CollectedValuesList) returnValue).getReturnType() :
-					KotlinDetector.isSuspendingFunction(super.getMethod()) ?
-					ResolvableType.forMethodParameter(getReturnType()) :
 					ResolvableType.forType(super.getGenericParameterType()).getGeneric());
 		}
 
@@ -289,7 +274,7 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 				return this.returnValue.getClass();
 			}
 			if (!ResolvableType.NONE.equals(this.returnType)) {
-				return this.returnType.toClass();
+				return this.returnType.resolve(Object.class);
 			}
 			return super.getParameterType();
 		}

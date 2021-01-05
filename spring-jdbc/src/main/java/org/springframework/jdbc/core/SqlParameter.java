@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,17 @@
 package org.springframework.jdbc.core;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Object to represent an SQL parameter definition.
+ * Object to represent a SQL parameter definition.
  *
  * <p>Parameters may be anonymous, in which case "name" is {@code null}.
- * However, all parameters must define an SQL type according to {@link java.sql.Types}.
+ * However, all parameters must define a SQL type according to {@link java.sql.Types}.
  *
  * @author Rod Johnson
  * @author Thomas Risberg
@@ -53,7 +54,7 @@ public class SqlParameter {
 
 	/**
 	 * Create a new anonymous SqlParameter, supplying the SQL type.
-	 * @param sqlType the SQL type of the parameter according to {@code java.sql.Types}
+	 * @param sqlType SQL type of the parameter according to {@code java.sql.Types}
 	 */
 	public SqlParameter(int sqlType) {
 		this.sqlType = sqlType;
@@ -61,7 +62,7 @@ public class SqlParameter {
 
 	/**
 	 * Create a new anonymous SqlParameter, supplying the SQL type.
-	 * @param sqlType the SQL type of the parameter according to {@code java.sql.Types}
+	 * @param sqlType SQL type of the parameter according to {@code java.sql.Types}
 	 * @param typeName the type name of the parameter (optional)
 	 */
 	public SqlParameter(int sqlType, @Nullable String typeName) {
@@ -71,7 +72,7 @@ public class SqlParameter {
 
 	/**
 	 * Create a new anonymous SqlParameter, supplying the SQL type.
-	 * @param sqlType the SQL type of the parameter according to {@code java.sql.Types}
+	 * @param sqlType SQL type of the parameter according to {@code java.sql.Types}
 	 * @param scale the number of digits after the decimal point
 	 * (for DECIMAL and NUMERIC types)
 	 */
@@ -82,8 +83,8 @@ public class SqlParameter {
 
 	/**
 	 * Create a new SqlParameter, supplying name and SQL type.
-	 * @param name the name of the parameter, as used in input and output maps
-	 * @param sqlType the SQL type of the parameter according to {@code java.sql.Types}
+	 * @param name name of the parameter, as used in input and output maps
+	 * @param sqlType SQL type of the parameter according to {@code java.sql.Types}
 	 */
 	public SqlParameter(String name, int sqlType) {
 		this.name = name;
@@ -92,8 +93,8 @@ public class SqlParameter {
 
 	/**
 	 * Create a new SqlParameter, supplying name and SQL type.
-	 * @param name the name of the parameter, as used in input and output maps
-	 * @param sqlType the SQL type of the parameter according to {@code java.sql.Types}
+	 * @param name name of the parameter, as used in input and output maps
+	 * @param sqlType SQL type of the parameter according to {@code java.sql.Types}
 	 * @param typeName the type name of the parameter (optional)
 	 */
 	public SqlParameter(String name, int sqlType, @Nullable String typeName) {
@@ -104,8 +105,8 @@ public class SqlParameter {
 
 	/**
 	 * Create a new SqlParameter, supplying name and SQL type.
-	 * @param name the name of the parameter, as used in input and output maps
-	 * @param sqlType the SQL type of the parameter according to {@code java.sql.Types}
+	 * @param name name of the parameter, as used in input and output maps
+	 * @param sqlType SQL type of the parameter according to {@code java.sql.Types}
 	 * @param scale the number of digits after the decimal point
 	 * (for DECIMAL and NUMERIC types)
 	 */
@@ -185,7 +186,7 @@ public class SqlParameter {
 	 */
 	public static List<SqlParameter> sqlTypesToAnonymousParameterList(@Nullable int... types) {
 		if (types == null) {
-			return new ArrayList<>();
+			return new LinkedList<>();
 		}
 		List<SqlParameter> result = new ArrayList<>(types.length);
 		for (int type : types) {

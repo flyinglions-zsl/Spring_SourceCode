@@ -22,10 +22,10 @@ import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.spi.CachingProvider;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.After;
+import org.junit.Before;
 
-import org.springframework.context.testfixture.cache.AbstractValueAdaptingCacheTests;
+import org.springframework.cache.AbstractValueAdaptingCacheTests;
 
 /**
  * @author Stephane Nicoll
@@ -41,7 +41,7 @@ public class JCacheEhCacheApiTests extends AbstractValueAdaptingCacheTests<JCach
 	private JCacheCache cacheNoNull;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		this.cacheManager = getCachingProvider().getCacheManager();
 		this.cacheManager.createCache(CACHE_NAME, new MutableConfiguration<>());
@@ -57,7 +57,7 @@ public class JCacheEhCacheApiTests extends AbstractValueAdaptingCacheTests<JCach
 		return Caching.getCachingProvider("org.ehcache.jcache.JCacheCachingProvider");
 	}
 
-	@AfterEach
+	@After
 	public void shutdown() {
 		if (this.cacheManager != null) {
 			this.cacheManager.close();

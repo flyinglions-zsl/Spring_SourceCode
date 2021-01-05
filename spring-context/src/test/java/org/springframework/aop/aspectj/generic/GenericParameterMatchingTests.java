@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,14 @@ import java.util.Collection;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
- * Tests that pointcut matching is correct with generic method parameter.
+ * Tests that poitncut matching is correct with generic method parameter.
  * See SPR-3904 for more details.
  *
  * @author Ramnivas Laddad
@@ -42,7 +42,7 @@ public class GenericParameterMatchingTests {
 
 
 	@SuppressWarnings("unchecked")
-	@org.junit.jupiter.api.BeforeEach
+	@org.junit.Before
 	public void setup() {
 		ClassPathXmlApplicationContext ctx =
 				new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
@@ -57,19 +57,19 @@ public class GenericParameterMatchingTests {
 	@Test
 	public void testGenericInterfaceGenericArgExecution() {
 		testBean.save("");
-		assertThat(counterAspect.genericInterfaceGenericArgExecutionCount).isEqualTo(1);
+		assertEquals(1, counterAspect.genericInterfaceGenericArgExecutionCount);
 	}
 
 	@Test
 	public void testGenericInterfaceGenericCollectionArgExecution() {
 		testBean.saveAll(null);
-		assertThat(counterAspect.genericInterfaceGenericCollectionArgExecutionCount).isEqualTo(1);
+		assertEquals(1, counterAspect.genericInterfaceGenericCollectionArgExecutionCount);
 	}
 
 	@Test
 	public void testGenericInterfaceSubtypeGenericCollectionArgExecution() {
 		testBean.saveAll(null);
-		assertThat(counterAspect.genericInterfaceSubtypeGenericCollectionArgExecutionCount).isEqualTo(1);
+		assertEquals(1, counterAspect.genericInterfaceSubtypeGenericCollectionArgExecutionCount);
 	}
 
 

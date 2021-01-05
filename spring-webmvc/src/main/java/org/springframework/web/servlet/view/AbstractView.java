@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
-
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -66,7 +65,7 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	/** Default content type. Overridable as bean property. */
 	public static final String DEFAULT_CONTENT_TYPE = "text/html;charset=ISO-8859-1";
 
-	/** Initial size for the temporary output byte array (if any). */
+	/** Initial size for the temporary output byte array (if any) */
 	private static final int OUTPUT_BYTE_ARRAY_INITIAL_SIZE = 4096;
 
 
@@ -147,10 +146,11 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 							"At least 2 characters ([]) required in attributes CSV string '" + propString + "'");
 				}
 				String name = tok.substring(0, eqIdx);
+				String value = tok.substring(eqIdx + 1);
+
 				// Delete first and last characters of value: { and }
-				int beginIndex = eqIdx + 2;
-				int endIndex = tok.length() - 1;
-				String value = tok.substring(beginIndex, endIndex);
+				value = value.substring(1);
+				value = value.substring(0, value.length() - 1);
 
 				addStaticAttribute(name, value);
 			}
@@ -305,10 +305,9 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	public void render(@Nullable Map<String, ?> model, HttpServletRequest request,
 			HttpServletResponse response) throws Exception {
 
-		if (logger.isDebugEnabled()) {
-			logger.debug("View " + formatViewName() +
-					", model " + (model != null ? model : Collections.emptyMap()) +
-					(this.staticAttributes.isEmpty() ? "" : ", static attributes " + this.staticAttributes));
+		if (logger.isTraceEnabled()) {
+			logger.trace("Rendering view with name '" + this.beanName + "' with model " + model +
+				" and static attributes " + this.staticAttributes);
 		}
 
 		Map<String, Object> mergedModel = createMergedOutputModel(model, request, response);
@@ -332,7 +331,7 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 		size += (model != null ? model.size() : 0);
 		size += (pathVars != null ? pathVars.size() : 0);
 
-		Map<String, Object> mergedModel = CollectionUtils.newLinkedHashMap(size);
+		Map<String, Object> mergedModel = new LinkedHashMap<>(size);
 		mergedModel.putAll(this.staticAttributes);
 		if (pathVars != null) {
 			mergedModel.putAll(pathVars);
@@ -439,12 +438,20 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	protected void exposeModelAsRequestAttributes(Map<String, Object> model,
 			HttpServletRequest request) throws Exception {
 
-		model.forEach((name, value) -> {
-			if (value != null) {
-				request.setAttribute(name, value);
+		model.forEach((modelName, modelValue) -> {
+			if (modelValue != null) {
+				request.setAttribute(modelName, modelValue);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Added model object '" + modelName + "' of type [" + modelValue.getClass().getName() +
+							"] to request in view with name '" + getBeanName() + "'");
+				}
 			}
 			else {
-				request.removeAttribute(name);
+				request.removeAttribute(modelName);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Removed model object '" + modelName +
+							"' from request in view with name '" + getBeanName() + "'");
+				}
 			}
 		});
 	}
@@ -493,11 +500,14 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 
 	@Override
 	public String toString() {
-		return getClass().getName() + ": " + formatViewName();
-	}
-
-	protected String formatViewName() {
-		return (getBeanName() != null ? "name '" + getBeanName() + "'" : "[" + getClass().getSimpleName() + "]");
+		StringBuilder sb = new StringBuilder(getClass().getName());
+		if (getBeanName() != null) {
+			sb.append(": name '").append(getBeanName()).append("'");
+		}
+		else {
+			sb.append(": unnamed");
+		}
+		return sb.toString();
 	}
 
 }

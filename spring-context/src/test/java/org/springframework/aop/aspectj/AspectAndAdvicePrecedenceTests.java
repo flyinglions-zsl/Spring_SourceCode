@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,17 @@ package org.springframework.aop.aspectj;
 import java.lang.reflect.Method;
 
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.springframework.aop.MethodBeforeAdvice;
 import org.springframework.beans.factory.BeanNameAware;
-import org.springframework.beans.testfixture.beans.ITestBean;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.lang.Nullable;
+import org.springframework.tests.sample.beans.ITestBean;
+
+import static org.junit.Assert.*;
 
 /**
  * @author Adrian Colyer
@@ -46,7 +48,7 @@ public class AspectAndAdvicePrecedenceTests {
 	private ITestBean testBean;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		ClassPathXmlApplicationContext ctx =
 				new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
@@ -74,24 +76,24 @@ public class AspectAndAdvicePrecedenceTests {
 		private static final String[] EXPECTED = {
 			// this order confirmed by running the same aspects (minus the Spring AOP advisors)
 			// through AspectJ...
-			"beforeAdviceOne(highPrecedenceAspect)",				// 1
-			"beforeAdviceTwo(highPrecedenceAspect)",				// 2
-			"aroundAdviceOne(highPrecedenceAspect)",				// 3,  before proceed
-				"aroundAdviceTwo(highPrecedenceAspect)",			// 4,  before proceed
-					"beforeAdviceOne(highPrecedenceSpringAdvice)",	// 5
-					"beforeAdviceOne(lowPrecedenceSpringAdvice)",	// 6
-					"beforeAdviceOne(lowPrecedenceAspect)",			// 7
-					"beforeAdviceTwo(lowPrecedenceAspect)",			// 8
-					"aroundAdviceOne(lowPrecedenceAspect)",			// 9,  before proceed
-				"aroundAdviceTwo(lowPrecedenceAspect)",				// 10, before proceed
-				"aroundAdviceTwo(lowPrecedenceAspect)",				// 11, after proceed
-					"aroundAdviceOne(lowPrecedenceAspect)",			// 12, after proceed
-					"afterAdviceOne(lowPrecedenceAspect)",			// 13
-					"afterAdviceTwo(lowPrecedenceAspect)",			// 14
-				"aroundAdviceTwo(highPrecedenceAspect)",			// 15, after proceed
-			"aroundAdviceOne(highPrecedenceAspect)",				// 16, after proceed
-			"afterAdviceOne(highPrecedenceAspect)",					// 17
-			"afterAdviceTwo(highPrecedenceAspect)"					// 18
+			"beforeAdviceOne(highPrecedenceAspect)",  	       // 1
+			"beforeAdviceTwo(highPrecedenceAspect)",           // 2
+			"aroundAdviceOne(highPrecedenceAspect)",           // 3, before proceed
+			  "aroundAdviceTwo(highPrecedenceAspect)",         // 4, before proceed
+			    "beforeAdviceOne(highPrecedenceSpringAdvice)", // 5
+			    "beforeAdviceOne(lowPrecedenceSpringAdvice)",  // 6
+			    "beforeAdviceOne(lowPrecedenceAspect)",        // 7
+			    "beforeAdviceTwo(lowPrecedenceAspect)",        // 8
+			    "aroundAdviceOne(lowPrecedenceAspect)",        // 9, before proceed
+			      "aroundAdviceTwo(lowPrecedenceAspect)",      // 10, before proceed
+			      "aroundAdviceTwo(lowPrecedenceAspect)",      // 11, after proceed
+			    "aroundAdviceOne(lowPrecedenceAspect)",        // 12, after proceed
+			    "afterAdviceOne(lowPrecedenceAspect)",         // 13
+			    "afterAdviceTwo(lowPrecedenceAspect)",         // 14
+			  "aroundAdviceTwo(highPrecedenceAspect)",         // 15, after proceed
+			"aroundAdviceOne(highPrecedenceAspect)",           // 16, after proceed
+			"afterAdviceOne(highPrecedenceAspect)",            // 17
+			"afterAdviceTwo(highPrecedenceAspect)"             // 18
 		};
 
 		private int adviceInvocationNumber = 0;
@@ -99,12 +101,12 @@ public class AspectAndAdvicePrecedenceTests {
 		private void checkAdvice(String whatJustHappened) {
 			//System.out.println("[" + adviceInvocationNumber + "] " + whatJustHappened + " ==> " + EXPECTED[adviceInvocationNumber]);
 			if (adviceInvocationNumber > (EXPECTED.length - 1)) {
-				throw new AssertionError("Too many advice invocations, expecting " + EXPECTED.length
+				fail("Too many advice invocations, expecting " + EXPECTED.length
 						+ " but had " + adviceInvocationNumber);
 			}
 			String expecting = EXPECTED[adviceInvocationNumber++];
 			if (!whatJustHappened.equals(expecting)) {
-				throw new AssertionError("Expecting '" + expecting + "' on advice invocation " + adviceInvocationNumber +
+				fail("Expecting '" + expecting + "' on advice invocation " + adviceInvocationNumber +
 						" but got '" + whatJustHappened + "'");
 			}
 		}

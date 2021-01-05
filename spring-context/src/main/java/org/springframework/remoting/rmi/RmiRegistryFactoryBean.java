@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,9 +60,7 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.jmx.support.ConnectorServerFactoryBean
  * @see java.rmi.registry.Registry
  * @see java.rmi.registry.LocateRegistry
- * @deprecated as of 5.3 (phasing out serialization-based remoting)
  */
-@Deprecated
 public class RmiRegistryFactoryBean implements FactoryBean<Registry>, InitializingBean, DisposableBean {
 
 	protected final Log logger = LogFactory.getLog(getClass());
@@ -185,8 +183,8 @@ public class RmiRegistryFactoryBean implements FactoryBean<Registry>, Initializi
 
 		if (registryHost != null) {
 			// Host explicitly specified: only lookup possible.
-			if (logger.isDebugEnabled()) {
-				logger.debug("Looking for RMI registry at port '" + registryPort + "' of host [" + registryHost + "]");
+			if (logger.isInfoEnabled()) {
+				logger.info("Looking for RMI registry at port '" + registryPort + "' of host [" + registryHost + "]");
 			}
 			Registry reg = LocateRegistry.getRegistry(registryHost, registryPort, clientSocketFactory);
 			testRegistry(reg);
@@ -212,12 +210,12 @@ public class RmiRegistryFactoryBean implements FactoryBean<Registry>, Initializi
 
 		if (clientSocketFactory != null) {
 			if (this.alwaysCreate) {
-				logger.debug("Creating new RMI registry");
+				logger.info("Creating new RMI registry");
 				this.created = true;
 				return LocateRegistry.createRegistry(registryPort, clientSocketFactory, serverSocketFactory);
 			}
-			if (logger.isDebugEnabled()) {
-				logger.debug("Looking for RMI registry at port '" + registryPort + "', using custom socket factory");
+			if (logger.isInfoEnabled()) {
+				logger.info("Looking for RMI registry at port '" + registryPort + "', using custom socket factory");
 			}
 			synchronized (LocateRegistry.class) {
 				try {
@@ -227,8 +225,8 @@ public class RmiRegistryFactoryBean implements FactoryBean<Registry>, Initializi
 					return reg;
 				}
 				catch (RemoteException ex) {
-					logger.trace("RMI registry access threw exception", ex);
-					logger.debug("Could not detect RMI registry - creating new one");
+					logger.debug("RMI registry access threw exception", ex);
+					logger.info("Could not detect RMI registry - creating new one");
 					// Assume no registry found -> create new one.
 					this.created = true;
 					return LocateRegistry.createRegistry(registryPort, clientSocketFactory, serverSocketFactory);
@@ -249,12 +247,12 @@ public class RmiRegistryFactoryBean implements FactoryBean<Registry>, Initializi
 	 */
 	protected Registry getRegistry(int registryPort) throws RemoteException {
 		if (this.alwaysCreate) {
-			logger.debug("Creating new RMI registry");
+			logger.info("Creating new RMI registry");
 			this.created = true;
 			return LocateRegistry.createRegistry(registryPort);
 		}
-		if (logger.isDebugEnabled()) {
-			logger.debug("Looking for RMI registry at port '" + registryPort + "'");
+		if (logger.isInfoEnabled()) {
+			logger.info("Looking for RMI registry at port '" + registryPort + "'");
 		}
 		synchronized (LocateRegistry.class) {
 			try {
@@ -264,8 +262,8 @@ public class RmiRegistryFactoryBean implements FactoryBean<Registry>, Initializi
 				return reg;
 			}
 			catch (RemoteException ex) {
-				logger.trace("RMI registry access threw exception", ex);
-				logger.debug("Could not detect RMI registry - creating new one");
+				logger.debug("RMI registry access threw exception", ex);
+				logger.info("Could not detect RMI registry - creating new one");
 				// Assume no registry found -> create new one.
 				this.created = true;
 				return LocateRegistry.createRegistry(registryPort);
@@ -309,7 +307,7 @@ public class RmiRegistryFactoryBean implements FactoryBean<Registry>, Initializi
 	@Override
 	public void destroy() throws RemoteException {
 		if (this.created) {
-			logger.debug("Unexporting RMI registry");
+			logger.info("Unexporting RMI registry");
 			UnicastRemoteObject.unexportObject(this.registry, true);
 		}
 	}

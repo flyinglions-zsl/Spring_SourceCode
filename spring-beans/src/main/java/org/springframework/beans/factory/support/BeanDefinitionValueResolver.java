@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.beans.factory.support;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,19 +30,15 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.beans.factory.config.DependencyDescriptor;
-import org.springframework.beans.factory.config.NamedBeanHolder;
 import org.springframework.beans.factory.config.RuntimeBeanNameReference;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.config.TypedStringValue;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
@@ -60,7 +57,7 @@ import org.springframework.util.StringUtils;
  */
 class BeanDefinitionValueResolver {
 
-	private final AbstractAutowireCapableBeanFactory beanFactory;
+	private final AbstractBeanFactory beanFactory;
 
 	private final String beanName;
 
@@ -76,8 +73,8 @@ class BeanDefinitionValueResolver {
 	 * @param beanDefinition the BeanDefinition of the bean that we work on
 	 * @param typeConverter the TypeConverter to use for resolving TypedStringValues
 	 */
-	public BeanDefinitionValueResolver(AbstractAutowireCapableBeanFactory beanFactory, String beanName,
-			BeanDefinition beanDefinition, TypeConverter typeConverter) {
+	public BeanDefinitionValueResolver(
+			AbstractBeanFactory beanFactory, String beanName, BeanDefinition beanDefinition, TypeConverter typeConverter) {
 
 		this.beanFactory = beanFactory;
 		this.beanName = beanName;
@@ -132,17 +129,6 @@ class BeanDefinitionValueResolver {
 			String innerBeanName = "(inner bean)" + BeanFactoryUtils.GENERATED_BEAN_NAME_SEPARATOR +
 					ObjectUtils.getIdentityHexString(bd);
 			return resolveInnerBean(argName, innerBeanName, bd);
-		}
-		else if (value instanceof DependencyDescriptor) {
-			Set<String> autowiredBeanNames = new LinkedHashSet<>(4);
-			Object result = this.beanFactory.resolveDependency(
-					(DependencyDescriptor) value, this.beanName, autowiredBeanNames, this.typeConverter);
-			for (String autowiredBeanName : autowiredBeanNames) {
-				if (this.beanFactory.containsBean(autowiredBeanName)) {
-					this.beanFactory.registerDependentBean(autowiredBeanName, this.beanName);
-				}
-			}
-			return result;
 		}
 		else if (value instanceof ManagedArray) {
 			// May need to resolve contained runtime references.
@@ -302,34 +288,20 @@ class BeanDefinitionValueResolver {
 	private Object resolveReference(Object argName, RuntimeBeanReference ref) {
 		try {
 			Object bean;
-			Class<?> beanType = ref.getBeanType();
+			String refName = ref.getBeanName();
+			refName = String.valueOf(doEvaluate(refName));
 			if (ref.isToParent()) {
-				BeanFactory parent = this.beanFactory.getParentBeanFactory();
-				if (parent == null) {
+				if (this.beanFactory.getParentBeanFactory() == null) {
 					throw new BeanCreationException(
 							this.beanDefinition.getResourceDescription(), this.beanName,
-							"Cannot resolve reference to bean " + ref +
-									" in parent factory: no parent factory available");
+							"Can't resolve reference to bean '" + refName +
+									"' in parent factory: no parent factory available");
 				}
-				if (beanType != null) {
-					bean = parent.getBean(beanType);
-				}
-				else {
-					bean = parent.getBean(String.valueOf(doEvaluate(ref.getBeanName())));
-				}
+				bean = this.beanFactory.getParentBeanFactory().getBean(refName);
 			}
 			else {
-				String resolvedName;
-				if (beanType != null) {
-					NamedBeanHolder<?> namedBean = this.beanFactory.resolveNamedBean(beanType);
-					bean = namedBean.getBeanInstance();
-					resolvedName = namedBean.getBeanName();
-				}
-				else {
-					resolvedName = String.valueOf(doEvaluate(ref.getBeanName()));
-					bean = this.beanFactory.getBean(resolvedName);
-				}
-				this.beanFactory.registerDependentBean(resolvedName, this.beanName);
+				bean = this.beanFactory.getBean(refName);
+				this.beanFactory.registerDependentBean(refName, this.beanName);
 			}
 			if (bean instanceof NullBean) {
 				bean = null;
@@ -400,10 +372,9 @@ class BeanDefinitionValueResolver {
 	private String adaptInnerBeanName(String innerBeanName) {
 		String actualInnerBeanName = innerBeanName;
 		int counter = 0;
-		String prefix = innerBeanName + BeanFactoryUtils.GENERATED_BEAN_NAME_SEPARATOR;
 		while (this.beanFactory.isBeanNameInUse(actualInnerBeanName)) {
 			counter++;
-			actualInnerBeanName = prefix + counter;
+			actualInnerBeanName = innerBeanName + BeanFactoryUtils.GENERATED_BEAN_NAME_SEPARATOR + counter;
 		}
 		return actualInnerBeanName;
 	}
@@ -447,7 +418,7 @@ class BeanDefinitionValueResolver {
 	 * For each element in the managed map, resolve reference if necessary.
 	 */
 	private Map<?, ?> resolveManagedMap(Object argName, Map<?, ?> mm) {
-		Map<Object, Object> resolved = CollectionUtils.newLinkedHashMap(mm.size());
+		Map<Object, Object> resolved = new LinkedHashMap<>(mm.size());
 		mm.forEach((key, value) -> {
 			Object resolvedKey = resolveValueIfNecessary(argName, key);
 			Object resolvedValue = resolveValueIfNecessary(new KeyedArgName(argName, key), value);

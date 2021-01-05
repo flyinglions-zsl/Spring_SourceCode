@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,22 @@
 
 package org.springframework.web.reactive.socket.client;
 
-import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.UpgradeRequest;
 import org.eclipse.jetty.websocket.api.UpgradeResponse;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.io.UpgradeListener;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.MonoProcessor;
 
 import org.springframework.context.Lifecycle;
+import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.socket.HandshakeInfo;
 import org.springframework.web.reactive.socket.WebSocketHandler;
-import org.springframework.web.reactive.socket.adapter.ContextWebSocketHandler;
 import org.springframework.web.reactive.socket.adapter.JettyWebSocketHandlerAdapter;
 import org.springframework.web.reactive.socket.adapter.JettyWebSocketSession;
 
@@ -51,14 +48,17 @@ import org.springframework.web.reactive.socket.adapter.JettyWebSocketSession;
  * @author Rossen Stoyanchev
  * @since 5.0
  */
-public class JettyWebSocketClient implements WebSocketClient, Lifecycle {
-
-	private static final Log logger = LogFactory.getLog(JettyWebSocketClient.class);
-
+public class JettyWebSocketClient extends WebSocketClientSupport implements WebSocketClient, Lifecycle {
 
 	private final org.eclipse.jetty.websocket.client.WebSocketClient jettyClient;
 
 	private final boolean externallyManaged;
+
+	private volatile boolean running = false;
+
+	private final Object lifecycleMonitor = new Object();
+
+	private final DataBufferFactory bufferFactory = new DefaultDataBufferFactory();
 
 
 	/**
@@ -99,31 +99,43 @@ public class JettyWebSocketClient implements WebSocketClient, Lifecycle {
 
 	@Override
 	public void start() {
-		if (!this.externallyManaged) {
-			try {
-				this.jettyClient.start();
-			}
-			catch (Exception ex) {
-				throw new IllegalStateException("Failed to start Jetty WebSocketClient", ex);
+		if (this.externallyManaged) {
+			return;
+		}
+		synchronized (this.lifecycleMonitor) {
+			if (!isRunning()) {
+				try {
+					this.running = true;
+					this.jettyClient.start();
+				}
+				catch (Exception ex) {
+					throw new IllegalStateException("Failed to start Jetty WebSocketClient", ex);
+				}
 			}
 		}
 	}
 
 	@Override
 	public void stop() {
-		if (!this.externallyManaged) {
-			try {
-				this.jettyClient.stop();
-			}
-			catch (Exception ex) {
-				throw new IllegalStateException("Error stopping Jetty WebSocketClient", ex);
+		if (this.externallyManaged) {
+			return;
+		}
+		synchronized (this.lifecycleMonitor) {
+			if (isRunning()) {
+				try {
+					this.running = false;
+					this.jettyClient.stop();
+				}
+				catch (Exception ex) {
+					throw new IllegalStateException("Error stopping Jetty WebSocketClient", ex);
+				}
 			}
 		}
 	}
 
 	@Override
 	public boolean isRunning() {
-		return this.jettyClient.isRunning();
+		return this.running;
 	}
 
 
@@ -138,38 +150,28 @@ public class JettyWebSocketClient implements WebSocketClient, Lifecycle {
 	}
 
 	private Mono<Void> executeInternal(URI url, HttpHeaders headers, WebSocketHandler handler) {
-		Sinks.Empty<Void> completionSink = Sinks.empty();
-		return Mono.deferContextual(contextView -> {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Connecting to " + url);
-			}
-			Object jettyHandler = createHandler(
-					url, ContextWebSocketHandler.decorate(handler, contextView), completionSink);
-			ClientUpgradeRequest request = new ClientUpgradeRequest();
-			request.setSubProtocols(handler.getSubProtocols());
-			UpgradeListener upgradeListener = new DefaultUpgradeListener(headers);
-			try {
-				this.jettyClient.connect(jettyHandler, url, request, upgradeListener);
-				return completionSink.asMono();
-			}
-			catch (IOException ex) {
-				return Mono.error(ex);
-			}
-		});
+		MonoProcessor<Void> completionMono = MonoProcessor.create();
+		return Mono.fromCallable(
+				() -> {
+					List<String> protocols = beforeHandshake(url, headers, handler);
+					ClientUpgradeRequest upgradeRequest = new ClientUpgradeRequest();
+					upgradeRequest.setSubProtocols(protocols);
+					Object jettyHandler = createJettyHandler(url, handler, completionMono);
+					UpgradeListener upgradeListener = new DefaultUpgradeListener(headers);
+					return this.jettyClient.connect(jettyHandler, url, upgradeRequest, upgradeListener);
+				})
+				.then(completionMono);
 	}
 
-	private Object createHandler(URI url, WebSocketHandler handler, Sinks.Empty<Void> completion) {
-		return new JettyWebSocketHandlerAdapter(handler, session -> {
-			HandshakeInfo info = createHandshakeInfo(url, session);
-			return new JettyWebSocketSession(session, info, DefaultDataBufferFactory.sharedInstance, completion);
-		});
-	}
-
-	private HandshakeInfo createHandshakeInfo(URI url, Session jettySession) {
-		HttpHeaders headers = new HttpHeaders();
-		jettySession.getUpgradeResponse().getHeaders().forEach(headers::put);
-		String protocol = headers.getFirst("Sec-WebSocket-Protocol");
-		return new HandshakeInfo(url, headers, Mono.empty(), protocol);
+	private Object createJettyHandler(URI url, WebSocketHandler handler, MonoProcessor<Void> completion) {
+		return new JettyWebSocketHandlerAdapter(handler,
+				session -> {
+					UpgradeResponse response = session.getUpgradeResponse();
+					HttpHeaders responseHeaders = new HttpHeaders();
+					response.getHeaders().forEach(responseHeaders::put);
+					HandshakeInfo info = afterHandshake(url, responseHeaders);
+					return new JettyWebSocketSession(session, info, this.bufferFactory, completion);
+				});
 	}
 
 

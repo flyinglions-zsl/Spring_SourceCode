@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.util.context.Context;
 
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -129,24 +127,24 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 		@Nullable
 		private Subscription subscription;
 
-		/** Cached data item before readyToWrite. */
+		/** Cached data item before readyToWrite */
 		@Nullable
 		private T item;
 
-		/** Cached error signal before readyToWrite. */
+		/** Cached error signal before readyToWrite */
 		@Nullable
 		private Throwable error;
 
-		/** Cached onComplete signal before readyToWrite. */
+		/** Cached onComplete signal before readyToWrite */
 		private boolean completed = false;
 
-		/** Recursive demand while emitting cached signals. */
+		/** Recursive demand while emitting cached signals */
 		private long demandBeforeReadyToWrite;
 
-		/** Current state. */
+		/** Current state */
 		private State state = State.NEW;
 
-		/** The actual writeSubscriber from the HTTP server adapter. */
+		/** The actual writeSubscriber from the HTTP server adapter */
 		@Nullable
 		private Subscriber<? super T> writeSubscriber;
 
@@ -181,15 +179,7 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 				else if (this.state == State.NEW) {
 					this.item = item;
 					this.state = State.FIRST_SIGNAL_RECEIVED;
-					Publisher<Void> result;
-					try {
-						result = writeFunction.apply(this);
-					}
-					catch (Throwable ex) {
-						this.writeCompletionBarrier.onError(ex);
-						return;
-					}
-					result.subscribe(this.writeCompletionBarrier);
+					writeFunction.apply(this).subscribe(this.writeCompletionBarrier);
 				}
 				else {
 					if (this.subscription != null) {
@@ -238,15 +228,7 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 				else if (this.state == State.NEW) {
 					this.completed = true;
 					this.state = State.FIRST_SIGNAL_RECEIVED;
-					Publisher<Void> result;
-					try {
-						result = writeFunction.apply(this);
-					}
-					catch (Throwable ex) {
-						this.writeCompletionBarrier.onError(ex);
-						return;
-					}
-					result.subscribe(this.writeCompletionBarrier);
+					writeFunction.apply(this).subscribe(this.writeCompletionBarrier);
 				}
 				else {
 					this.completed = true;
@@ -297,19 +279,12 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 		}
 
 		private boolean emitCachedSignals() {
-			if (this.error != null) {
-				try {
-					requiredWriteSubscriber().onError(this.error);
-				}
-				finally {
-					releaseCachedItem();
-				}
-				return true;
+			if (this.item != null) {
+				requiredWriteSubscriber().onNext(this.item);
 			}
-			T item = this.item;
-			this.item = null;
-			if (item != null) {
-				requiredWriteSubscriber().onNext(item);
+			if (this.error != null) {
+				requiredWriteSubscriber().onError(this.error);
+				return true;
 			}
 			if (this.completed) {
 				requiredWriteSubscriber().onComplete();
@@ -323,22 +298,7 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 			Subscription s = this.subscription;
 			if (s != null) {
 				this.subscription = null;
-				try {
-					s.cancel();
-				}
-				finally {
-					releaseCachedItem();
-				}
-			}
-		}
-
-		private void releaseCachedItem() {
-			synchronized (this) {
-				Object item = this.item;
-				if (item instanceof DataBuffer) {
-					DataBufferUtils.release((DataBuffer) item);
-				}
-				this.item = null;
+				s.cancel();
 			}
 		}
 
@@ -410,12 +370,7 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 
 		@Override
 		public void onError(Throwable ex) {
-			try {
-				this.completionSubscriber.onError(ex);
-			}
-			finally {
-				this.writeBarrier.releaseCachedItem();
-			}
+			this.completionSubscriber.onError(ex);
 		}
 
 		@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ import org.springframework.util.StringUtils;
 public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedenceInformation, Serializable {
 
 	/**
-	 * Key used in ReflectiveMethodInvocation userAttributes map for the current joinpoint.
+	 * Key used in ReflectiveMethodInvocation userAtributes map for the current joinpoint.
 	 */
 	protected static final String JOIN_POINT_KEY = JoinPoint.class.getName();
 
@@ -117,16 +117,16 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 
 	/**
 	 * This will be non-null if the creator of this advice object knows the argument names
-	 * and sets them explicitly.
+	 * and sets them explicitly
 	 */
 	@Nullable
 	private String[] argumentNames;
 
-	/** Non-null if after throwing advice binds the thrown value. */
+	/** Non-null if after throwing advice binds the thrown value */
 	@Nullable
 	private String throwingName;
 
-	/** Non-null if after returning advice binds the return value. */
+	/** Non-null if after returning advice binds the return value */
 	@Nullable
 	private String returningName;
 
@@ -136,13 +136,13 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 
 	/**
 	 * Index for thisJoinPoint argument (currently only
-	 * supported at index 0 if present at all).
+	 * supported at index 0 if present at all)
 	 */
 	private int joinPointArgumentIndex = -1;
 
 	/**
 	 * Index for thisJoinPointStaticPart argument (currently only
-	 * supported at index 0 if present at all).
+	 * supported at index 0 if present at all)
 	 */
 	private int joinPointStaticPartArgumentIndex = -1;
 
@@ -350,8 +350,17 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 		return this.discoveredThrowingType;
 	}
 
-	private static boolean isVariableName(String name) {
-		return AspectJProxyUtils.isVariableName(name);
+	private boolean isVariableName(String name) {
+		char[] chars = name.toCharArray();
+		if (!Character.isJavaIdentifierStart(chars[0])) {
+			return false;
+		}
+		for (int i = 1; i < chars.length; i++) {
+			if (!Character.isJavaIdentifierPart(chars[i])) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 
@@ -542,7 +551,7 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 
 	/**
 	 * Take the arguments at the method execution join point and output a set of arguments
-	 * to the advice method.
+	 * to the advice method
 	 * @param jp the current JoinPoint
 	 * @param jpMatch the join point match that matched this execution join point
 	 * @param returnValue the return value from the method execution (may be null)
@@ -631,6 +640,7 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 		}
 		try {
 			ReflectionUtils.makeAccessible(this.aspectJAdviceMethod);
+			// TODO AopUtils.invokeJoinpointUsingReflection
 			return this.aspectJAdviceMethod.invoke(this.aspectInstanceFactory.getAspectInstance(), actualArgs);
 		}
 		catch (IllegalArgumentException ex) {
@@ -705,12 +715,12 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 		}
 
 		@Override
-		public boolean matches(Method method, Class<?> targetClass) {
+		public boolean matches(Method method, @Nullable Class<?> targetClass) {
 			return !this.adviceMethod.equals(method);
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
+		public boolean equals(Object other) {
 			if (this == other) {
 				return true;
 			}
@@ -724,11 +734,6 @@ public abstract class AbstractAspectJAdvice implements Advice, AspectJPrecedence
 		@Override
 		public int hashCode() {
 			return this.adviceMethod.hashCode();
-		}
-
-		@Override
-		public String toString() {
-			return getClass().getName() + ": " + this.adviceMethod;
 		}
 	}
 

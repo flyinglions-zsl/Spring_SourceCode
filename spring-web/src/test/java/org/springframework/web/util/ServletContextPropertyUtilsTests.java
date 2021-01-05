@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,15 +12,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ */package org.springframework.web.util;
 
-package org.springframework.web.util;
+import org.junit.Test;
 
-import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.test.MockServletContext;
 
-import org.springframework.web.testfixture.servlet.MockServletContext;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Marten Deinum
@@ -28,24 +26,25 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class ServletContextPropertyUtilsTests {
 
-	@Test
-	public void resolveAsServletContextInitParameter() {
-		MockServletContext servletContext = new MockServletContext();
-		servletContext.setInitParameter("test.prop", "bar");
-		String resolved = ServletContextPropertyUtils.resolvePlaceholders("${test.prop:foo}", servletContext);
-		assertThat(resolved).isEqualTo("bar");
-	}
+    @Test
+    public void resolveAsServletContextInitParameter() {
+        MockServletContext servletContext = new MockServletContext();
+        servletContext.setInitParameter("test.prop", "bar");
+        String resolved = ServletContextPropertyUtils.resolvePlaceholders("${test.prop:foo}", servletContext);
+        assertEquals("bar", resolved);
+    }
 
-	@Test
-	public void fallbackToSystemProperties() {
-		MockServletContext servletContext = new MockServletContext();
-		System.setProperty("test.prop", "bar");
-		try {
-			String resolved = ServletContextPropertyUtils.resolvePlaceholders("${test.prop:foo}", servletContext);
-			assertThat(resolved).isEqualTo("bar");
-		}
+    @Test
+    public void fallbackToSystemProperties() {
+        MockServletContext servletContext = new MockServletContext();
+        System.setProperty("test.prop", "bar");
+        try {
+            String resolved = ServletContextPropertyUtils.resolvePlaceholders("${test.prop:foo}", servletContext);
+            assertEquals("bar", resolved);
+        }
 		finally {
-			System.clearProperty("test.prop");
-		}
-	}
+            System.clearProperty("test.prop");
+        }
+    }
+
 }

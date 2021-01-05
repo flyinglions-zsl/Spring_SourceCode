@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@
 package org.springframework.web.servlet.resource;
 
 import java.io.IOException;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.core.io.Resource;
 
 /**
- * A contract for invoking a chain of {@link ResourceTransformer ResourceTransformers} where each resolver
+ * A contract for invoking a chain of {@link ResourceTransformer}s where each resolver
  * is given a reference to the chain allowing it to delegate when necessary.
  *
  * @author Rossen Stoyanchev

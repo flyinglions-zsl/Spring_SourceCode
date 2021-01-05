@@ -17,7 +17,6 @@
 package org.springframework.web.servlet.tags.form;
 
 import java.util.Map;
-
 import javax.servlet.jsp.JspException;
 
 import org.springframework.lang.Nullable;
@@ -246,6 +245,9 @@ public class InputTag extends AbstractHtmlInputElementTag {
 	public static final String ONSELECT_ATTRIBUTE = "onselect";
 
 	public static final String AUTOCOMPLETE_ATTRIBUTE = "autocomplete";
+
+	@Deprecated
+	public static final String READONLY_ATTRIBUTE = "readonly";
 
 
 	@Nullable

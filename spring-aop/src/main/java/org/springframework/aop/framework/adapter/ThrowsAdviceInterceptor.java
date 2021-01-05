@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ public class ThrowsAdviceInterceptor implements MethodInterceptor, AfterAdvice {
 
 	private final Object throwsAdvice;
 
-	/** Methods on throws advice, keyed by exception class. */
+	/** Methods on throws advice, keyed by exception class */
 	private final Map<Class<?>, Method> exceptionHandlerMap = new HashMap<>();
 
 
@@ -107,7 +107,6 @@ public class ThrowsAdviceInterceptor implements MethodInterceptor, AfterAdvice {
 
 
 	@Override
-	@Nullable
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		try {
 			return mi.proceed();
@@ -137,8 +136,8 @@ public class ThrowsAdviceInterceptor implements MethodInterceptor, AfterAdvice {
 			exceptionClass = exceptionClass.getSuperclass();
 			handler = this.exceptionHandlerMap.get(exceptionClass);
 		}
-		if (handler != null && logger.isTraceEnabled()) {
-			logger.trace("Found handler for exception of type [" + exceptionClass.getName() + "]: " + handler);
+		if (handler != null && logger.isDebugEnabled()) {
+			logger.debug("Found handler for exception of type [" + exceptionClass.getName() + "]: " + handler);
 		}
 		return handler;
 	}

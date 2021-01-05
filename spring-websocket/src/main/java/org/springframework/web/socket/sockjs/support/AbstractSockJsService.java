@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,17 +22,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.InvalidMediaTypeException;
@@ -48,6 +48,7 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.sockjs.SockJsException;
 import org.springframework.web.socket.sockjs.SockJsService;
@@ -96,28 +97,12 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 
 	private boolean suppressCors = false;
 
-	protected final CorsConfiguration corsConfiguration;
-
-	private final SockJsRequestHandler infoHandler = new InfoHandler();
-
-	private final SockJsRequestHandler iframeHandler = new IframeHandler();
+	protected final Set<String> allowedOrigins = new LinkedHashSet<>();
 
 
 	public AbstractSockJsService(TaskScheduler scheduler) {
 		Assert.notNull(scheduler, "TaskScheduler must not be null");
 		this.taskScheduler = scheduler;
-		this.corsConfiguration = initCorsConfiguration();
-	}
-
-	private static CorsConfiguration initCorsConfiguration() {
-		CorsConfiguration config = new CorsConfiguration();
-		config.addAllowedMethod("*");
-		config.setAllowedOrigins(Collections.emptyList());
-		config.setAllowedOriginPatterns(Collections.emptyList());
-		config.setAllowCredentials(true);
-		config.setMaxAge(ONE_YEAR);
-		config.addAllowedHeader("*");
-		return config;
 	}
 
 
@@ -314,9 +299,9 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	 * designed for browsers. There is nothing preventing other types of client
 	 * to modify the {@code Origin} header value.
 	 * <p>When SockJS is enabled and origins are restricted, transport types
-	 * that do not allow to check request origin (Iframe based transports)
-	 * are disabled. As a consequence, IE 6 to 9 are not supported when origins
-	 * are restricted.
+	 * that do not allow to check request origin (JSONP and Iframe based
+	 * transports) are disabled. As a consequence, IE 6 to 9 are not supported
+	 * when origins are restricted.
 	 * <p>Each provided allowed origin must have a scheme, and optionally a port
 	 * (e.g. "https://example.org", "https://example.org:9090"). An allowed origin
 	 * string may also be "*" in which case all origins are allowed.
@@ -326,7 +311,8 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	 */
 	public void setAllowedOrigins(Collection<String> allowedOrigins) {
 		Assert.notNull(allowedOrigins, "Allowed origins Collection must not be null");
-		this.corsConfiguration.setAllowedOrigins(new ArrayList<>(allowedOrigins));
+		this.allowedOrigins.clear();
+		this.allowedOrigins.addAll(allowedOrigins);
 	}
 
 	/**
@@ -334,31 +320,8 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	 * @since 4.1.2
 	 * @see #setAllowedOrigins
 	 */
-	@SuppressWarnings("ConstantConditions")
 	public Collection<String> getAllowedOrigins() {
-		return this.corsConfiguration.getAllowedOrigins();
-	}
-	/**
-	 * A variant of {@link #setAllowedOrigins(Collection)} that accepts flexible
-	 * domain patterns, e.g. {@code "https://*.domain1.com"}. Furthermore it
-	 * always sets the {@code Access-Control-Allow-Origin} response header to
-	 * the matched origin and never to {@code "*"}, nor to any other pattern.
-	 * <p>By default this is not set.
-	 * @since 5.2.3
-	 */
-	public void setAllowedOriginPatterns(Collection<String> allowedOriginPatterns) {
-		Assert.notNull(allowedOriginPatterns, "Allowed origin patterns Collection must not be null");
-		this.corsConfiguration.setAllowedOriginPatterns(new ArrayList<>(allowedOriginPatterns));
-	}
-
-	/**
-	 * Return {@link #setAllowedOriginPatterns(Collection) configured} origin patterns.
-	 * @since 5.3.2
-	 * @see #setAllowedOriginPatterns
-	 */
-	@SuppressWarnings("ConstantConditions")
-	public Collection<String> getAllowedOriginPatterns() {
-		return this.corsConfiguration.getAllowedOriginPatterns();
+		return Collections.unmodifiableSet(this.allowedOrigins);
 	}
 
 
@@ -404,8 +367,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 			}
 
 			else if (sockJsPath.matches("/iframe[0-9-.a-z_]*.html")) {
-				if (!getAllowedOrigins().isEmpty() && !getAllowedOrigins().contains("*") ||
-						!getAllowedOriginPatterns().isEmpty()) {
+				if (!this.allowedOrigins.isEmpty() && !this.allowedOrigins.contains("*")) {
 					if (requestInfo != null) {
 						logger.debug("Iframe support is disabled when an origin check is required. " +
 								"Ignoring transport request: " + requestInfo);
@@ -413,7 +375,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 					response.setStatusCode(HttpStatus.NOT_FOUND);
 					return;
 				}
-				if (getAllowedOrigins().isEmpty()) {
+				if (this.allowedOrigins.isEmpty()) {
 					response.getHeaders().add(XFRAME_OPTIONS_HEADER, "SAMEORIGIN");
 				}
 				if (requestInfo != null) {
@@ -505,7 +467,8 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	private boolean validatePath(ServerHttpRequest request) {
 		String path = request.getURI().getPath();
 		int index = path.lastIndexOf('/') + 1;
-		return (path.indexOf(';', index) == -1);
+		String filename = path.substring(index);
+		return (filename.indexOf(';') == -1);
 	}
 
 	protected boolean checkOrigin(ServerHttpRequest request, ServerHttpResponse response, HttpMethod... httpMethods)
@@ -515,7 +478,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 			return true;
 		}
 
-		if (this.corsConfiguration.checkOrigin(request.getHeaders().getOrigin()) == null) {
+		if (!WebUtils.isValidOrigin(request, this.allowedOrigins)) {
 			if (logger.isWarnEnabled()) {
 				logger.warn("Origin header value '" + request.getHeaders().getOrigin() + "' not allowed.");
 			}
@@ -529,15 +492,21 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	@Override
 	@Nullable
 	public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
-		if (!this.suppressCors && (request.getHeader(HttpHeaders.ORIGIN) != null)) {
-			return this.corsConfiguration;
+		if (!this.suppressCors && CorsUtils.isCorsRequest(request)) {
+			CorsConfiguration config = new CorsConfiguration();
+			config.setAllowedOrigins(new ArrayList<>(this.allowedOrigins));
+			config.addAllowedMethod("*");
+			config.setAllowCredentials(true);
+			config.setMaxAge(ONE_YEAR);
+			config.addAllowedHeader("*");
+			return config;
 		}
 		return null;
 	}
 
 	protected void addCacheHeaders(ServerHttpResponse response) {
 		response.getHeaders().setCacheControl("public, max-age=" + ONE_YEAR);
-		response.getHeaders().setExpires(System.currentTimeMillis() + ONE_YEAR * 1000);
+		response.getHeaders().setExpires(new Date().getTime() + ONE_YEAR * 1000);
 	}
 
 	protected void addNoCacheHeaders(ServerHttpResponse response) {
@@ -570,7 +539,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	}
 
 
-	private class InfoHandler implements SockJsRequestHandler {
+	private final SockJsRequestHandler infoHandler = new SockJsRequestHandler() {
 
 		private static final String INFO_CONTENT =
 				"{\"entropy\":%s,\"origins\":[\"*:*\"],\"cookie_needed\":%s,\"websocket\":%s}";
@@ -597,10 +566,10 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 				sendMethodNotAllowed(response, HttpMethod.GET, HttpMethod.OPTIONS);
 			}
 		}
-	}
+	};
 
 
-	private class IframeHandler implements SockJsRequestHandler {
+	private final SockJsRequestHandler iframeHandler = new SockJsRequestHandler() {
 
 		private static final String IFRAME_CONTENT =
 				"<!DOCTYPE html>\n" +
@@ -648,6 +617,6 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 			response.getHeaders().setETag(etagValue);
 			response.getBody().write(contentBytes);
 		}
-	}
+	};
 
 }

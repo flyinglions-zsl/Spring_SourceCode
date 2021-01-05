@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,12 @@ package org.springframework.orm.jpa.hibernate;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.jpa.AbstractContainerEntityManagerFactoryIntegrationTests;
-import org.springframework.orm.jpa.EntityManagerFactoryInfo;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.junit.Assert.*;
 
 /**
  * Hibernate-specific JPA tests with multiple EntityManagerFactory instances.
@@ -46,23 +44,15 @@ public class HibernateMultiEntityManagerFactoryIntegrationTests extends Abstract
 	}
 
 
-	@Override
-	@Test
-	public void testEntityManagerFactoryImplementsEntityManagerFactoryInfo() {
-		boolean condition = this.entityManagerFactory instanceof EntityManagerFactoryInfo;
-		assertThat(condition).as("Must have introduced config interface").isTrue();
-		EntityManagerFactoryInfo emfi = (EntityManagerFactoryInfo) this.entityManagerFactory;
-		assertThat(emfi.getPersistenceUnitName()).isEqualTo("Drivers");
-		assertThat(emfi.getPersistenceUnitInfo()).as("PersistenceUnitInfo must be available").isNotNull();
-		assertThat(emfi.getNativeEntityManagerFactory()).as("Raw EntityManagerFactory must be available").isNotNull();
-	}
-
 	@Test
 	public void testEntityManagerFactory2() {
 		EntityManager em = this.entityManagerFactory2.createEntityManager();
 		try {
-			assertThatIllegalArgumentException().isThrownBy(() ->
-					em.createQuery("select tb from TestBean"));
+			em.createQuery("select tb from TestBean");
+			fail("Should have thrown IllegalArgumentException");
+		}
+		catch (IllegalArgumentException ex) {
+			// expected
 		}
 		finally {
 			em.close();

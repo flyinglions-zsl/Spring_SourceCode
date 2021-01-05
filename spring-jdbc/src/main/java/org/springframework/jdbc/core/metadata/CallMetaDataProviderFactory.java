@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.jdbc.core.metadata;
 
 import java.util.Arrays;
 import java.util.List;
-
 import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
@@ -36,35 +35,28 @@ import org.springframework.jdbc.support.MetaDataAccessException;
  * @author Juergen Hoeller
  * @since 2.5
  */
-public final class CallMetaDataProviderFactory {
+public class CallMetaDataProviderFactory {
 
-	/** List of supported database products for procedure calls. */
+	/** List of supported database products for procedure calls */
 	public static final List<String> supportedDatabaseProductsForProcedures = Arrays.asList(
 			"Apache Derby",
 			"DB2",
-			"Informix Dynamic Server",
-			"MariaDB",
-			"Microsoft SQL Server",
 			"MySQL",
+			"Microsoft SQL Server",
 			"Oracle",
 			"PostgreSQL",
 			"Sybase"
 		);
 
-	/** List of supported database products for function calls. */
+	/** List of supported database products for function calls */
 	public static final List<String> supportedDatabaseProductsForFunctions = Arrays.asList(
-			"MariaDB",
-			"Microsoft SQL Server",
 			"MySQL",
+			"Microsoft SQL Server",
 			"Oracle",
 			"PostgreSQL"
 		);
 
 	private static final Log logger = LogFactory.getLog(CallMetaDataProviderFactory.class);
-
-
-	private CallMetaDataProviderFactory() {
-	}
 
 
 	/**
@@ -75,29 +67,29 @@ public final class CallMetaDataProviderFactory {
 	 */
 	public static CallMetaDataProvider createMetaDataProvider(DataSource dataSource, final CallMetaDataContext context) {
 		try {
-			return JdbcUtils.extractDatabaseMetaData(dataSource, databaseMetaData -> {
+			return (CallMetaDataProvider) JdbcUtils.extractDatabaseMetaData(dataSource, databaseMetaData -> {
 				String databaseProductName = JdbcUtils.commonDatabaseName(databaseMetaData.getDatabaseProductName());
 				boolean accessProcedureColumnMetaData = context.isAccessCallParameterMetaData();
 				if (context.isFunction()) {
 					if (!supportedDatabaseProductsForFunctions.contains(databaseProductName)) {
-						if (logger.isInfoEnabled()) {
-							logger.info(databaseProductName + " is not one of the databases fully supported for function calls " +
+						if (logger.isWarnEnabled()) {
+							logger.warn(databaseProductName + " is not one of the databases fully supported for function calls " +
 									"-- supported are: " + supportedDatabaseProductsForFunctions);
 						}
 						if (accessProcedureColumnMetaData) {
-							logger.info("Metadata processing disabled - you must specify all parameters explicitly");
+							logger.warn("Metadata processing disabled - you must specify all parameters explicitly");
 							accessProcedureColumnMetaData = false;
 						}
 					}
 				}
 				else {
 					if (!supportedDatabaseProductsForProcedures.contains(databaseProductName)) {
-						if (logger.isInfoEnabled()) {
-							logger.info(databaseProductName + " is not one of the databases fully supported for procedure calls " +
+						if (logger.isWarnEnabled()) {
+							logger.warn(databaseProductName + " is not one of the databases fully supported for procedure calls " +
 									"-- supported are: " + supportedDatabaseProductsForProcedures);
 						}
 						if (accessProcedureColumnMetaData) {
-							logger.info("Metadata processing disabled - you must specify all parameters explicitly");
+							logger.warn("Metadata processing disabled - you must specify all parameters explicitly");
 							accessProcedureColumnMetaData = false;
 						}
 					}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import java.util.concurrent.FutureTask;
 
 import example.scannable.FooService;
 import example.scannable.ServiceInvocationCounter;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Mark Fisher
@@ -41,17 +41,16 @@ public class SimpleConfigTests {
 		ServiceInvocationCounter serviceInvocationCounter = ctx.getBean("serviceInvocationCounter", ServiceInvocationCounter.class);
 
 		String value = fooService.foo(1);
-		assertThat(value).isEqualTo("bar");
+		assertEquals("bar", value);
 
 		Future<?> future = fooService.asyncFoo(1);
-		boolean condition = future instanceof FutureTask;
-		assertThat(condition).isTrue();
-		assertThat(future.get()).isEqualTo("bar");
+		assertTrue(future instanceof FutureTask);
+		assertEquals("bar", future.get());
 
-		assertThat(serviceInvocationCounter.getCount()).isEqualTo(2);
+		assertEquals(2, serviceInvocationCounter.getCount());
 
 		fooService.foo(1);
-		assertThat(serviceInvocationCounter.getCount()).isEqualTo(3);
+		assertEquals(3, serviceInvocationCounter.getCount());
 	}
 
 	public String[] getConfigLocations() {

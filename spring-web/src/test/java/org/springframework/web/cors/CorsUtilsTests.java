@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package org.springframework.web.cors;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.*;
+
+import org.junit.Test;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 
 /**
  * Test case for {@link CorsUtils}.
@@ -35,13 +35,13 @@ public class CorsUtilsTests {
 	public void isCorsRequest() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader(HttpHeaders.ORIGIN, "https://domain.com");
-		assertThat(CorsUtils.isCorsRequest(request)).isTrue();
+		assertTrue(CorsUtils.isCorsRequest(request));
 	}
 
 	@Test
 	public void isNotCorsRequest() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
-		assertThat(CorsUtils.isCorsRequest(request)).isFalse();
+		assertFalse(CorsUtils.isCorsRequest(request));
 	}
 
 	@Test
@@ -50,18 +50,23 @@ public class CorsUtilsTests {
 		request.setMethod(HttpMethod.OPTIONS.name());
 		request.addHeader(HttpHeaders.ORIGIN, "https://domain.com");
 		request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET");
-		assertThat(CorsUtils.isPreFlightRequest(request)).isTrue();
+		assertTrue(CorsUtils.isPreFlightRequest(request));
 	}
 
 	@Test
 	public void isNotPreFlightRequest() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
-		assertThat(CorsUtils.isPreFlightRequest(request)).isFalse();
+		assertFalse(CorsUtils.isPreFlightRequest(request));
 
 		request = new MockHttpServletRequest();
 		request.setMethod(HttpMethod.OPTIONS.name());
 		request.addHeader(HttpHeaders.ORIGIN, "https://domain.com");
-		assertThat(CorsUtils.isPreFlightRequest(request)).isFalse();
+		assertFalse(CorsUtils.isPreFlightRequest(request));
+
+		request = new MockHttpServletRequest();
+		request.setMethod(HttpMethod.OPTIONS.name());
+		request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET");
+		assertFalse(CorsUtils.isPreFlightRequest(request));
 	}
 
 }

@@ -160,17 +160,17 @@ public class ReflectiveMethodResolver implements MethodResolver {
 
 			for (Method method : methodsToIterate) {
 				if (method.getName().equals(name)) {
-					int paramCount = method.getParameterCount();
-					List<TypeDescriptor> paramDescriptors = new ArrayList<>(paramCount);
-					for (int i = 0; i < paramCount; i++) {
+					Class<?>[] paramTypes = method.getParameterTypes();
+					List<TypeDescriptor> paramDescriptors = new ArrayList<>(paramTypes.length);
+					for (int i = 0; i < paramTypes.length; i++) {
 						paramDescriptors.add(new TypeDescriptor(new MethodParameter(method, i)));
 					}
 					ReflectionHelper.ArgumentsMatchInfo matchInfo = null;
-					if (method.isVarArgs() && argumentTypes.size() >= (paramCount - 1)) {
+					if (method.isVarArgs() && argumentTypes.size() >= (paramTypes.length - 1)) {
 						// *sigh* complicated
 						matchInfo = ReflectionHelper.compareArgumentsVarargs(paramDescriptors, argumentTypes, typeConverter);
 					}
-					else if (paramCount == argumentTypes.size()) {
+					else if (paramTypes.length == argumentTypes.size()) {
 						// Name and parameter number match, check the arguments
 						matchInfo = ReflectionHelper.compareArguments(paramDescriptors, argumentTypes, typeConverter);
 					}

@@ -16,16 +16,16 @@
 
 package org.springframework.aop.target;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.SideEffectBean;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.SideEffectBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.junit.Assert.*;
+import static org.springframework.tests.TestResourceUtils.*;
 
 /**
  * @author Rod Johnson
@@ -39,7 +39,7 @@ public class ThreadLocalTargetSourceTests {
 	private DefaultListableBeanFactory beanFactory;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		this.beanFactory = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(this.beanFactory).loadBeanDefinitions(
@@ -62,24 +62,24 @@ public class ThreadLocalTargetSourceTests {
 	@Test
 	public void testUseDifferentManagedInstancesInSameThread() {
 		SideEffectBean apartment = (SideEffectBean) beanFactory.getBean("apartment");
-		assertThat(apartment.getCount()).isEqualTo(INITIAL_COUNT);
+		assertEquals(INITIAL_COUNT, apartment.getCount());
 		apartment.doWork();
-		assertThat(apartment.getCount()).isEqualTo((INITIAL_COUNT + 1));
+		assertEquals(INITIAL_COUNT + 1, apartment.getCount());
 
 		ITestBean test = (ITestBean) beanFactory.getBean("threadLocal2");
-		assertThat(test.getName()).isEqualTo("Rod");
-		assertThat(test.getSpouse().getName()).isEqualTo("Kerry");
+		assertEquals("Rod", test.getName());
+		assertEquals("Kerry", test.getSpouse().getName());
 	}
 
 	@Test
 	public void testReuseInSameThread() {
 		SideEffectBean apartment = (SideEffectBean) beanFactory.getBean("apartment");
-		assertThat(apartment.getCount()).isEqualTo(INITIAL_COUNT);
+		assertEquals(INITIAL_COUNT, apartment.getCount());
 		apartment.doWork();
-		assertThat(apartment.getCount()).isEqualTo((INITIAL_COUNT + 1));
+		assertEquals(INITIAL_COUNT + 1, apartment.getCount());
 
 		apartment = (SideEffectBean) beanFactory.getBean("apartment");
-		assertThat(apartment.getCount()).isEqualTo((INITIAL_COUNT + 1));
+		assertEquals(INITIAL_COUNT + 1, apartment.getCount());
 	}
 
 	/**
@@ -89,37 +89,37 @@ public class ThreadLocalTargetSourceTests {
 	public void testCanGetStatsViaMixin() {
 		ThreadLocalTargetSourceStats stats = (ThreadLocalTargetSourceStats) beanFactory.getBean("apartment");
 		// +1 because creating target for stats call counts
-		assertThat(stats.getInvocationCount()).isEqualTo(1);
+		assertEquals(1, stats.getInvocationCount());
 		SideEffectBean apartment = (SideEffectBean) beanFactory.getBean("apartment");
 		apartment.doWork();
 		// +1 again
-		assertThat(stats.getInvocationCount()).isEqualTo(3);
+		assertEquals(3, stats.getInvocationCount());
 		// + 1 for states call!
-		assertThat(stats.getHitCount()).isEqualTo(3);
+		assertEquals(3, stats.getHitCount());
 		apartment.doWork();
-		assertThat(stats.getInvocationCount()).isEqualTo(6);
-		assertThat(stats.getHitCount()).isEqualTo(6);
+		assertEquals(6, stats.getInvocationCount());
+		assertEquals(6, stats.getHitCount());
 		// Only one thread so only one object can have been bound
-		assertThat(stats.getObjectCount()).isEqualTo(1);
+		assertEquals(1, stats.getObjectCount());
 	}
 
 	@Test
 	public void testNewThreadHasOwnInstance() throws InterruptedException {
 		SideEffectBean apartment = (SideEffectBean) beanFactory.getBean("apartment");
-		assertThat(apartment.getCount()).isEqualTo(INITIAL_COUNT);
+		assertEquals(INITIAL_COUNT, apartment.getCount());
 		apartment.doWork();
 		apartment.doWork();
 		apartment.doWork();
-		assertThat(apartment.getCount()).isEqualTo((INITIAL_COUNT + 3));
+		assertEquals(INITIAL_COUNT + 3, apartment.getCount());
 
 		class Runner implements Runnable {
 			public SideEffectBean mine;
 			@Override
 			public void run() {
 				this.mine = (SideEffectBean) beanFactory.getBean("apartment");
-				assertThat(mine.getCount()).isEqualTo(INITIAL_COUNT);
+				assertEquals(INITIAL_COUNT, mine.getCount());
 				mine.doWork();
-				assertThat(mine.getCount()).isEqualTo((INITIAL_COUNT + 1));
+				assertEquals(INITIAL_COUNT + 1, mine.getCount());
 			}
 		}
 		Runner r = new Runner();
@@ -127,17 +127,17 @@ public class ThreadLocalTargetSourceTests {
 		t.start();
 		t.join();
 
-		assertThat(r).isNotNull();
+		assertNotNull(r);
 
 		// Check it didn't affect the other thread's copy
-		assertThat(apartment.getCount()).isEqualTo((INITIAL_COUNT + 3));
+		assertEquals(INITIAL_COUNT + 3, apartment.getCount());
 
 		// When we use other thread's copy in this thread
 		// it should behave like ours
-		assertThat(r.mine.getCount()).isEqualTo((INITIAL_COUNT + 3));
+		assertEquals(INITIAL_COUNT + 3, r.mine.getCount());
 
 		// Bound to two threads
-		assertThat(((ThreadLocalTargetSourceStats) apartment).getObjectCount()).isEqualTo(2);
+		assertEquals(2, ((ThreadLocalTargetSourceStats) apartment).getObjectCount());
 	}
 
 	/**
@@ -152,7 +152,12 @@ public class ThreadLocalTargetSourceTests {
 		source.destroy();
 
 		// try second time
-		source.getTarget(); // Should not throw NPE
+		try {
+			source.getTarget();
+		}
+		catch (NullPointerException ex) {
+			fail("Should not throw NPE");
+		}
 	}
 
 }

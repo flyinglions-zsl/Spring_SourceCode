@@ -18,7 +18,6 @@ package org.springframework.jdbc.object;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-
 import javax.sql.DataSource;
 
 import org.springframework.dao.TypeMismatchDataAccessException;
@@ -47,7 +46,6 @@ import org.springframework.lang.Nullable;
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @author Jean-Pierre Pawlak
- * @param <T> the result type
  * @see StoredProcedure
  */
 public class SqlFunction<T> extends MappingSqlQuery<T> {
@@ -70,8 +68,8 @@ public class SqlFunction<T> extends MappingSqlQuery<T> {
 	/**
 	 * Create a new SqlFunction object with SQL, but without parameters.
 	 * Must add parameters or settle with none.
-	 * @param ds the DataSource to obtain connections from
-	 * @param sql the SQL to execute
+	 * @param ds DataSource to obtain connections from
+	 * @param sql SQL to execute
 	 */
 	public SqlFunction(DataSource ds, String sql) {
 		setRowsExpected(1);
@@ -81,9 +79,9 @@ public class SqlFunction<T> extends MappingSqlQuery<T> {
 
 	/**
 	 * Create a new SqlFunction object with SQL and parameters.
-	 * @param ds the DataSource to obtain connections from
-	 * @param sql the SQL to execute
-	 * @param types the SQL types of the parameters, as defined in the
+	 * @param ds DataSource to obtain connections from
+	 * @param sql SQL to execute
+	 * @param types SQL types of the parameters, as defined in the
 	 * {@code java.sql.Types} class
 	 * @see java.sql.Types
 	 */
@@ -96,9 +94,9 @@ public class SqlFunction<T> extends MappingSqlQuery<T> {
 
 	/**
 	 * Create a new SqlFunction object with SQL, parameters and a result type.
-	 * @param ds the DataSource to obtain connections from
-	 * @param sql the SQL to execute
-	 * @param types the SQL types of the parameters, as defined in the
+	 * @param ds DataSource to obtain connections from
+	 * @param sql SQL to execute
+	 * @param types SQL types of the parameters, as defined in the
 	 * {@code java.sql.Types} class
 	 * @param resultType the type that the result object is required to match
 	 * @see #setResultType(Class)

@@ -17,15 +17,11 @@
 package org.springframework.http.converter.json;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.core.JsonEncoding;
@@ -37,7 +33,6 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -55,15 +50,13 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StreamUtils;
 import org.springframework.util.TypeUtils;
 
 /**
  * Abstract base class for Jackson based and content type independent
  * {@link HttpMessageConverter} implementations.
  *
- * <p>Compatible with Jackson 2.9 to 2.12, as of Spring 5.3.
+ * <p>Compatible with Jackson 2.9 and higher, as of Spring 5.0.
  *
  * @author Arjen Poutsma
  * @author Keith Donald
@@ -75,23 +68,7 @@ import org.springframework.util.TypeUtils;
  */
 public abstract class AbstractJackson2HttpMessageConverter extends AbstractGenericHttpMessageConverter<Object> {
 
-	private static final Map<String, JsonEncoding> ENCODINGS;
-
-	static {
-		ENCODINGS = CollectionUtils.newHashMap(JsonEncoding.values().length);
-		for (JsonEncoding encoding : JsonEncoding.values()) {
-			ENCODINGS.put(encoding.getJavaName(), encoding);
-		}
-		ENCODINGS.put("US-ASCII", JsonEncoding.UTF8);
-	}
-
-
-	/**
-	 * The default charset used by the converter.
-	 */
-	@Nullable
-	@Deprecated
-	public static final Charset DEFAULT_CHARSET = null;
+	public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
 
 	protected ObjectMapper objectMapper;
@@ -105,6 +82,7 @@ public abstract class AbstractJackson2HttpMessageConverter extends AbstractGener
 
 	protected AbstractJackson2HttpMessageConverter(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
+		setDefaultCharset(DEFAULT_CHARSET);
 		DefaultPrettyPrinter prettyPrinter = new DefaultPrettyPrinter();
 		prettyPrinter.indentObjectsWith(new DefaultIndenter("  ", "\ndata:"));
 		this.ssePrettyPrinter = prettyPrinter;
@@ -190,12 +168,6 @@ public abstract class AbstractJackson2HttpMessageConverter extends AbstractGener
 		if (!canWrite(mediaType)) {
 			return false;
 		}
-		if (mediaType != null && mediaType.getCharset() != null) {
-			Charset charset = mediaType.getCharset();
-			if (!ENCODINGS.containsKey(charset.name())) {
-				return false;
-			}
-		}
 		AtomicReference<Throwable> causeRef = new AtomicReference<>();
 		if (this.objectMapper.canSerialize(clazz, causeRef)) {
 			return true;
@@ -218,7 +190,8 @@ public abstract class AbstractJackson2HttpMessageConverter extends AbstractGener
 		}
 
 		// Do not log warning for serializer not found (note: different message wording on Jackson 2.9)
-		boolean debugLevel = (cause instanceof JsonMappingException && cause.getMessage().startsWith("Cannot find"));
+		boolean debugLevel = (cause instanceof JsonMappingException &&
+				(cause.getMessage().startsWith("Can not find") || cause.getMessage().startsWith("Cannot find")));
 
 		if (debugLevel ? logger.isDebugEnabled() : logger.isWarnEnabled()) {
 			String msg = "Failed to evaluate Jackson " + (type instanceof JavaType ? "de" : "") +
@@ -252,54 +225,21 @@ public abstract class AbstractJackson2HttpMessageConverter extends AbstractGener
 	}
 
 	private Object readJavaType(JavaType javaType, HttpInputMessage inputMessage) throws IOException {
-		MediaType contentType = inputMessage.getHeaders().getContentType();
-		Charset charset = getCharset(contentType);
-
-		boolean isUnicode = ENCODINGS.containsKey(charset.name());
 		try {
 			if (inputMessage instanceof MappingJacksonInputMessage) {
 				Class<?> deserializationView = ((MappingJacksonInputMessage) inputMessage).getDeserializationView();
 				if (deserializationView != null) {
-					ObjectReader objectReader = this.objectMapper.readerWithView(deserializationView).forType(javaType);
-					if (isUnicode) {
-						return objectReader.readValue(inputMessage.getBody());
-					}
-					else {
-						Reader reader = new InputStreamReader(inputMessage.getBody(), charset);
-						return objectReader.readValue(reader);
-					}
+					return this.objectMapper.readerWithView(deserializationView).forType(javaType).
+							readValue(inputMessage.getBody());
 				}
 			}
-			if (isUnicode) {
-				return this.objectMapper.readValue(inputMessage.getBody(), javaType);
-			}
-			else {
-				Reader reader = new InputStreamReader(inputMessage.getBody(), charset);
-				return this.objectMapper.readValue(reader, javaType);
-			}
+			return this.objectMapper.readValue(inputMessage.getBody(), javaType);
 		}
 		catch (InvalidDefinitionException ex) {
 			throw new HttpMessageConversionException("Type definition error: " + ex.getType(), ex);
 		}
 		catch (JsonProcessingException ex) {
-			throw new HttpMessageNotReadableException("JSON parse error: " + ex.getOriginalMessage(), ex, inputMessage);
-		}
-	}
-
-	/**
-	 * Determine the charset to use for JSON input.
-	 * <p>By default this is either the charset from the input {@code MediaType}
-	 * or otherwise falling back on {@code UTF-8}. Can be overridden in subclasses.
-	 * @param contentType the content type of the HTTP input message
-	 * @return the charset to use
-	 * @since 5.1.18
-	 */
-	protected Charset getCharset(@Nullable MediaType contentType) {
-		if (contentType != null && contentType.getCharset() != null) {
-			return contentType.getCharset();
-		}
-		else {
-			return StandardCharsets.UTF_8;
+			throw new HttpMessageNotReadableException("JSON parse error: " + ex.getOriginalMessage(), ex);
 		}
 	}
 
@@ -309,9 +249,8 @@ public abstract class AbstractJackson2HttpMessageConverter extends AbstractGener
 
 		MediaType contentType = outputMessage.getHeaders().getContentType();
 		JsonEncoding encoding = getJsonEncoding(contentType);
-
-		OutputStream outputStream = StreamUtils.nonClosing(outputMessage.getBody());
-		try (JsonGenerator generator = this.objectMapper.getFactory().createGenerator(outputStream, encoding)) {
+		JsonGenerator generator = this.objectMapper.getFactory().createGenerator(outputMessage.getBody(), encoding);
+		try {
 			writePrefix(generator, object);
 
 			Object value = object;
@@ -390,9 +329,10 @@ public abstract class AbstractJackson2HttpMessageConverter extends AbstractGener
 	protected JsonEncoding getJsonEncoding(@Nullable MediaType contentType) {
 		if (contentType != null && contentType.getCharset() != null) {
 			Charset charset = contentType.getCharset();
-			JsonEncoding encoding = ENCODINGS.get(charset.name());
-			if (encoding != null) {
-				return encoding;
+			for (JsonEncoding encoding : JsonEncoding.values()) {
+				if (charset.name().equals(encoding.getJavaName())) {
+					return encoding;
+				}
 			}
 		}
 		return JsonEncoding.UTF8;

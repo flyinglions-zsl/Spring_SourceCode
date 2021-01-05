@@ -34,7 +34,7 @@ import org.springframework.util.ObjectUtils;
 public abstract class JCacheOperationSourcePointcut extends StaticMethodMatcherPointcut implements Serializable {
 
 	@Override
-	public boolean matches(Method method, Class<?> targetClass) {
+	public boolean matches(Method method, @Nullable Class<?> targetClass) {
 		JCacheOperationSource cas = getCacheOperationSource();
 		return (cas != null && cas.getCacheOperation(method, targetClass) != null);
 	}
@@ -48,7 +48,7 @@ public abstract class JCacheOperationSourcePointcut extends StaticMethodMatcherP
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

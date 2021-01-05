@@ -68,8 +68,7 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 	 * <ul>
 	 * <li>Calls {@link #validateMergedContextConfiguration(MergedContextConfiguration)}
 	 * to allow subclasses to validate the supplied configuration before proceeding.</li>
-	 * <li>Calls {@link #createContext()} to create a {@link GenericApplicationContext}
-	 * instance.</li>
+	 * <li>Creates a {@link GenericApplicationContext} instance.</li>
 	 * <li>If the supplied {@code MergedContextConfiguration} references a
 	 * {@linkplain MergedContextConfiguration#getParent() parent configuration},
 	 * the corresponding {@link MergedContextConfiguration#getParentApplicationContext()
@@ -110,7 +109,8 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 
 		validateMergedContextConfiguration(mergedConfig);
 
-		GenericApplicationContext context = createContext();
+		GenericApplicationContext context = new GenericApplicationContext();
+
 		ApplicationContext parent = mergedConfig.getParentApplicationContext();
 		if (parent != null) {
 			context.setParent(parent);
@@ -141,15 +141,14 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 	 * @since 4.0.4
 	 */
 	protected void validateMergedContextConfiguration(MergedContextConfiguration mergedConfig) {
-		// no-op
+		/* no-op */
 	}
 
 	/**
 	 * Load a Spring ApplicationContext from the supplied {@code locations}.
 	 * <p>Implementation details:
 	 * <ul>
-	 * <li>Calls {@link #createContext()} to create a {@link GenericApplicationContext}
-	 * instance.</li>
+	 * <li>Creates a {@link GenericApplicationContext} instance.</li>
 	 * <li>Calls {@link #prepareContext(GenericApplicationContext)} to allow for customizing the context
 	 * before bean definitions are loaded.</li>
 	 * <li>Calls {@link #customizeBeanFactory(DefaultListableBeanFactory)} to allow for customizing the
@@ -182,7 +181,7 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 					StringUtils.arrayToCommaDelimitedString(locations)));
 		}
 
-		GenericApplicationContext context = createContext();
+		GenericApplicationContext context = new GenericApplicationContext();
 
 		prepareContext(context);
 		customizeBeanFactory(context.getDefaultListableBeanFactory());
@@ -197,32 +196,18 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 	}
 
 	/**
-	 * Factory method for creating the {@link GenericApplicationContext} used by
-	 * this {@code ContextLoader}.
-	 * <p>The default implementation creates a {@code GenericApplicationContext}
-	 * using the default constructor. This method may get overridden e.g. to use
-	 * a custom context subclass or to create a {@code GenericApplicationContext}
-	 * with a custom {@link DefaultListableBeanFactory} implementation.
-	 * @return a newly instantiated {@code GenericApplicationContext}
-	 * @since 5.2.9
-	 */
-	protected GenericApplicationContext createContext() {
-		return new GenericApplicationContext();
-	}
-
-	/**
 	 * Prepare the {@link GenericApplicationContext} created by this {@code ContextLoader}.
 	 * Called <i>before</i> bean definitions are read.
 	 * <p>The default implementation is empty. Can be overridden in subclasses to
 	 * customize {@code GenericApplicationContext}'s standard settings.
 	 * @param context the context that should be prepared
-	 * @since 2.5
 	 * @see #loadContext(MergedContextConfiguration)
 	 * @see #loadContext(String...)
 	 * @see GenericApplicationContext#setAllowBeanDefinitionOverriding
 	 * @see GenericApplicationContext#setResourceLoader
 	 * @see GenericApplicationContext#setId
 	 * @see #prepareContext(ConfigurableApplicationContext, MergedContextConfiguration)
+	 * @since 2.5
 	 */
 	protected void prepareContext(GenericApplicationContext context) {
 	}
@@ -233,13 +218,13 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 	 * <p>The default implementation is empty but can be overridden in subclasses
 	 * to customize {@code DefaultListableBeanFactory}'s standard settings.
 	 * @param beanFactory the bean factory created by this {@code ContextLoader}
-	 * @since 2.5
 	 * @see #loadContext(MergedContextConfiguration)
 	 * @see #loadContext(String...)
 	 * @see DefaultListableBeanFactory#setAllowBeanDefinitionOverriding
 	 * @see DefaultListableBeanFactory#setAllowEagerClassLoading
 	 * @see DefaultListableBeanFactory#setAllowCircularReferences
 	 * @see DefaultListableBeanFactory#setAllowRawInjectionDespiteWrapping
+	 * @since 2.5
 	 */
 	protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {
 	}
@@ -258,8 +243,8 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 	 * registering bean definitions.
 	 * @param context the context into which the bean definitions should be loaded
 	 * @param mergedConfig the merged context configuration
-	 * @since 3.1
 	 * @see #loadContext(MergedContextConfiguration)
+	 * @since 3.1
 	 */
 	protected void loadBeanDefinitions(GenericApplicationContext context, MergedContextConfiguration mergedConfig) {
 		createBeanDefinitionReader(context).loadBeanDefinitions(mergedConfig.getLocations());
@@ -271,10 +256,10 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 	 * @param context the context for which the {@code BeanDefinitionReader}
 	 * should be created
 	 * @return a {@code BeanDefinitionReader} for the supplied context
-	 * @since 2.5
 	 * @see #loadContext(String...)
 	 * @see #loadBeanDefinitions
 	 * @see BeanDefinitionReader
+	 * @since 2.5
 	 */
 	protected abstract BeanDefinitionReader createBeanDefinitionReader(GenericApplicationContext context);
 
@@ -285,10 +270,10 @@ public abstract class AbstractGenericContextLoader extends AbstractContextLoader
 	 * <p>The default implementation is empty but can be overridden in subclasses
 	 * to customize the application context.
 	 * @param context the newly created application context
-	 * @since 2.5
 	 * @see #loadContext(MergedContextConfiguration)
 	 * @see #loadContext(String...)
 	 * @see #customizeContext(ConfigurableApplicationContext, MergedContextConfiguration)
+	 * @since 2.5
 	 */
 	protected void customizeContext(GenericApplicationContext context) {
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,9 +53,7 @@ import org.springframework.util.StringUtils;
  * @author Ruslan Sibgatullin
  * @since 3.0
  * @see CronTrigger
- * @deprecated as of 5.3, in favor of {@link CronExpression}
  */
-@Deprecated
 public class CronSequenceGenerator {
 
 	private final String expression;
@@ -77,27 +75,23 @@ public class CronSequenceGenerator {
 
 
 	/**
-	 * Construct a {@code CronSequenceGenerator} from the pattern provided,
+	 * Construct a {@link CronSequenceGenerator} from the pattern provided,
 	 * using the default {@link TimeZone}.
 	 * @param expression a space-separated list of time fields
 	 * @throws IllegalArgumentException if the pattern cannot be parsed
 	 * @see java.util.TimeZone#getDefault()
-	 * @deprecated as of 5.3, in favor of {@link CronExpression#parse(String)}
 	 */
-	@Deprecated
 	public CronSequenceGenerator(String expression) {
 		this(expression, TimeZone.getDefault());
 	}
 
 	/**
-	 * Construct a {@code CronSequenceGenerator} from the pattern provided,
+	 * Construct a {@link CronSequenceGenerator} from the pattern provided,
 	 * using the specified {@link TimeZone}.
 	 * @param expression a space-separated list of time fields
 	 * @param timeZone the TimeZone to use for generated trigger times
 	 * @throws IllegalArgumentException if the pattern cannot be parsed
-	 * @deprecated as of 5.3, in favor of {@link CronExpression#parse(String)}
 	 */
-	@Deprecated
 	public CronSequenceGenerator(String expression, TimeZone timeZone) {
 		this.expression = expression;
 		this.timeZone = timeZone;
@@ -192,7 +186,7 @@ public class CronSequenceGenerator {
 
 		int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
 		int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
-		int updateDayOfMonth = findNextDay(calendar, this.daysOfMonth, dayOfMonth, this.daysOfWeek, dayOfWeek, resets);
+		int updateDayOfMonth = findNextDay(calendar, this.daysOfMonth, dayOfMonth, daysOfWeek, dayOfWeek, resets);
 		if (dayOfMonth == updateDayOfMonth) {
 			resets.add(Calendar.DAY_OF_MONTH);
 		}
@@ -378,7 +372,7 @@ public class CronSequenceGenerator {
 			return result;
 		}
 		if (!field.contains("-")) {
-			result[0] = result[1] = Integer.parseInt(field);
+			result[0] = result[1] = Integer.valueOf(field);
 		}
 		else {
 			String[] split = StringUtils.delimitedListToStringArray(field, "-");
@@ -386,8 +380,8 @@ public class CronSequenceGenerator {
 				throw new IllegalArgumentException("Range has more than two fields: '" +
 						field + "' in expression \"" + this.expression + "\"");
 			}
-			result[0] = Integer.parseInt(split[0]);
-			result[1] = Integer.parseInt(split[1]);
+			result[0] = Integer.valueOf(split[0]);
+			result[1] = Integer.valueOf(split[1]);
 		}
 		if (result[0] >= max || result[1] >= max) {
 			throw new IllegalArgumentException("Range exceeds maximum (" + max + "): '" +
@@ -434,7 +428,7 @@ public class CronSequenceGenerator {
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}

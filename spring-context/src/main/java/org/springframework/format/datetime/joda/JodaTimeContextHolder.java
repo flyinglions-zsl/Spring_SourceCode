@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,17 +31,11 @@ import org.springframework.lang.Nullable;
  * @author Juergen Hoeller
  * @since 3.0
  * @see org.springframework.context.i18n.LocaleContextHolder
- * @deprecated as of 5.3, in favor of standard JSR-310 support
  */
-@Deprecated
 public final class JodaTimeContextHolder {
 
 	private static final ThreadLocal<JodaTimeContext> jodaTimeContextHolder =
 			new NamedThreadLocal<>("JodaTimeContext");
-
-
-	private JodaTimeContextHolder() {
-	}
 
 
 	/**

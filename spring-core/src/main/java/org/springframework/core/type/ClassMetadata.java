@@ -55,9 +55,7 @@ public interface ClassMetadata {
 	 * Return whether the underlying class represents a concrete class,
 	 * i.e. neither an interface nor an abstract class.
 	 */
-	default boolean isConcrete() {
-		return !(isInterface() || isAbstract());
-	}
+	boolean isConcrete();
 
 	/**
 	 * Return whether the underlying class is marked as 'final'.
@@ -78,9 +76,7 @@ public interface ClassMetadata {
 	 * <p>If this method returns {@code false}, then the underlying
 	 * class is a top-level class.
 	 */
-	default boolean hasEnclosingClass() {
-		return (getEnclosingClassName() != null);
-	}
+	boolean hasEnclosingClass();
 
 	/**
 	 * Return the name of the enclosing class of the underlying class,
@@ -92,9 +88,7 @@ public interface ClassMetadata {
 	/**
 	 * Return whether the underlying class has a super class.
 	 */
-	default boolean hasSuperClass() {
-		return (getSuperClassName() != null);
-	}
+	boolean hasSuperClass();
 
 	/**
 	 * Return the name of the super class of the underlying class,

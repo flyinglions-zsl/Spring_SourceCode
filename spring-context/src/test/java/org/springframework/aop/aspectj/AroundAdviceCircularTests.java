@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2008 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.aop.aspectj;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.aop.support.AopUtils;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * @author Juergen Hoeller
@@ -31,9 +31,9 @@ public class AroundAdviceCircularTests extends AroundAdviceBindingTests {
 	@Test
 	public void testBothBeansAreProxies() {
 		Object tb = ctx.getBean("testBean");
-		assertThat(AopUtils.isAopProxy(tb)).isTrue();
+		assertTrue(AopUtils.isAopProxy(tb));
 		Object tb2 = ctx.getBean("testBean2");
-		assertThat(AopUtils.isAopProxy(tb2)).isTrue();
+		assertTrue(AopUtils.isAopProxy(tb2));
 	}
 
 }

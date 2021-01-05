@@ -53,7 +53,6 @@ class WildcardTheRestPathElement extends PathElement {
 	}
 
 
-	@Override
 	public String toString() {
 		return "WildcardTheRest(" + this.separator + "**)";
 	}

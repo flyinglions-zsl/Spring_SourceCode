@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.reactive.ClientHttpRequest;
-import org.springframework.lang.Nullable;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserter;
 
@@ -45,16 +44,6 @@ import org.springframework.web.reactive.function.BodyInserter;
  * @since 5.0
  */
 public interface ClientRequest {
-
-	/**
-	 * Name of {@link #attributes() attribute} whose value can be used to
-	 * correlate log messages for this request. Use {@link #logPrefix()} to
-	 * obtain a consistently formatted prefix based on this attribute.
-	 * @since 5.1
-	 * @see #logPrefix()
-	 */
-	String LOG_ID_ATTRIBUTE = ClientRequest.class.getName() + ".LOG_ID";
-
 
 	/**
 	 * Return the HTTP method.
@@ -94,24 +83,6 @@ public interface ClientRequest {
 	 * Return the attributes of this request.
 	 */
 	Map<String, Object> attributes();
-
-	/**
-	 * Return consumer(s) configured to access to the {@link ClientHttpRequest}.
-	 * @since 5.3
-	 */
-	@Nullable
-	Consumer<ClientHttpRequest> httpRequest();
-
-
-	/**
-	 * Return a log message prefix to use to correlate messages for this request.
-	 * The prefix is based on the value of the attribute {@link #LOG_ID_ATTRIBUTE
-	 * LOG_ID_ATTRIBUTE} surrounded with "[" and "]".
-	 * @return the log message prefix or an empty String if the
-	 * {@link #LOG_ID_ATTRIBUTE LOG_ID_ATTRIBUTE} is not set.
-	 * @since 5.1
-	 */
-	String logPrefix();
 
 	/**
 	 * Write this request to the given {@link ClientHttpRequest}.
@@ -259,18 +230,6 @@ public interface ClientRequest {
 		 * @return this builder
 		 */
 		Builder attributes(Consumer<Map<String, Object>> attributesConsumer);
-
-		/**
-		 * Callback for access to the {@link ClientHttpRequest} that in turn
-		 * provides access to the native request of the underlying HTTP library.
-		 * This could be useful for setting advanced, per-request options that
-		 * exposed by the underlying library.
-		 * @param requestConsumer a consumer to access the
-		 * {@code ClientHttpRequest} with
-		 * @return this builder
-		 * @since 5.3
-		 */
-		Builder httpRequest(Consumer<ClientHttpRequest> requestConsumer);
 
 		/**
 		 * Build the request.

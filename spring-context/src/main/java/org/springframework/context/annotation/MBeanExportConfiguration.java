@@ -17,7 +17,6 @@
 package org.springframework.context.annotation;
 
 import java.util.Map;
-
 import javax.management.MBeanServer;
 import javax.naming.NamingException;
 
@@ -49,7 +48,7 @@ import org.springframework.util.StringUtils;
  * @since 3.2
  * @see EnableMBeanExport
  */
-@Configuration(proxyBeanMethods = false)
+@Configuration
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 public class MBeanExportConfiguration implements ImportAware, EnvironmentAware, BeanFactoryAware {
 
@@ -133,14 +132,8 @@ public class MBeanExportConfiguration implements ImportAware, EnvironmentAware, 
 	}
 
 
-	/**
-	 * Specific platforms that might need custom MBean handling.
-	 */
 	public enum SpecificPlatform {
 
-		/**
-		 * Weblogic.
-		 */
 		WEBLOGIC("weblogic.management.Helper") {
 			@Override
 			public MBeanServer getMBeanServer() {
@@ -153,9 +146,6 @@ public class MBeanExportConfiguration implements ImportAware, EnvironmentAware, 
 			}
 		},
 
-		/**
-		 * Websphere.
-		 */
 		WEBSPHERE("com.ibm.websphere.management.AdminServiceFactory") {
 			@Override
 			public MBeanServer getMBeanServer() {

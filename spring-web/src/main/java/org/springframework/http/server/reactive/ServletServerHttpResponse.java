@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,12 @@ package org.springframework.http.server.reactive;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.List;
-
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
 import org.reactivestreams.Processor;
@@ -34,8 +33,6 @@ import org.reactivestreams.Publisher;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.lang.Nullable;
@@ -63,18 +60,11 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 
 	private volatile boolean flushOnNext;
 
-	private final ServletServerHttpRequest request;
 
 	public ServletServerHttpResponse(HttpServletResponse response, AsyncContext asyncContext,
-			DataBufferFactory bufferFactory, int bufferSize, ServletServerHttpRequest request) throws IOException {
+			DataBufferFactory bufferFactory, int bufferSize) throws IOException {
 
-		this(new HttpHeaders(), response, asyncContext, bufferFactory, bufferSize, request);
-	}
-
-	public ServletServerHttpResponse(HttpHeaders headers, HttpServletResponse response, AsyncContext asyncContext,
-			DataBufferFactory bufferFactory, int bufferSize, ServletServerHttpRequest request) throws IOException {
-
-		super(bufferFactory, headers);
+		super(bufferFactory);
 
 		Assert.notNull(response, "HttpServletResponse must not be null");
 		Assert.notNull(bufferFactory, "DataBufferFactory must not be null");
@@ -83,7 +73,6 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 		this.response = response;
 		this.outputStream = response.getOutputStream();
 		this.bufferSize = bufferSize;
-		this.request = request;
 
 		asyncContext.addListener(new ResponseAsyncListener());
 
@@ -99,22 +88,10 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 	}
 
 	@Override
-	public HttpStatus getStatusCode() {
-		HttpStatus status = super.getStatusCode();
-		return (status != null ? status : HttpStatus.resolve(this.response.getStatus()));
-	}
-
-	@Override
-	public Integer getRawStatusCode() {
-		Integer status = super.getRawStatusCode();
-		return (status != null ? status : this.response.getStatus());
-	}
-
-	@Override
 	protected void applyStatusCode() {
-		Integer status = super.getRawStatusCode();
-		if (status != null) {
-			this.response.setStatus(status);
+		Integer statusCode = getStatusCodeValue();
+		if (statusCode != null) {
+			this.response.setStatus(statusCode);
 		}
 	}
 
@@ -125,14 +102,7 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 				this.response.addHeader(headerName, headerValue);
 			}
 		});
-		MediaType contentType = null;
-		try {
-			contentType = getHeaders().getContentType();
-		}
-		catch (Exception ex) {
-			String rawContentType = getHeaders().getFirst(HttpHeaders.CONTENT_TYPE);
-			this.response.setContentType(rawContentType);
-		}
+		MediaType contentType = getHeaders().getContentType();
 		if (this.response.getContentType() == null && contentType != null) {
 			this.response.setContentType(contentType.toString());
 		}
@@ -140,27 +110,25 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 		if (this.response.getCharacterEncoding() == null && charset != null) {
 			this.response.setCharacterEncoding(charset.name());
 		}
-		long contentLength = getHeaders().getContentLength();
-		if (contentLength != -1) {
-			this.response.setContentLengthLong(contentLength);
-		}
 	}
 
 	@Override
 	protected void applyCookies() {
-
-		// Servlet Cookie doesn't support same site:
-		// https://github.com/eclipse-ee4j/servlet-api/issues/175
-
-		// For Jetty, starting 9.4.21+ we could adapt to HttpCookie:
-		// https://github.com/eclipse/jetty.project/issues/3040
-
-		// For Tomcat it seems to be a global option only:
-		// https://tomcat.apache.org/tomcat-8.5-doc/config/cookie-processor.html
-
-		for (List<ResponseCookie> cookies : getCookies().values()) {
-			for (ResponseCookie cookie : cookies) {
-				this.response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+		for (String name : getCookies().keySet()) {
+			for (ResponseCookie httpCookie : getCookies().get(name)) {
+				Cookie cookie = new Cookie(name, httpCookie.getValue());
+				if (!httpCookie.getMaxAge().isNegative()) {
+					cookie.setMaxAge((int) httpCookie.getMaxAge().getSeconds());
+				}
+				if (httpCookie.getDomain() != null) {
+					cookie.setDomain(httpCookie.getDomain());
+				}
+				if (httpCookie.getPath() != null) {
+					cookie.setPath(httpCookie.getPath());
+				}
+				cookie.setSecure(httpCookie.isSecure());
+				cookie.setHttpOnly(httpCookie.isHttpOnly());
+				this.response.addCookie(cookie);
 			}
 		}
 	}
@@ -297,10 +265,6 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 
 	private class ResponseBodyFlushProcessor extends AbstractListenerWriteFlushProcessor<DataBuffer> {
 
-		public ResponseBodyFlushProcessor() {
-			super(request.getLogPrefix());
-		}
-
 		@Override
 		protected Processor<? super DataBuffer, Void> createWriteProcessor() {
 			ResponseBodyProcessor processor = new ResponseBodyProcessor();
@@ -310,8 +274,8 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 
 		@Override
 		protected void flush() throws IOException {
-			if (rsWriteFlushLogger.isTraceEnabled()) {
-				rsWriteFlushLogger.trace(getLogPrefix() + "Flush attempt");
+			if (logger.isTraceEnabled()) {
+				logger.trace("flush");
 			}
 			ServletServerHttpResponse.this.flush();
 		}
@@ -330,11 +294,6 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 
 	private class ResponseBodyProcessor extends AbstractListenerWriteProcessor<DataBuffer> {
 
-
-		public ResponseBodyProcessor() {
-			super(request.getLogPrefix());
-		}
-
 		@Override
 		protected boolean isWritePossible() {
 			return ServletServerHttpResponse.this.isWritePossible();
@@ -348,31 +307,30 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 		@Override
 		protected boolean write(DataBuffer dataBuffer) throws IOException {
 			if (ServletServerHttpResponse.this.flushOnNext) {
-				if (rsWriteLogger.isTraceEnabled()) {
-					rsWriteLogger.trace(getLogPrefix() + "Flush attempt");
+				if (logger.isTraceEnabled()) {
+					logger.trace("flush");
 				}
 				flush();
 			}
-
 			boolean ready = ServletServerHttpResponse.this.isWritePossible();
+			if (this.logger.isTraceEnabled()) {
+				this.logger.trace("write: " + dataBuffer + " ready: " + ready);
+			}
 			int remaining = dataBuffer.readableByteCount();
 			if (ready && remaining > 0) {
 				// In case of IOException, onError handling should call discardData(DataBuffer)..
 				int written = writeToOutputStream(dataBuffer);
-				if (rsWriteLogger.isTraceEnabled()) {
-					rsWriteLogger.trace(getLogPrefix() + "Wrote " + written + " of " + remaining + " bytes");
+				if (this.logger.isTraceEnabled()) {
+					this.logger.trace("written: " + written + " total: " + remaining);
 				}
 				if (written == remaining) {
+					if (logger.isTraceEnabled()) {
+						logger.trace("releaseData: " + dataBuffer);
+					}
 					DataBufferUtils.release(dataBuffer);
 					return true;
 				}
 			}
-			else {
-				if (rsWriteLogger.isTraceEnabled()) {
-					rsWriteLogger.trace(getLogPrefix() + "ready: " + ready + ", remaining: " + remaining);
-				}
-			}
-
 			return false;
 		}
 

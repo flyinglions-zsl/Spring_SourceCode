@@ -18,7 +18,6 @@ package org.springframework.web.servlet.handler;
 
 import java.util.Collections;
 import java.util.List;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -28,8 +27,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
 
 /**
- * A {@link HandlerExceptionResolver} that delegates to a list of other
- * {@link HandlerExceptionResolver HandlerExceptionResolvers}.
+ * A {@link HandlerExceptionResolver} that delegates to a list of other {@link HandlerExceptionResolver}s.
  *
  * @author Rossen Stoyanchev
  * @since 3.1

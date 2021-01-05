@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,8 +47,8 @@ import org.springframework.util.MultiValueMap;
 @SuppressWarnings("serial")
 public abstract class UriComponents implements Serializable {
 
-	/** Captures URI template variable names. */
-	private static final Pattern NAMES_PATTERN = Pattern.compile("\\{([^/]+?)}");
+	/** Captures URI template variable names */
+	private static final Pattern NAMES_PATTERN = Pattern.compile("\\{([^/]+?)\\}");
 
 
 	@Nullable
@@ -185,8 +185,8 @@ public abstract class UriComponents implements Serializable {
 
 	/**
 	 * Replace all URI template variables with the values from the given {@link
-	 * UriTemplateVariables}.
-	 * @param uriVariables the URI template values
+	 * UriTemplateVariables}
+	 * @param uriVariables URI template values
 	 * @return the expanded URI components
 	 */
 	abstract UriComponents expandInternal(UriTemplateVariables uriVariables);
@@ -276,10 +276,8 @@ public abstract class UriComponents implements Serializable {
 	 */
 	private static String sanitizeSource(String source) {
 		int level = 0;
-		int lastCharIndex = 0;
-		char[] chars = new char[source.length()];
-		for (int i = 0; i < source.length(); i++) {
-			char c = source.charAt(i);
+		StringBuilder sb = new StringBuilder();
+		for (char c : source.toCharArray()) {
 			if (c == '{') {
 				level++;
 			}
@@ -289,9 +287,9 @@ public abstract class UriComponents implements Serializable {
 			if (level > 1 || (level == 1 && c == '}')) {
 				continue;
 			}
-			chars[lastCharIndex++] = c;
+			sb.append(c);
 		}
-		return new String(chars, 0, lastCharIndex);
+		return sb.toString();
 	}
 
 	private static String getVariableName(String match) {
@@ -305,7 +303,7 @@ public abstract class UriComponents implements Serializable {
 
 
 	/**
-	 * Defines the contract for URI Template variables.
+	 * Defines the contract for URI Template variables
 	 * @see HierarchicalUriComponents#expand
 	 */
 	public interface UriTemplateVariables {

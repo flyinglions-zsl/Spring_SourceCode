@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.web.servlet.mvc.method.annotation;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
-
 import javax.servlet.ServletResponse;
 
 import org.springframework.core.MethodParameter;
@@ -30,8 +29,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Resolves servlet backed response-related method arguments. Supports values of the
- * following types:
+ * Resolves response-related method argument values of types:
  * <ul>
  * <li>{@link ServletResponse}
  * <li>{@link OutputStream}

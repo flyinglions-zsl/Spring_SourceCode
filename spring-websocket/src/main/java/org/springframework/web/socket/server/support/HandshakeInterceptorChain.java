@@ -77,7 +77,7 @@ public class HandshakeInterceptorChain {
 			try {
 				interceptor.afterHandshake(request, response, this.wsHandler, failure);
 			}
-			catch (Exception ex) {
+			catch (Throwable ex) {
 				if (logger.isWarnEnabled()) {
 					logger.warn(interceptor + " threw exception in afterHandshake: " + ex);
 				}

@@ -66,7 +66,7 @@ public class NameMatchMethodPointcut extends StaticMethodMatcherPointcut impleme
 	 * before a proxy is used.
 	 * <p><b>NB:</b> This method does not work after the proxy is in
 	 * use, as advice chains will be cached.
-	 * @param name the name of the additional method that will match
+	 * @param name name of the additional method that will match
 	 * @return this pointcut to allow for multiple additions in one line
 	 */
 	public NameMatchMethodPointcut addMethodName(String name) {
@@ -76,7 +76,7 @@ public class NameMatchMethodPointcut extends StaticMethodMatcherPointcut impleme
 
 
 	@Override
-	public boolean matches(Method method, Class<?> targetClass) {
+	public boolean matches(Method method, @Nullable Class<?> targetClass) {
 		for (String mappedName : this.mappedNames) {
 			if (mappedName.equals(method.getName()) || isMatch(method.getName(), mappedName)) {
 				return true;
@@ -100,7 +100,7 @@ public class NameMatchMethodPointcut extends StaticMethodMatcherPointcut impleme
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		return (this == other || (other instanceof NameMatchMethodPointcut &&
 				this.mappedNames.equals(((NameMatchMethodPointcut) other).mappedNames)));
 	}
@@ -108,11 +108,6 @@ public class NameMatchMethodPointcut extends StaticMethodMatcherPointcut impleme
 	@Override
 	public int hashCode() {
 		return this.mappedNames.hashCode();
-	}
-
-	@Override
-	public String toString() {
-		return getClass().getName() + ": " + this.mappedNames;
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.springframework.aop.support.DefaultIntroductionAdvisor;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.aop.support.DelegatingIntroductionInterceptor;
 import org.springframework.beans.factory.NamedBean;
-import org.springframework.lang.Nullable;
 
 /**
  * Convenient methods for creating advisors that may be used when autoproxying beans
@@ -63,7 +62,7 @@ public abstract class ExposeBeanNameAdvisors {
 	/**
 	 * Find the bean name for the given invocation. Assumes that an ExposeBeanNameAdvisor
 	 * has been included in the interceptor chain.
-	 * @param mi the MethodInvocation that should contain the bean name as an attribute
+	 * @param mi MethodInvocation that should contain the bean name as an attribute
 	 * @return the bean name (never {@code null})
 	 * @throws IllegalStateException if the bean name has not been exposed
 	 */
@@ -81,7 +80,7 @@ public abstract class ExposeBeanNameAdvisors {
 
 	/**
 	 * Create a new advisor that will expose the given bean name,
-	 * with no introduction.
+	 * with no introduction
 	 * @param beanName bean name to expose
 	 */
 	public static Advisor createAdvisorWithoutIntroduction(String beanName) {
@@ -111,7 +110,6 @@ public abstract class ExposeBeanNameAdvisors {
 		}
 
 		@Override
-		@Nullable
 		public Object invoke(MethodInvocation mi) throws Throwable {
 			if (!(mi instanceof ProxyMethodInvocation)) {
 				throw new IllegalStateException("MethodInvocation is not a Spring ProxyMethodInvocation: " + mi);
@@ -136,7 +134,6 @@ public abstract class ExposeBeanNameAdvisors {
 		}
 
 		@Override
-		@Nullable
 		public Object invoke(MethodInvocation mi) throws Throwable {
 			if (!(mi instanceof ProxyMethodInvocation)) {
 				throw new IllegalStateException("MethodInvocation is not a Spring ProxyMethodInvocation: " + mi);

@@ -16,63 +16,63 @@
 
 package org.springframework.beans.factory.parsing;
 
-import java.util.ArrayDeque;
+import java.util.LinkedList;
 
 import org.springframework.lang.Nullable;
 
 /**
- * Simple {@link ArrayDeque}-based structure for tracking the logical position during
- * a parsing process. {@link Entry entries} are added to the ArrayDeque at each point
+ * Simple {@link LinkedList}-based structure for tracking the logical position during
+ * a parsing process. {@link Entry entries} are added to the LinkedList at each point
  * during the parse phase in a reader-specific manner.
  *
  * <p>Calling {@link #toString()} will render a tree-style view of the current logical
  * position in the parse phase. This representation is intended for use in error messages.
  *
  * @author Rob Harrop
- * @author Juergen Hoeller
  * @since 2.0
  */
 public final class ParseState {
 
 	/**
-	 * Internal {@link ArrayDeque} storage.
+	 * Internal {@link LinkedList} storage.
 	 */
-	private final ArrayDeque<Entry> state;
+	private final LinkedList<Entry> state;
 
 
 	/**
-	 * Create a new {@code ParseState} with an empty {@link ArrayDeque}.
+	 * Create a new {@code ParseState} with an empty {@link LinkedList}.
 	 */
 	public ParseState() {
-		this.state = new ArrayDeque<>();
+		this.state = new LinkedList<>();
 	}
 
 	/**
-	 * Create a new {@code ParseState} whose {@link ArrayDeque} is a clone
-	 * of the state in the passed-in {@code ParseState}.
+	 * Create a new {@code ParseState} whose {@link LinkedList} is a clone
+	 * of the state in the passed in {@code ParseState}.
 	 */
+	@SuppressWarnings("unchecked")
 	private ParseState(ParseState other) {
-		this.state = other.state.clone();
+		this.state = (LinkedList<Entry>) other.state.clone();
 	}
 
 
 	/**
-	 * Add a new {@link Entry} to the {@link ArrayDeque}.
+	 * Add a new {@link Entry} to the {@link LinkedList}.
 	 */
 	public void push(Entry entry) {
 		this.state.push(entry);
 	}
 
 	/**
-	 * Remove an {@link Entry} from the {@link ArrayDeque}.
+	 * Remove an {@link Entry} from the {@link LinkedList}.
 	 */
 	public void pop() {
 		this.state.pop();
 	}
 
 	/**
-	 * Return the {@link Entry} currently at the top of the {@link ArrayDeque} or
-	 * {@code null} if the {@link ArrayDeque} is empty.
+	 * Return the {@link Entry} currently at the top of the {@link LinkedList} or
+	 * {@code null} if the {@link LinkedList} is empty.
 	 */
 	@Nullable
 	public Entry peek() {

@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.StringJoiner;
 
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -65,7 +65,6 @@ public abstract class HttpRange {
 		long contentLength = getLengthFor(resource);
 		long start = getRangeStart(contentLength);
 		long end = getRangeEnd(contentLength);
-		Assert.isTrue(start < contentLength, "'position' exceeds the resource length " + contentLength);
 		return new ResourceRegion(resource, start, end - start + 1);
 	}
 
@@ -215,9 +214,13 @@ public abstract class HttpRange {
 	 */
 	public static String toString(Collection<HttpRange> ranges) {
 		Assert.notEmpty(ranges, "Ranges Collection must not be empty");
-		StringJoiner builder = new StringJoiner(", ", BYTE_RANGE_PREFIX, "");
-		for (HttpRange range : ranges) {
-			builder.add(range.toString());
+		StringBuilder builder = new StringBuilder(BYTE_RANGE_PREFIX);
+		for (Iterator<HttpRange> iterator = ranges.iterator(); iterator.hasNext(); ) {
+			HttpRange range = iterator.next();
+			builder.append(range);
+			if (iterator.hasNext()) {
+				builder.append(", ");
+			}
 		}
 		return builder.toString();
 	}
@@ -268,7 +271,7 @@ public abstract class HttpRange {
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
+		public boolean equals(Object other) {
 			if (this == other) {
 				return true;
 			}
@@ -331,7 +334,7 @@ public abstract class HttpRange {
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
+		public boolean equals(Object other) {
 			if (this == other) {
 				return true;
 			}

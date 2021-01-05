@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.web.servlet.mvc.method.annotation;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -74,12 +73,8 @@ class ReactiveTypeHandler {
 
 	private static final long STREAMING_TIMEOUT_VALUE = -1;
 
-	@SuppressWarnings("deprecation")
-	private static final List<MediaType> JSON_STREAMING_MEDIA_TYPES =
-			Arrays.asList(MediaType.APPLICATION_NDJSON, MediaType.APPLICATION_STREAM_JSON);
 
-	private static final Log logger = LogFactory.getLog(ReactiveTypeHandler.class);
-
+	private static Log logger = LogFactory.getLog(ReactiveTypeHandler.class);
 
 	private final ReactiveAdapterRegistry adapterRegistry;
 
@@ -111,7 +106,7 @@ class ReactiveTypeHandler {
 	 * Whether the type can be adapted to a Reactive Streams {@link Publisher}.
 	 */
 	public boolean isReactiveType(Class<?> type) {
-		return (this.adapterRegistry.getAdapter(type) != null);
+		return (this.adapterRegistry.hasAdapters() && this.adapterRegistry.getAdapter(type) != null);
 	}
 
 
@@ -130,7 +125,7 @@ class ReactiveTypeHandler {
 		Assert.state(adapter != null, () -> "Unexpected return value: " + returnValue);
 
 		ResolvableType elementType = ResolvableType.forMethodParameter(returnType).getGeneric();
-		Class<?> elementClass = elementType.toClass();
+		Class<?> elementClass = elementType.resolve(Object.class);
 
 		Collection<MediaType> mediaTypes = getMediaTypes(request);
 		Optional<MediaType> mediaType = mediaTypes.stream().filter(MimeType::isConcrete).findFirst();
@@ -149,15 +144,11 @@ class ReactiveTypeHandler {
 				new TextEmitterSubscriber(emitter, this.taskExecutor).connect(adapter, returnValue);
 				return emitter;
 			}
-			for (MediaType type : mediaTypes) {
-				for (MediaType streamingType : JSON_STREAMING_MEDIA_TYPES) {
-					if (streamingType.includes(type)) {
-						logExecutorWarning(returnType);
-						ResponseBodyEmitter emitter = getEmitter(streamingType);
-						new JsonEmitterSubscriber(emitter, this.taskExecutor).connect(adapter, returnValue);
-						return emitter;
-					}
-				}
+			if (mediaTypes.stream().anyMatch(MediaType.APPLICATION_STREAM_JSON::includes)) {
+				logExecutorWarning(returnType);
+				ResponseBodyEmitter emitter = getEmitter(MediaType.APPLICATION_STREAM_JSON);
+				new JsonEmitterSubscriber(emitter, this.taskExecutor).connect(adapter, returnValue);
+				return emitter;
 			}
 		}
 
@@ -248,9 +239,12 @@ class ReactiveTypeHandler {
 		@Override
 		public final void onSubscribe(Subscription subscription) {
 			this.subscription = subscription;
+			if (logger.isDebugEnabled()) {
+				logger.debug("Subscribed to Publisher for " + this.emitter);
+			}
 			this.emitter.onTimeout(() -> {
-				if (logger.isTraceEnabled()) {
-					logger.trace("Connection timeout for " + this.emitter);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Connection timed out for " + this.emitter);
 				}
 				terminate();
 				this.emitter.complete();
@@ -318,8 +312,8 @@ class ReactiveTypeHandler {
 					this.subscription.request(1);
 				}
 				catch (final Throwable ex) {
-					if (logger.isTraceEnabled()) {
-						logger.trace("Send for " + this.emitter + " failed: " + ex);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Send error for " + this.emitter, ex);
 					}
 					terminate();
 					return;
@@ -331,14 +325,14 @@ class ReactiveTypeHandler {
 				Throwable ex = this.error;
 				this.error = null;
 				if (ex != null) {
-					if (logger.isTraceEnabled()) {
-						logger.trace("Publisher for " + this.emitter + " failed: " + ex);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Publisher error for " + this.emitter, ex);
 					}
 					this.emitter.completeWithError(ex);
 				}
 				else {
-					if (logger.isTraceEnabled()) {
-						logger.trace("Publisher for " + this.emitter + " completed");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Publishing completed for " + this.emitter);
 					}
 					this.emitter.complete();
 				}

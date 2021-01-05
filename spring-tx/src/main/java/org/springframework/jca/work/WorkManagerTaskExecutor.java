@@ -19,7 +19,6 @@ package org.springframework.jca.work;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
-
 import javax.naming.NamingException;
 import javax.resource.spi.BootstrapContext;
 import javax.resource.spi.work.ExecutionContext;
@@ -291,6 +290,14 @@ public class WorkManagerTaskExecutor extends JndiLocatorSupport
 		ListenableFutureTask<T> future = new ListenableFutureTask<>(task);
 		execute(future, TIMEOUT_INDEFINITE);
 		return future;
+	}
+
+	/**
+	 * This task executor prefers short-lived work units.
+	 */
+	@Override
+	public boolean prefersShortLivedTasks() {
+		return true;
 	}
 
 

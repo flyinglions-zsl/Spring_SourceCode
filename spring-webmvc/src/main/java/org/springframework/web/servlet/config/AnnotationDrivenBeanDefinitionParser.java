@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolv
  * A {@link BeanDefinitionParser} that provides the configuration for the
  * {@code <annotation-driven/>} MVC namespace element.
  *
- * <p>This class registers the following {@link HandlerMapping HandlerMappings}:</p>
+ * <p>This class registers the following {@link HandlerMapping}s:</p>
  * <ul>
  * <li>{@link RequestMappingHandlerMapping}
  * ordered at 0 for mapping requests to annotated controller methods.
@@ -101,17 +101,17 @@ import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolv
  * as a result of using the {@code <view-controller>} or the
  * {@code <resources>} MVC namespace elements.
  *
- * <p>This class registers the following {@link HandlerAdapter HandlerAdapters}:
+ * <p>This class registers the following {@link HandlerAdapter}s:
  * <ul>
  * <li>{@link RequestMappingHandlerAdapter}
  * for processing requests with annotated controller methods.
  * <li>{@link HttpRequestHandlerAdapter}
- * for processing requests with {@link HttpRequestHandler HttpRequestHandlers}.
+ * for processing requests with {@link HttpRequestHandler}s.
  * <li>{@link SimpleControllerHandlerAdapter}
- * for processing requests with interface-based {@link Controller Controllers}.
+ * for processing requests with interface-based {@link Controller}s.
  * </ul>
  *
- * <p>This class registers the following {@link HandlerExceptionResolver HandlerExceptionResolvers}:
+ * <p>This class registers the following {@link HandlerExceptionResolver}s:
  * <ul>
  * <li>{@link ExceptionHandlerExceptionResolver} for handling exceptions through
  * {@link org.springframework.web.bind.annotation.ExceptionHandler} methods.
@@ -139,7 +139,7 @@ import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolv
  * <li>A {@link DefaultFormattingConversionService}
  * <li>A {@link org.springframework.validation.beanvalidation.LocalValidatorFactoryBean}
  * if a JSR-303 implementation is available on the classpath
- * <li>A range of {@link HttpMessageConverter HttpMessageConverters} depending on which third-party
+ * <li>A range of {@link HttpMessageConverter}s depending on which third-party
  * libraries are available on the classpath.
  * </ul>
  *
@@ -160,34 +160,39 @@ class AnnotationDrivenBeanDefinitionParser implements BeanDefinitionParser {
 	public static final String CONTENT_NEGOTIATION_MANAGER_BEAN_NAME = "mvcContentNegotiationManager";
 
 
-	private static final boolean javaxValidationPresent;
+	private static final boolean javaxValidationPresent =
+			ClassUtils.isPresent("javax.validation.Validator",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
-	private static final boolean romePresent;
+	private static final boolean romePresent =
+			ClassUtils.isPresent("com.rometools.rome.feed.WireFeed",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
-	private static final boolean jaxb2Present;
+	private static final boolean jaxb2Present =
+			ClassUtils.isPresent("javax.xml.bind.Binder",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
-	private static final boolean jackson2Present;
+	private static final boolean jackson2Present =
+			ClassUtils.isPresent("com.fasterxml.jackson.databind.ObjectMapper",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader()) &&
+			ClassUtils.isPresent("com.fasterxml.jackson.core.JsonGenerator",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
-	private static final boolean jackson2XmlPresent;
+	private static final boolean jackson2XmlPresent =
+			ClassUtils.isPresent("com.fasterxml.jackson.dataformat.xml.XmlMapper",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
-	private static final boolean jackson2SmilePresent;
+	private static final boolean jackson2SmilePresent =
+			ClassUtils.isPresent("com.fasterxml.jackson.dataformat.smile.SmileFactory",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
-	private static final boolean jackson2CborPresent;
+	private static final boolean jackson2CborPresent =
+			ClassUtils.isPresent("com.fasterxml.jackson.dataformat.cbor.CBORFactory",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
-	private static final boolean gsonPresent;
-
-	static {
-		ClassLoader classLoader = AnnotationDrivenBeanDefinitionParser.class.getClassLoader();
-		javaxValidationPresent = ClassUtils.isPresent("javax.validation.Validator", classLoader);
-		romePresent = ClassUtils.isPresent("com.rometools.rome.feed.WireFeed", classLoader);
-		jaxb2Present = ClassUtils.isPresent("javax.xml.bind.Binder", classLoader);
-		jackson2Present = ClassUtils.isPresent("com.fasterxml.jackson.databind.ObjectMapper", classLoader) &&
-						ClassUtils.isPresent("com.fasterxml.jackson.core.JsonGenerator", classLoader);
-		jackson2XmlPresent = ClassUtils.isPresent("com.fasterxml.jackson.dataformat.xml.XmlMapper", classLoader);
-		jackson2SmilePresent = ClassUtils.isPresent("com.fasterxml.jackson.dataformat.smile.SmileFactory", classLoader);
-		jackson2CborPresent = ClassUtils.isPresent("com.fasterxml.jackson.dataformat.cbor.CBORFactory", classLoader);
-		gsonPresent = ClassUtils.isPresent("com.google.gson.Gson", classLoader);
-	}
+	private static final boolean gsonPresent =
+			ClassUtils.isPresent("com.google.gson.Gson",
+					AnnotationDrivenBeanDefinitionParser.class.getClassLoader());
 
 
 	@Override
@@ -234,8 +239,8 @@ class AnnotationDrivenBeanDefinitionParser implements BeanDefinitionParser {
 		ManagedList<?> returnValueHandlers = getReturnValueHandlers(element, context);
 		String asyncTimeout = getAsyncTimeout(element);
 		RuntimeBeanReference asyncExecutor = getAsyncExecutor(element);
-		ManagedList<?> callableInterceptors = getInterceptors(element, source, context, "callable-interceptors");
-		ManagedList<?> deferredResultInterceptors = getInterceptors(element, source, context, "deferred-result-interceptors");
+		ManagedList<?> callableInterceptors = getCallableInterceptors(element, source, context);
+		ManagedList<?> deferredResultInterceptors = getDeferredResultInterceptors(element, source, context);
 
 		RootBeanDefinition handlerAdapterDef = new RootBeanDefinition(RequestMappingHandlerAdapter.class);
 		handlerAdapterDef.setSource(source);
@@ -450,7 +455,7 @@ class AnnotationDrivenBeanDefinitionParser implements BeanDefinitionParser {
 			defaultMediaTypes.put("smile", "application/x-jackson-smile");
 		}
 		if (jackson2CborPresent) {
-			defaultMediaTypes.put("cbor", MediaType.APPLICATION_CBOR_VALUE);
+			defaultMediaTypes.put("cbor", "application/cbor");
 		}
 		return defaultMediaTypes;
 	}
@@ -480,13 +485,34 @@ class AnnotationDrivenBeanDefinitionParser implements BeanDefinitionParser {
 		return null;
 	}
 
-	private ManagedList<?> getInterceptors(
-			Element element, @Nullable Object source, ParserContext context, String interceptorElementName) {
+	private ManagedList<?> getCallableInterceptors(
+			Element element, @Nullable Object source, ParserContext context) {
 
 		ManagedList<Object> interceptors = new ManagedList<>();
 		Element asyncElement = DomUtils.getChildElementByTagName(element, "async-support");
 		if (asyncElement != null) {
-			Element interceptorsElement = DomUtils.getChildElementByTagName(asyncElement, interceptorElementName);
+			Element interceptorsElement = DomUtils.getChildElementByTagName(asyncElement, "callable-interceptors");
+			if (interceptorsElement != null) {
+				interceptors.setSource(source);
+				for (Element converter : DomUtils.getChildElementsByTagName(interceptorsElement, "bean")) {
+					BeanDefinitionHolder beanDef = context.getDelegate().parseBeanDefinitionElement(converter);
+					if (beanDef != null) {
+						beanDef = context.getDelegate().decorateBeanDefinitionIfRequired(converter, beanDef);
+						interceptors.add(beanDef);
+					}
+				}
+			}
+		}
+		return interceptors;
+	}
+
+	private ManagedList<?> getDeferredResultInterceptors(
+			Element element, @Nullable Object source, ParserContext context) {
+
+		ManagedList<Object> interceptors = new ManagedList<>();
+		Element asyncElement = DomUtils.getChildElementByTagName(element, "async-support");
+		if (asyncElement != null) {
+			Element interceptorsElement = DomUtils.getChildElementByTagName(asyncElement, "deferred-result-interceptors");
 			if (interceptorsElement != null) {
 				interceptors.setSource(source);
 				for (Element converter : DomUtils.getChildElementsByTagName(interceptorsElement, "bean")) {

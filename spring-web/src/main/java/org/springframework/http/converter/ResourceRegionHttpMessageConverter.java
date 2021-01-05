@@ -148,7 +148,7 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 
 		long start = region.getPosition();
 		long end = start + region.getCount() - 1;
-		long resourceLength = region.getResource().contentLength();
+		Long resourceLength = region.getResource().contentLength();
 		end = Math.min(end, resourceLength - 1);
 		long rangeLength = end - start + 1;
 		responseHeaders.add("Content-Range", "bytes " + start + '-' + end + '/' + resourceLength);
@@ -179,51 +179,34 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 		responseHeaders.set(HttpHeaders.CONTENT_TYPE, "multipart/byteranges; boundary=" + boundaryString);
 		OutputStream out = outputMessage.getBody();
 
-		Resource resource = null;
-		InputStream in = null;
-		long inputStreamPosition = 0;
-
-		try {
-			for (ResourceRegion region : resourceRegions) {
-				long start = region.getPosition() - inputStreamPosition;
-				if (start < 0 || resource != region.getResource()) {
-					if (in != null) {
-						in.close();
-					}
-					resource = region.getResource();
-					in = resource.getInputStream();
-					inputStreamPosition = 0;
-					start = region.getPosition();
-				}
-				long end = start + region.getCount() - 1;
+		for (ResourceRegion region : resourceRegions) {
+			long start = region.getPosition();
+			long end = start + region.getCount() - 1;
+			InputStream in = region.getResource().getInputStream();
+			try {
 				// Writing MIME header.
 				println(out);
 				print(out, "--" + boundaryString);
 				println(out);
 				if (contentType != null) {
-					print(out, "Content-Type: " + contentType);
+					print(out, "Content-Type: " + contentType.toString());
 					println(out);
 				}
-				long resourceLength = region.getResource().contentLength();
-				end = Math.min(end, resourceLength - inputStreamPosition - 1);
-				print(out, "Content-Range: bytes " +
-						region.getPosition() + '-' + (region.getPosition() + region.getCount() - 1) +
-						'/' + resourceLength);
+				Long resourceLength = region.getResource().contentLength();
+				end = Math.min(end, resourceLength - 1);
+				print(out, "Content-Range: bytes " + start + '-' + end + '/' + resourceLength);
 				println(out);
 				println(out);
 				// Printing content
 				StreamUtils.copyRange(in, out, start, end);
-				inputStreamPosition += (end + 1);
 			}
-		}
-		finally {
-			try {
-				if (in != null) {
+			finally {
+				try {
 					in.close();
 				}
-			}
-			catch (IOException ex) {
-				// ignore
+				catch (IOException ex) {
+					// ignore
+				}
 			}
 		}
 

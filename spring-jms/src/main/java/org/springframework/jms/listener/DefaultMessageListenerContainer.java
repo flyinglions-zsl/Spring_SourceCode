@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.jms.listener;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
-
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.MessageConsumer;
@@ -198,9 +197,9 @@ public class DefaultMessageListenerContainer extends AbstractPollingMessageListe
 
 	private int registeredWithDestination = 0;
 
-	private volatile boolean recovering;
+	private volatile boolean recovering = false;
 
-	private volatile boolean interrupted;
+	private volatile boolean interrupted = false;
 
 	@Nullable
 	private Runnable stopCallback;
@@ -875,7 +874,7 @@ public class DefaultMessageListenerContainer extends AbstractPollingMessageListe
 		}
 		if (ex instanceof SharedConnectionNotInitializedException) {
 			if (!alreadyRecovered) {
-				logger.debug("JMS message listener invoker needs to establish shared Connection");
+				logger.info("JMS message listener invoker needs to establish shared Connection");
 			}
 		}
 		else {
@@ -943,7 +942,7 @@ public class DefaultMessageListenerContainer extends AbstractPollingMessageListe
 					Connection con = createConnection();
 					JmsUtils.closeConnection(con);
 				}
-				logger.debug("Successfully refreshed JMS Connection");
+				logger.info("Successfully refreshed JMS Connection");
 				break;
 			}
 			catch (Exception ex) {

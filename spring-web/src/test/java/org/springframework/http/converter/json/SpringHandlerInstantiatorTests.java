@@ -46,15 +46,15 @@ import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Test class for {@link SpringHandlerInstantiatorTests}.
@@ -68,7 +68,7 @@ public class SpringHandlerInstantiatorTests {
 	private ObjectMapper objectMapper;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		AutowiredAnnotationBeanPostProcessor bpp = new AutowiredAnnotationBeanPostProcessor();
@@ -84,34 +84,34 @@ public class SpringHandlerInstantiatorTests {
 	public void autowiredSerializer() throws JsonProcessingException {
 		User user = new User("bob");
 		String json = this.objectMapper.writeValueAsString(user);
-		assertThat(json).isEqualTo("{\"username\":\"BOB\"}");
+		assertEquals("{\"username\":\"BOB\"}", json);
 	}
 
 	@Test
 	public void autowiredDeserializer() throws IOException {
 		String json = "{\"username\":\"bob\"}";
 		User user = this.objectMapper.readValue(json, User.class);
-		assertThat(user.getUsername()).isEqualTo("BOB");
+		assertEquals("BOB", user.getUsername());
 	}
 
 	@Test
 	public void autowiredKeyDeserializer() throws IOException {
 		String json = "{\"credentials\":{\"bob\":\"admin\"}}";
 		SecurityRegistry registry = this.objectMapper.readValue(json, SecurityRegistry.class);
-		assertThat(registry.getCredentials().keySet().contains("BOB")).isTrue();
-		assertThat(registry.getCredentials().keySet().contains("bob")).isFalse();
+		assertTrue(registry.getCredentials().keySet().contains("BOB"));
+		assertFalse(registry.getCredentials().keySet().contains("bob"));
 	}
 
 	@Test
 	public void applicationContextAwaretypeResolverBuilder() throws JsonProcessingException {
 		this.objectMapper.writeValueAsString(new Group());
-		assertThat(CustomTypeResolverBuilder.isAutowiredFiledInitialized).isTrue();
+		assertTrue(CustomTypeResolverBuilder.isAutowiredFiledInitialized);
 	}
 
 	@Test
 	public void applicationContextAwareTypeIdResolver() throws JsonProcessingException {
 		this.objectMapper.writeValueAsString(new Group());
-		assertThat(CustomTypeIdResolver.isAutowiredFiledInitialized).isTrue();
+		assertTrue(CustomTypeIdResolver.isAutowiredFiledInitialized);
 	}
 
 

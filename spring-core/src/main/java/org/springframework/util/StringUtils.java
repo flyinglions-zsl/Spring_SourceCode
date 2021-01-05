@@ -18,20 +18,18 @@ package org.springframework.util;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
 
@@ -61,8 +59,6 @@ import org.springframework.lang.Nullable;
  */
 public abstract class StringUtils {
 
-	private static final String[] EMPTY_STRING_ARRAY = {};
-
 	private static final String FOLDER_SEPARATOR = "/";
 
 	private static final String WINDOWS_FOLDER_SEPARATOR = "\\";
@@ -91,10 +87,9 @@ public abstract class StringUtils {
 	 * {@link #hasLength(String)} or {@link #hasText(String)} instead.</b>
 	 * @param str the candidate object (possibly a {@code String})
 	 * @since 3.2.1
-	 * @deprecated as of 5.3, in favor of {@link #hasLength(String)} and
-	 * {@link #hasText(String)} (or {@link ObjectUtils#isEmpty(Object)})
+	 * @see #hasLength(String)
+	 * @see #hasText(String)
 	 */
-	@Deprecated
 	public static boolean isEmpty(@Nullable Object str) {
 		return (str == null || "".equals(str));
 	}
@@ -112,8 +107,7 @@ public abstract class StringUtils {
 	 * </pre>
 	 * @param str the {@code CharSequence} to check (may be {@code null})
 	 * @return {@code true} if the {@code CharSequence} is not {@code null} and has length
-	 * @see #hasLength(String)
-	 * @see #hasText(CharSequence)
+	 * @see #hasText(String)
 	 */
 	public static boolean hasLength(@Nullable CharSequence str) {
 		return (str != null && str.length() > 0);
@@ -272,11 +266,11 @@ public abstract class StringUtils {
 			return str;
 		}
 
-		int beginIdx = 0;
-		while (beginIdx < str.length() && Character.isWhitespace(str.charAt(beginIdx))) {
-			beginIdx++;
+		StringBuilder sb = new StringBuilder(str);
+		while (sb.length() > 0 && Character.isWhitespace(sb.charAt(0))) {
+			sb.deleteCharAt(0);
 		}
-		return str.substring(beginIdx);
+		return sb.toString();
 	}
 
 	/**
@@ -290,11 +284,11 @@ public abstract class StringUtils {
 			return str;
 		}
 
-		int endIdx = str.length() - 1;
-		while (endIdx >= 0 && Character.isWhitespace(str.charAt(endIdx))) {
-			endIdx--;
+		StringBuilder sb = new StringBuilder(str);
+		while (sb.length() > 0 && Character.isWhitespace(sb.charAt(sb.length() - 1))) {
+			sb.deleteCharAt(sb.length() - 1);
 		}
-		return str.substring(0, endIdx + 1);
+		return sb.toString();
 	}
 
 	/**
@@ -308,11 +302,11 @@ public abstract class StringUtils {
 			return str;
 		}
 
-		int beginIdx = 0;
-		while (beginIdx < str.length() && leadingCharacter == str.charAt(beginIdx)) {
-			beginIdx++;
+		StringBuilder sb = new StringBuilder(str);
+		while (sb.length() > 0 && sb.charAt(0) == leadingCharacter) {
+			sb.deleteCharAt(0);
 		}
-		return str.substring(beginIdx);
+		return sb.toString();
 	}
 
 	/**
@@ -326,21 +320,11 @@ public abstract class StringUtils {
 			return str;
 		}
 
-		int endIdx = str.length() - 1;
-		while (endIdx >= 0 && trailingCharacter == str.charAt(endIdx)) {
-			endIdx--;
+		StringBuilder sb = new StringBuilder(str);
+		while (sb.length() > 0 && sb.charAt(sb.length() - 1) == trailingCharacter) {
+			sb.deleteCharAt(sb.length() - 1);
 		}
-		return str.substring(0, endIdx + 1);
-	}
-
-	/**
-	 * Test if the given {@code String} matches the given single character.
-	 * @param str the {@code String} to check
-	 * @param singleCharacter the character to compare to
-	 * @since 5.2.9
-	 */
-	public static boolean matchesCharacter(@Nullable String str, char singleCharacter) {
-		return (str != null && str.length() == 1 && str.charAt(0) == singleCharacter);
+		return sb.toString();
 	}
 
 	/**
@@ -465,19 +449,16 @@ public abstract class StringUtils {
 			return inString;
 		}
 
-		int lastCharIndex = 0;
-		char[] result = new char[inString.length()];
+		StringBuilder sb = new StringBuilder(inString.length());
 		for (int i = 0; i < inString.length(); i++) {
 			char c = inString.charAt(i);
 			if (charsToDelete.indexOf(c) == -1) {
-				result[lastCharIndex++] = c;
+				sb.append(c);
 			}
 		}
-		if (lastCharIndex == inString.length()) {
-			return inString;
-		}
-		return new String(result, 0, lastCharIndex);
+		return sb.toString();
 	}
+
 
 	//---------------------------------------------------------------------
 	// Convenience methods for working with formatted Strings
@@ -669,11 +650,6 @@ public abstract class StringUtils {
 		}
 		String pathToUse = replace(path, WINDOWS_FOLDER_SEPARATOR, FOLDER_SEPARATOR);
 
-		// Shortcut if there is no work to do
-		if (pathToUse.indexOf('.') == -1) {
-			return pathToUse;
-		}
-
 		// Strip prefix from path to analyze, to not treat it as part of the
 		// first path element. This is necessary to correctly parse paths like
 		// "file:core/../core/io/Resource.class", where the ".." should just
@@ -695,7 +671,7 @@ public abstract class StringUtils {
 		}
 
 		String[] pathArray = delimitedListToStringArray(pathToUse, FOLDER_SEPARATOR);
-		Deque<String> pathElements = new ArrayDeque<>();
+		LinkedList<String> pathElements = new LinkedList<>();
 		int tops = 0;
 
 		for (int i = pathArray.length - 1; i >= 0; i--) {
@@ -719,10 +695,6 @@ public abstract class StringUtils {
 			}
 		}
 
-		// All path elements stayed the same - shortcut
-		if (pathArray.length == pathElements.size()) {
-			return prefix + pathToUse;
-		}
 		// Remaining top paths need to be retained.
 		for (int i = 0; i < tops; i++) {
 			pathElements.addFirst(TOP_PATH);
@@ -792,7 +764,7 @@ public abstract class StringUtils {
 				baos.write(ch);
 			}
 		}
-		return (changed ? StreamUtils.copyToString(baos, charset) : source);
+		return (changed ? new String(baos.toByteArray(), charset) : source);
 	}
 
 	/**
@@ -812,7 +784,6 @@ public abstract class StringUtils {
 	public static Locale parseLocale(String localeValue) {
 		String[] tokens = tokenizeLocaleSource(localeValue);
 		if (tokens.length == 1) {
-			validateLocalePart(localeValue);
 			Locale resolved = Locale.forLanguageTag(localeValue);
 			if (resolved.getLanguage().length() > 0) {
 				return resolved;
@@ -874,7 +845,7 @@ public abstract class StringUtils {
 	private static void validateLocalePart(String localePart) {
 		for (int i = 0; i < localePart.length(); i++) {
 			char ch = localePart.charAt(i);
-			if (ch != ' ' && ch != '_' && ch != '-' && ch != '#' && !Character.isLetterOrDigit(ch)) {
+			if (ch != ' ' && ch != '_' && ch != '#' && !Character.isLetterOrDigit(ch)) {
 				throw new IllegalArgumentException(
 						"Locale part \"" + localePart + "\" contains invalid characters");
 			}
@@ -922,7 +893,7 @@ public abstract class StringUtils {
 	 * @return the resulting {@code String} array
 	 */
 	public static String[] toStringArray(@Nullable Collection<String> collection) {
-		return (!CollectionUtils.isEmpty(collection) ? collection.toArray(EMPTY_STRING_ARRAY) : EMPTY_STRING_ARRAY);
+		return (collection != null ? collection.toArray(new String[0]) : new String[0]);
 	}
 
 	/**
@@ -933,7 +904,7 @@ public abstract class StringUtils {
 	 * @return the resulting {@code String} array
 	 */
 	public static String[] toStringArray(@Nullable Enumeration<String> enumeration) {
-		return (enumeration != null ? toStringArray(Collections.list(enumeration)) : EMPTY_STRING_ARRAY);
+		return (enumeration != null ? toStringArray(Collections.list(enumeration)) : new String[0]);
 	}
 
 	/**
@@ -1000,7 +971,8 @@ public abstract class StringUtils {
 			return array1;
 		}
 
-		List<String> result = new ArrayList<>(Arrays.asList(array1));
+		List<String> result = new ArrayList<>();
+		result.addAll(Arrays.asList(array1));
 		for (String str : array2) {
 			if (!result.contains(str)) {
 				result.add(str);
@@ -1016,7 +988,7 @@ public abstract class StringUtils {
 	 */
 	public static String[] sortStringArray(String[] array) {
 		if (ObjectUtils.isEmpty(array)) {
-			return array;
+			return new String[0];
 		}
 
 		Arrays.sort(array);
@@ -1029,9 +1001,9 @@ public abstract class StringUtils {
 	 * @param array the original {@code String} array (potentially empty)
 	 * @return the resulting array (of the same size) with trimmed elements
 	 */
-	public static String[] trimArrayElements(String[] array) {
+	public static String[] trimArrayElements(@Nullable String[] array) {
 		if (ObjectUtils.isEmpty(array)) {
-			return array;
+			return new String[0];
 		}
 
 		String[] result = new String[array.length];
@@ -1175,7 +1147,7 @@ public abstract class StringUtils {
 			@Nullable String str, String delimiters, boolean trimTokens, boolean ignoreEmptyTokens) {
 
 		if (str == null) {
-			return EMPTY_STRING_ARRAY;
+			return new String[0];
 		}
 
 		StringTokenizer st = new StringTokenizer(str, delimiters);
@@ -1228,7 +1200,7 @@ public abstract class StringUtils {
 			@Nullable String str, @Nullable String delimiter, @Nullable String charsToDelete) {
 
 		if (str == null) {
-			return EMPTY_STRING_ARRAY;
+			return new String[0];
 		}
 		if (delimiter == null) {
 			return new String[] {str};
@@ -1341,11 +1313,14 @@ public abstract class StringUtils {
 			return ObjectUtils.nullSafeToString(arr[0]);
 		}
 
-		StringJoiner sj = new StringJoiner(delim);
-		for (Object o : arr) {
-			sj.add(String.valueOf(o));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < arr.length; i++) {
+			if (i > 0) {
+				sb.append(delim);
+			}
+			sb.append(arr[i]);
 		}
-		return sj.toString();
+		return sb.toString();
 	}
 
 	/**
